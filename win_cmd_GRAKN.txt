@@ -1,0 +1,17 @@
+### WINDOWS cmd to run GRAKN ###
+
+CD \Users\kubap\Documents\THESIS\grakn-core-all-windows-1.5.9 
+.\grakn server start
+.\grakn console --keyspace ssp_test --file path-to-folder\export\ssp_schema.gql
+# open intercative console
+.\grakn console --keyspace ssp_test
+# test if loaded properly
+match $x sub thing; get;
+# clean keyspace
+.\grakn console --keyspace ssp_test
+clean
+confirm
+# load data
+python3 path-to-folder\export\my_migrate.py
+
+
