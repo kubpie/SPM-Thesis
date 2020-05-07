@@ -6,10 +6,10 @@ To run GRAKN execute following steps:
 4. in my_migrate.py change the path to the directory where the unpacked folder is stored 
 5. run my_migrate from python interpreter or cmd. This will upload only a small fraction of selected data, shouldn't take longer than 2-3min.
 6. use query from query.txt in GRAKN Workbase to display the graph for scenario. The query takes a single input scenario_id $sid and should return a graph with all entities and attributes as in the draft block diagram.
-
-
-QUERY:
-match
+\
+\
+QUERY:\
+match 
 $scn isa sound-propagation-scenario, has scenario_id $sid;
 $ray isa ray-input, has num_rays $nray; 
 $src isa source, has depth $ds; 
