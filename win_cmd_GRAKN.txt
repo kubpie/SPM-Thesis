@@ -2,7 +2,7 @@
 
 CD path-to-grakn-folder
 .\grakn server start
-.\grakn console --keyspace ssp_test --file path-to-folder\export\ssp_schema.gql
+.\grakn console --keyspace ssp_test --file path-to-folder\ssp_schema.gql
 # open intercative console
 .\grakn console --keyspace ssp_test
 # test if loaded properly
@@ -12,6 +12,6 @@ match $x sub thing; get;
 clean
 confirm
 # load data
-python3 path-to-folder\export\my_migrate.py
+python3 path-to-folder\my_migrate.py
 
 
