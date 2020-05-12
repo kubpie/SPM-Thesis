@@ -262,8 +262,11 @@ def multipage(filename, figs=None, dpi=200):
         
     
 #path = #change path  #r'C:\Users\kubap\Documents\THESIS\DATA\\'
-#rawdata = LoadData(path)
 
+import os
+path = os.getcwd()+'\\'
+
+rawdata = LoadData(path)
 ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
 ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")

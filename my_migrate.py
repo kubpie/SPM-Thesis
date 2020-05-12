@@ -7,8 +7,8 @@ Created on Wed Apr 22 00:32:19 2020
 from grakn.client import GraknClient
 import numpy as np
 import pandas as pd
-import sys
-sys.path.append(r'C:\Users\kubap\Documents\THESIS\DATA_PREP')
+#import sys
+#sys.path.append(r'C:\Users\kubap\Documents\THESIS\DATA_PREP')
 from ssp_features import SSPGrad, SSPStat, SSPId
 from data_prep import LoadData, FeatDuct
 from decimal import Decimal
@@ -380,8 +380,9 @@ def rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop):
 ###########################################
 ###     Build input data dictionaries   ###
 ###########################################
-
-path = r'C:\Users\kubap\Documents\THESIS\DATA\\'
+import os
+path = os.getcwd()+'\\'
+#path = r'C:\Users\kubap\Documents\THESIS\DATA\\'
 Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False
@@ -449,6 +450,7 @@ Entities = [
     {"NodeName": 'not-a-duct',
      "QueryList": DuctExists()
      }
+]
      
 Relations = [
         
@@ -491,6 +493,6 @@ Relations = [
 ]
 """
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities,Relations], keyspace_name = "ssp_test")
+    #build_graph(Inputs=[Entities,Relations], keyspace_name = "ssp_test")
     print("Importing data to GRAKN finished OK!")
     
