@@ -233,7 +233,7 @@ def SSPId(SSP_Input, path, plot = False, save = False):
                 #DC limited by the SSP maximum (top or bottom)
                 closest_max = maxima[np.searchsorted(maxima,dci,side='right')-1] #where to put dci such that the order is maintained
                 next_max_below = maxima[maxima.index(closest_max)+1] #next max BELOW DC axis
-                next_max_above = maxima[maxima.index(closest_max)-1]
+                #next_max_above = maxima[maxima.index(closest_max)-1]
                 
                 if SSP_table[ssp].iloc[closest_max] <= SSP_table[ssp].iloc[next_max_below]: #SSP_table[ssp].iloc[-1]:
                 #DC limited from above
