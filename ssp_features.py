@@ -374,12 +374,12 @@ def SSPId(SSP_Input, path, plot = False, save = False):
 
 
 #path = #change path #r'C:\Users\kubap\Documents\THESIS\DATA\\'
-import os
-path = os.getcwd()+'\\'
-SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+#import os
+#path = os.getcwd()+'\data\\'
+#SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False)
 #SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
-SSP_Prop = SSPId(SSP_Input, path, plot = False, save = False)
+#SSP_Prop = SSPId(SSP_Input, path, plot = False, save = False)
 
 #######################################################################################
 # TODO:  REFINE SSP APPROXIMATION -> REDUCE THE NR OF ATTRIBUTES AS MUCH AS POSSIBLE

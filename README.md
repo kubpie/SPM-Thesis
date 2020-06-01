@@ -9,7 +9,7 @@ To run GRAKN execute following steps:
 \
 \
 QUERY:\
-match 
+match
 $scn isa sound-propagation-scenario, has scenario_id $sid;
 $ray isa ray-input, has num_rays $nray; 
 $src isa source, has depth $ds; 

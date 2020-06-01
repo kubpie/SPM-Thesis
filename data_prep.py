@@ -47,8 +47,7 @@ def LoadData(path):
     return convData
     
 # FORMATTING
-def FeatDuct(data, SSP_info = False):
-        
+def FeatDuct(data, Input_Only = True):   
     # merge SD/BD features into one to emphasize duct propagation mode
     duct_cols = ['duct_prop_type','duct_width_if_sourceinduct', 'duct_SSP_if_sourceinduct']
     duct_df = pd.DataFrame(0, index=np.arange(len(data)), columns=duct_cols)
@@ -66,7 +65,7 @@ def FeatDuct(data, SSP_info = False):
     data = data.drop(columns = ['duct_type', 'surface_duct', 'bottom_duct', 'source_in_duct','surface_duct_depth','surface_duct_SSP','bottom_duct_width','bottom_duct_depth','bottom_duct_SSP'])        
                
     #DROPPING LOTS OF COLUMNS HERE TO LEAVE OUT PLAIN SIMULATION I/O DATA
-    if SSP_info == False:
+    if Input_Only == True:
         data = data.drop(columns = ['deep_CH_axis','deep_CH_SSP','shallow_CH_axis','shallow_CH_SSP'])
         data = data.drop(columns = ['waveguide','CHmax_axis','SSP_CHmax'])
         data = data.drop(columns = 'SSP_source')
@@ -160,94 +159,6 @@ def FeatBathySSP(data):
     data = pd.concat([data, df_src, df_area['total_area'], df_cmat], axis=1, sort=False) #df_wedge is out       
 
     return data
-        
-def constant_features(X, frac_constant_values = 0.90):
-    # Get number of rows in X
-    num_rows = X.shape[0]
-    # Get column labels
-    allLabels = X.columns.tolist()
-    # Make a dict to store the fraction describing the value that occurs the most
-    constant_per_feature = {label: X[label].value_counts().iloc[0]/num_rows for label in allLabels}
-    # Determine the features that contain a fraction of missing values greater than threshold
-    labels = [label for label in allLabels if constant_per_feature [label] > frac_constant_values]
-    
-    return labels
-
-def plot_correlation(corrmat):
-    for c in corrmat:
-        # Set font scale
-        sns.set(font_scale = 1)
-        # Set the figure size
-        f, ax = plt.subplots(figsize=(12, 12))
-        sns.heatmap(c, cmap= 'YlGnBu', square=True)
-        # Tight layout
-        f.tight_layout()
-
-
-def CreateSets(data, plot_corr = False):
-    
-    data0 = data.loc[data['wedge_slope'] == 0]
-    data2 = data.loc[data['wedge_slope'] == 2]
-    dataN2 = data.loc[data['wedge_slope'] == -2]
-        
-    distributions = []
-    alldata = []
-    #check the datasets statistics: class popualtion, ...
-    for dat in [data0, data2, dataN2]:
-        yclass, ycount = np.unique(dat['num_rays'], return_counts=True)
-        yper = ycount/sum(ycount)*100
-        ystat = dict(zip(yclass, zip(ycount, yper)))
-        distributions.append(ystat)
-        #remove outliers on condition: predict classes with 10 or more samples
-        outlier = np.where(ycount <= 10)
-        for x in outlier[0]:
-            out = dat.index[dat['num_rays'] == yclass[x]]     
-            dat = dat.drop(out)
-        alldata.append(dat)   
-    #data0 = data0.loc[data['num_rays'] <= 2500]
-    #data2 = data2.loc[data['num_rays'] <= 10000]    
-
-    #LABEL TARGET AND FEATURES
-    target = 'num_rays'
-    features = data.columns.tolist()
-    features.remove(target)
-    
-    redundant_feat = []
-    alldata_new = []
-    features_new = []
-    # Remove redundant features in separate dataset (with constant values)
-    for i, dat in enumerate(alldata):
-        #corr_matrix = dat[features].corr(method = 'spearman').abs()
-        redF = constant_features(dat[features], frac_constant_values = 0.90)
-        redundant_feat.append(redF)
-        alldata_new.append(dat.drop(columns = redF))
-        featnames = [x for x in features if x not in redF]
-        features_new.append(featnames)
-                    
-        
-    features = features_new
-    alldata = alldata_new
-
-    # divide dataset into test & training subsets
-    seed = 233
-    test_size = 0.25
-    
-    dtrain = []
-    dtest = []
-    
-    for i, dat in enumerate(alldata):
-        X_train, X_test, y_train, y_test = train_test_split(dat[features[i]], dat[target], test_size=test_size, random_state=seed, stratify = dat[target])
-        # stratified split makes sure that class distribution in training\test sets is as similar as possible
-        dtrain.append(pd.concat((X_train, y_train), axis = 1))
-        dtest.append(pd.concat((X_test, y_test), axis = 1))
-        corr_matrix = dat[features[i]].corr(method = 'spearman').abs()
-        
-        if plot_corr:
-            plot_correlation(corr_matrix)
-
-    
-    
-    return alldata, dtrain, dtest, features
 
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -259,15 +170,15 @@ def multipage(filename, figs=None, dpi=200):
         fig.savefig(pp, format='pdf')
     pp.close()
 
-        
+#TODO: Merge xgboost_data ad data_prep into one library        
     
 #path = #change path  #r'C:\Users\kubap\Documents\THESIS\DATA\\'
 
 import os
-path = os.getcwd()+'\\'
+path = os.getcwd()+'\data\\'
 
 rawdata = LoadData(path)
 ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
 ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
-data = FeatDuct(rawdata, SSP_info = False)
+data = FeatDuct(rawdata, Input_Only = True)

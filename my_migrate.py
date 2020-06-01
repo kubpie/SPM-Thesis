@@ -389,12 +389,13 @@ SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
 SSP_Prop = SSPId(SSP_Input, path, plot = False, save = False)
 Sim_Data = LoadData(path)
-data = FeatDuct(Sim_Data, SSP_info = False)
+data = FeatDuct(Sim_Data, SSP_Info = False, Input_Only = True)
 
 # DATA SELECTION FOR GRAKN TESTING
 data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
 SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
 
+#TODO: Relocate
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
