@@ -63,27 +63,10 @@ def EncodeData(data):
     #y_enc = label_encoder.transform(y)
     #y_enc = y
     return data_enc
-    
-def TrainTestSplit(data, save = False):
-    # divide dataset into test & training subsets
-    predictors = [x for x in data.columns if x not in target]
-    X_train, X_test, y_train, y_test = train_test_split(data[predictors], data[target], test_size=test_size, random_state=seed, stratify =  data[target])
-    # stratified split ensures that the class distribution in training\test sets is as similar as possible
-    dtrain = pd.concat((X_train, y_train), axis = 1)
-    dtest = pd.concat((X_test, y_test), axis = 1)
-    
-    if save:
-        # save into separate .csv files
-        filepath = os.getcwd()+'\data\\xgboost\\'
-        dtest.to_csv(filepath + 'dtest_25.csv', index = None, header = True)
-        dtrain.to_csv(filepath + 'dtrain_75.csv', index = None, header = True)
-        #dtrainup.to_csv(filepath + 'dtrainup.csv', index = None, header = True)
-        #dtrain_smot.to_csv(filepath + 'dtrain_smot.csv', index = None, header = True)
-        print("New datafiles have been created!")
 
-    return dtrain, dtest
+def ClassImbalance(data, plot = False):
+    target = 'num_rays'
 
-def ClassImbalance(data, target, plot = False):
     yclass, ycount = np.unique(data[target], return_counts=True)
     yper = ycount/sum(ycount)*100
     y_population = dict(zip(yclass, zip(ycount, yper)))
@@ -119,7 +102,7 @@ def ClassImbalance(data, target, plot = False):
         ax.set_ylabel('Per-class Percentage of Total Dataset [%]')
         ax.set_xlabel('Class: Number of Rays')
         ax.set_xticks(x)
-        ax.set_xticklabels(yclass)
+        ax.set_xticklabelsmet(yclass)
         ax.set_title('Cumulative sum plot of class distributions')
         ax.grid()
     
@@ -130,35 +113,40 @@ def ClassImbalance(data, target, plot = False):
             arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
     
     return y_population
-"""
-# Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
-#categorical_var = np.hstack([2, np.arange(5,33)])
-categorical_var = np.hstack([2,np.arange(5,33)])
-minority = np.arange(4,17)
-samplenr = 250
-population_target = dict(zip(minority, (np.ones(len(minority))*samplenr).astype(int)))
-smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
-#smote_nc_max = SMOTENC(categorical_features=categorical_var, sampling_strategy='auto', random_state=42)
-X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
-dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
-dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
 
-"""
+def PlotCorrelation(dat, features, annotate = True):
 
-def CreateSplits(data, level_out = 1, replace=False):
+        correlation_matrix = dat[features].corr(method = 'spearman').abs()
+        # Set font scale
+        sns.set(font_scale = 1)
+        # Set the figure size
+        f, ax = plt.subplots(figsize=(12, 12))
+        # Plot heatmap
+        sns.heatmap(correlation_matrix, cmap= 'YlGnBu', square=True, annot=annotate)
+        # Tight layout
+        f.tight_layout()
+        plt.show()  
+
+
+def CreateSplits(data, level_out = 1, replace = True, plot_distributions = False, plot_correlations = False):
     """
     1. Create 3 separate data splits based on the 'wedge_slope' value
+    --- OUTLIERS ---
     2. Investigate the distribution of each set
     3. Fix outliers based on 'level_out'% threshold, i.e. classes < 1% of the subset. 
     If replace = True, the outliers will be propagated to the closest higher class
     up to 2! classes up. 
     If after propagating up, the class is still < 1% it will be discared as an outlier.
+    --- FEATURES ---
+    4. Remove features that become redundant withing subsets i.e. water depth max, or slope value
+    
     """
 
     data_00 = data.loc[data['wedge_slope'] == 0]
     data_2U = data.loc[data['wedge_slope'] == 2] #2 deg up
     data_2D = data.loc[data['wedge_slope'] == -2] #2 deg down
-        
+    
+    ### Outliers Correction     
     distributions = []
     SplitSets = []
     
@@ -168,13 +156,25 @@ def CreateSplits(data, level_out = 1, replace=False):
         return dat
     
     
+    def constant_features(X, frac_constant_values = 0.90):
+        # Get number of rows in X
+        num_rows = X.shape[0]
+        # Get column labels
+        allLabels = X.columns.tolist()
+        # Make a dict to store the fraction describing the value that occurs the most
+        constant_per_feature = {label: X[label].value_counts().iloc[0]/num_rows for label in allLabels}
+        # Determine the features that contain a fraction of missing values greater than threshold
+        labels = [label for label in allLabels if constant_per_feature [label] > frac_constant_values]
+        
+        return labels
+        
     #check the datasets statistics: class popualtion, ...
-    for dat in [data_00, data_2U, data_2D]:
-        ystat = ClassImbalance(dat, target, plot = False)
+    for t, dat in enumerate([data_00, data_2U, data_2D]):
+        ystat = ClassImbalance(dat, plot = False)
         distributions.append(ystat)
         classlist = list(ystat.keys())
         for r, rayclass in enumerate(ystat):
-            ystatnew = ClassImbalance(dat, target, plot = False)
+            ystatnew = ClassImbalance(dat, plot = False)
             #remove outliers when sample size < 1% of total samples
             if ystatnew[rayclass][1] < level_out:              
                 if replace and r <= len(ystat)-3:
@@ -183,7 +183,6 @@ def CreateSplits(data, level_out = 1, replace=False):
                         dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
                     else:
                         dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
-                        ystatnew = ClassImbalance(dat, target, plot = False)
                         propagated_class = ystat[classlist[r+1]][1] + ystat[classlist[r+2]][1]
                         if propagated_class >= level_out:
                             dat.loc[dat['num_rays'] == classlist[r+1], ('num_rays')][1:] = classlist[r+2] 
@@ -203,78 +202,70 @@ def CreateSplits(data, level_out = 1, replace=False):
                     
                 if not replace: #if replace = False then always remove outliers
                     dat = remove_outliers(dat,rayclass)
-    
-        ystat = ClassImbalance(dat, target, plot = False)
+        
+        #1. TODO: Dirty fix for dat00, for some reason 6000 gets propagated all classes from below
+        if t == 0:
+            dat = remove_outliers(dat, 6000)
+            
+        ystat = ClassImbalance(dat, plot = plot_distributions)
         distributions.append(ystat)  
         SplitSets.append(dat)  
+    SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
+    
+    #2. TODO : A value is trying to be set on a copy of a slice from a DataFrame.
+    #          Try using .loc[row_indexer,col_indexer] = value instead
+    
+    ### End of Outlier Correction
+    
+    ### Feature dropout
+    # Remove redundant features with constant values in each set 
+    for i, dat in enumerate(SplitSets):
+        features = data.columns.tolist()
+        redF = constant_features(dat[features], frac_constant_values = 0.99)
+        print('Removed constant features ' + f'{redF} '  'for SplitSets ' f'{i}' )
+        dat = dat.drop(columns = redF)
+        features.remove('num_rays')
+        features = [f for f in features if f not in redF]
+        
+        if plot_correlations:
+            PlotCorrelation(dat, features, annotate = True)
+
     
     return SplitSets, distributions
-    
-"""
-    #LABEL TARGET AND FEATURES
-    target = 'num_rays'
-    features = data.columns.tolist()
-    features.remove(target)
-    
-    redundant_feat = []
-    alldata_new = []
-    features_new = []
-    # Remove redundant features in separate dataset (with constant values)
-    for i, dat in enumerate(SplitSets):
-        #corr_matrix = dat[features].corr(method = 'spearman').abs()
-        redF = constant_features(dat[features], frac_constant_values = 0.90)
-        redundant_feat.append(redF)
-        alldata_new.append(dat.drop(columns = redF))
-        featnames = [x for x in features if x not in redF]
-        features_new.append(featnames)
-                    
-        
-    features = features_new
-    SplitSets = alldata_new
 
+def TrainTestSplit(data, save = False):
     # divide dataset into test & training subsets
-    seed = 233
-    test_size = 0.25
+    predictors = [x for x in data.columns if x not in target]
+    X_train, X_test, y_train, y_test = train_test_split(data[predictors], data[target], test_size=test_size, random_state=seed, stratify =  data[target])
+    # stratified split ensures that the class distribution in training\test sets is as similar as possible
+    dtrain = pd.concat((X_train, y_train), axis = 1)
+    dtest = pd.concat((X_test, y_test), axis = 1)
     
-    dtrain = []
-    dtest = []
-    
-    for i, dat in enumerate(alldata):
-        X_train, X_test, y_train, y_test = train_test_split(dat[features[i]], dat[target], test_size=test_size, random_state=seed, stratify = dat[target])
-        # stratified split makes sure that class distribution in training\test sets is as similar as possible
-        dtrain.append(pd.concat((X_train, y_train), axis = 1))
-        dtest.append(pd.concat((X_test, y_test), axis = 1))
-        corr_matrix = dat[features[i]].corr(method = 'spearman').abs()
-        
-        if plot_corr:
-            plot_correlation(corr_matrix)
+    if save:
+        # save into separate .csv files
+        filepath = os.getcwd()+'\data\\xgboost\\'
+        dtest.to_csv(filepath + 'dtest_25.csv', index = None, header = True)
+        dtrain.to_csv(filepath + 'dtrain_75.csv', index = None, header = True)
+        #dtrainup.to_csv(filepath + 'dtrainup.csv', index = None, header = True)
+        #dtrain_smot.to_csv(filepath + 'dtrain_smot.csv', index = None, header = True)
+        print("New datafiles have been created!")
 
-    
-    """
-     #, dtrain, dtest, features
 
-def constant_features(X, frac_constant_values = 0.90):
-    # Get number of rows in X
-    num_rows = X.shape[0]
-    # Get column labels
-    allLabels = X.columns.tolist()
-    # Make a dict to store the fraction describing the value that occurs the most
-    constant_per_feature = {label: X[label].value_counts().iloc[0]/num_rows for label in allLabels}
-    # Determine the features that contain a fraction of missing values greater than threshold
-    labels = [label for label in allLabels if constant_per_feature [label] > frac_constant_values]
-    
-    return labels
+"""
+# Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
+#categorical_var = np.hstack([2, np.arange(5,33)])
+categorical_var = np.hstack([2,np.arange(5,33)])
+minority = np.arange(4,17)
+samplenr = 250
+population_target = dict(zip(minority, (np.ones(len(minority))*samplenr).astype(int)))
+smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
+#smote_nc_max = SMOTENC(categorical_features=categorical_var, sampling_strategy='auto', random_state=42)
+X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
+dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
+dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
 
-def plot_correlation(corrmat):
-    for c in corrmat:
-        # Set font scale
-        sns.set(font_scale = 1)
-        # Set the figure size
-        f, ax = plt.subplots(figsize=(12, 12))
-        sns.heatmap(c, cmap= 'YlGnBu', square=True)
-        # Tight layout
-        f.tight_layout()
-        
+"""
+
 
 # XGBOOST DATABASE PROCESSING (incl. feature selection)
 # load data
@@ -283,8 +274,6 @@ path = os.getcwd()+'\data\\'
 rawdata = LoadData(path)
 data = FeatDuct(rawdata, Input_Only = True)
 y = data['num_rays']
-target = 'num_rays'
 
 data_enc = EncodeData(data)
-ClassImbalance(data,target, plot = True)
-SplitSets, data_dist = CreateSplits(data, level_out = 1, replace=True)
+SplitSets, data_dist = CreateSplits(data_enc, level_out = 1, replace=True, plot_distributions = False, plot_correlations = False)
