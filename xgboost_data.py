@@ -14,9 +14,13 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTENC
 import seaborn as sns
+import xgboost as xgb
 
 from ssp_features import SSPGrad, SSPStat, SSPId
 from data_prep import LoadData, FeatDuct
+from xgb_mylib import ModelFit
+
+
 
 """
 This separate piece of code takes care of data pre-processing. 
@@ -219,22 +223,23 @@ def CreateSplits(data, level_out = 1, replace = True, plot_distributions = False
     
     ### Feature dropout
     # Remove redundant features with constant values in each set 
-    for i, dat in enumerate(SplitSets):
+    for i in range(len(SplitSets)):
         features = data.columns.tolist()
-        redF = constant_features(dat[features], frac_constant_values = 0.99)
+        redF = constant_features(SplitSets[i][features], frac_constant_values = 0.99)
         print('Removed constant features ' + f'{redF} '  'for SplitSets ' f'{i}' )
-        dat = dat.drop(columns = redF)
+        SplitSets[i] = SplitSets[i].drop(columns = redF)
         features.remove('num_rays')
         features = [f for f in features if f not in redF]
         
         if plot_correlations:
-            PlotCorrelation(dat, features, annotate = True)
+            PlotCorrelation(SplitSets[i], features, annotate = True)
 
     
     return SplitSets, distributions
 
-def TrainTestSplit(data, save = False):
+def TrainTestSplit(data, save = False, seed = 27, test_size = 0.25):
     # divide dataset into test & training subsets
+    target = 'num_rays'
     predictors = [x for x in data.columns if x not in target]
     X_train, X_test, y_train, y_test = train_test_split(data[predictors], data[target], test_size=test_size, random_state=seed, stratify =  data[target])
     # stratified split ensures that the class distribution in training\test sets is as similar as possible
@@ -249,6 +254,8 @@ def TrainTestSplit(data, save = False):
         #dtrainup.to_csv(filepath + 'dtrainup.csv', index = None, header = True)
         #dtrain_smot.to_csv(filepath + 'dtrain_smot.csv', index = None, header = True)
         print("New datafiles have been created!")
+    
+    return dtrain, dtest
 
 
 """
@@ -277,3 +284,29 @@ y = data['num_rays']
 
 data_enc = EncodeData(data)
 SplitSets, data_dist = CreateSplits(data_enc, level_out = 1, replace=True, plot_distributions = False, plot_correlations = False)
+
+xgb_class = xgb.XGBClassifier(
+        silent = 0,
+        learning_rate = 0.1, #0.05
+        n_estimators=1000, #3000
+        max_depth=10, #9 updated 
+        min_child_weight=0.0, #1 updated
+        min_split_loss=0.0, #0 updated
+        subsample= 1.0,
+        colsample_bytree=1.0,
+        reg_alpha = 0.0,
+        reg_lambda= 1.0,
+        objective= 'multi:softprob',
+        seed=27,
+        n_jobs = -1
+        )
+"""
+for subset in SplitSets:
+    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.25)
+    target = 'num_rays'
+    features = subset.columns
+    features.remove(target)
+    bst_model, fullresult_class, output_class = \
+    ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+    verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+    """
