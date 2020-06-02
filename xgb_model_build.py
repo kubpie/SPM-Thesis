@@ -20,8 +20,8 @@ import os
 path = os.getcwd()+'\data\\'
 rawdata = LoadData(path)
 data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
-y = data['num_rays']
-
+data_enc = EncodeData(data)
+target = 'num_rays'
 
 xgb_class = xgb.XGBClassifier(
         silent = 0,
@@ -39,16 +39,23 @@ xgb_class = xgb.XGBClassifier(
         n_jobs = -1
         )
 
-
-data_enc = EncodeData(data)
+### XGB with splits on slope
 SplitSets, data_dist = CreateSplits(data_enc, level_out = 1, replace=True, plot_distributions = False, plot_correlations = False)
-
 for subset in SplitSets:
     
     [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.25)
-    target = 'num_rays'
-    features = subset.columns.tolist()
-    features.remove(target)
+    
+    sub_features = subset.columns.tolist()
+    sub_features.remove(target)
     bst_model, fullresult_class, output_class = \
-    ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+    ModelFit(xgb_class, dtrain, dtest, sub_features, target, early_stop = 100,
     verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+
+
+### XGB wihout splits
+features = data_enc.columns.tolist()
+features.remove(target)
+[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
+bst_model, fullresult_class, output_class = \
+ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)

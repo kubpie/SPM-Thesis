@@ -33,7 +33,7 @@ $ssp isa SSP-vec, has location $loc, has season $ses, has mean_SSP $mssp, has st
 $conv($scn, $ray) isa convergence;
 $srcp($scn, $src, $bs1) isa src-position;
 $bathy($scn, $x) isa bathymetry, has bottom_type $bt;
-$x has length $l, has attribute $a;
+$x has attribute $a;
 $speed($scn, $ssp) isa sound-speed;
 $duct($ssp, $y) isa SSP-channel;
 $y has attribute $b;
@@ -45,4 +45,4 @@ $src, $ds, $srcp, $bs1, $dstart, $l,
 $bathy, $x, $bt, $a,
 $ssp, $speed, $loc, $ses, $mssp, $sdssp, $mgrad, $sdgrad, $sspval,
 $duct, $y, $b;
-offset 0; limit 100;
+offset 0; limit 150;

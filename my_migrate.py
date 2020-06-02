@@ -177,7 +177,7 @@ def SSPVec(SSP_Input, SSP_Stat):
     maxdepth = [50, 150, 200, 250, 350, 450, 600, 750, 900, 1050, 1200, 1500]
     for ssp in SSP_Input.iloc[:,1:].columns:
         for dmax in maxdepth:
-                    graql_queries.append(SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat))    
+            graql_queries.append(SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat))    
     return graql_queries
 
 def Source(data):

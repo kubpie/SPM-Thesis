@@ -77,72 +77,71 @@ def FeatDuct(data, Input_Only = True):
         data = data.drop(columns = duct_cols)
     return data
 
-def FeatBathySSP(data):
-    rmax = 44000
-    dmax = 1500
-    
-    path = r'C:\Users\kubap\Documents\THESIS\DATA\\'
+def FeatBathySSP(data, path):
 
-    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-    depth = ssp['DEPTH'].values.tolist()
     
-    dmin = data['water_depth_min'].values
-    profile = data['profile'].values
-    slope = data['wedge_slope'].values
-    srcdepth = data['source_depth'].values
-    srcssp = data['SSP_source'].values
+    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
+    depth = ssp['DEPTH'].values.tolist()
+
+    #dmin = data['water_depth_min'].values
+    #profile = data['profile'].values
+    #slope = data['wedge_slope'].values
     
     cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector 
     weight = np.zeros([len(data),len(depth)]) #weights on the SSP
     wedge = np.zeros([len(data),2]) #wedge parameters, bathymetry info
-    area = np.zeros([len(data),4]) #duct area parameters 
-    src = np.zeros([len(data),2]) #source-to-channel dimension ratios
     
-    for row in range(len(data)):
-        d = min(depth, key=lambda x:abs(x-dmin[row]))
-        idx = depth.index(d)+1
-        cmat[row,0:idx] = ssp[profile[row]].iloc[0:idx]
-        weight[row,0:idx] = 1.0
+    for dmin, dmax, profile, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['profile'], data['wedge_slope'], range(len(data)) ):
         
-        src[row,0] = srcdepth[row]/dmin[row] 
-        d300 = min(depth, key=lambda x:abs(x-300))
-        idx300 = depth.index(d300)
-        avg300 = np.mean(ssp[profile[row]].iloc[:idx300])
-        src[row,1] = srcssp[row]/avg300    #ssp_source/mean ssp of 300m depth, src pos goes only up to 300m so it indicated wheter src is in the duct
-          
-        area[row,0] = 0
-        area[row,1] = 0.5
-        area[row,2] = 0.5
-        area[row,3] = rmax*dmin[row]
+        ### Wedge Loop
+        if slope == 0 or slope == -2:
+            dstart = dmin
+            dend = dmax
+        else:
+            dstart = dmax
+            dend = dmin 
+            
+        find_lenflat = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_flat']
+        lenflat = find_lenflat.values[0]        
+        
+        find_lenslope = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_slope']
+        lenslope = find_lenslope.values[0]        
+
+        wedge[row, 0] = lenflat
+        wedge[row, 1] = lenslope
+        
+        ### SSP-vec Loop
+        
+        # d is a depth approximation in case that ssp sampling doesn't match the grid in Bellhop
+        d = min(depth, key=lambda x:abs(x-dmin))
+        # idx matches the index of ssp-vec entry with max_depth in each scenarion
+        # so in flat-bottom scn only a part of ssp is used
+        idx = depth.index(d)+1
+        
+        if slope == 0:
+            weight[row,0:idx] = 1.0
+            cmat[row,0:idx] = ssp[profile].iloc[0:idx]
                 
-        if slope[row] != 0: 
-            for dz in range(idx,len(depth)):
-                wedge_range = np.round((dmax-dmin[row])/np.tan(np.deg2rad(abs(slope[row]))))
+        else:
+            rmax = 44000
+            dmax = 1500 
+            for dz in range(len(depth)):
+                wedge_range = np.round((dmax-dmin)/np.tan(np.deg2rad(abs(slope))))
                 start_wedge = 0.5*(rmax - wedge_range)
-                ds = np.round((dmax-depth[dz])/np.tan(np.deg2rad(abs(slope[row]))))
+                ds = np.round((dmax-depth[dz])/np.tan(np.deg2rad(abs(slope))))
                 
-                #SSP weight matrix
-                gamma = 1.0
-                weight[row,dz] = ((rmax - gamma*(start_wedge+wedge_range-ds))/rmax) #weight proportional to the area covered by SSP
-                cmat[row,dz] = ssp[profile[row]].iloc[dz]*weight[row,dz]
-    
-                if slope[row] > 0:
-                    wedge[row,0] = start_wedge
-                    wedge[row,1] = start_wedge + wedge_range
-                    area[row,0] = (0.5*(wedge_range)*(dmax-dmin[row]))+wedge_range*dmin[row]
-                    area[row,1] = dmax*start_wedge
-                    area[row,2] = dmin[row]*(rmax - start_wedge - wedge_range)
-                    area[row,3] = sum(area[row,0:3]) #total area
-                    src[row,0] = srcdepth[row]/dmax
-    
-                else:
-                    wedge[row,0] = start_wedge
-                    wedge[row,1] = start_wedge + wedge_range
-                    area[row,0] = (0.5*(abs(wedge_range))*(dmax-dmin[row]))+abs(wedge_range)*dmin[row]
-                    area[row,1] = dmin[row]*abs(start_wedge)
-                    area[row,2] = dmax*(rmax - abs(start_wedge) - abs(wedge_range))
-                    area[row,3] = sum(area[row,0:3]) #total area
-                    src[row,0] = srcdepth[row]/dmin[row] 
+                # SSP weight matrix for changing the values of SSP-vec with respect to 
+                # 'totale coverage' of the water column, so kinda fittign on the bathymetry shape
+                # The weight matrix influence is controlled by weight-parameter
+                # gamma! If gamma = 0/0 weight is 1.0 everywhere, effectively turning off the 
+                # influence of the weight matrix
+                
+                gamma = 0.0
+                
+                weight[row,dz] = ((rmax - gamma*(start_wedge+wedge_range-ds))/rmax) 
+                cmat[row,dz] = ssp[profile].iloc[dz]*weight[row,dz]
+           
                               
     colnames = []         
     for i in range(len(depth)):
@@ -151,17 +150,11 @@ def FeatBathySSP(data):
     df_cmat.columns = colnames
     
     df_wedge = pd.DataFrame(wedge)
-    df_wedge.columns = ['r1','r2']
-    
-    df_area = pd.DataFrame(area)
-    df_area.columns = ['wedge_area','inlet_area','outlet_area', 'total_area'] 
-    
-    df_src = pd.DataFrame(src)
-    df_src.columns = ['src_pos_ratio', 'src_ssp_avg300']
-    
+    df_wedge.columns = ['len_flat','len_slope']
+
     #Overwrite data fiel with new feature columns
     data = data.drop(columns = 'profile') 
-    data = pd.concat([data, df_src, df_area['total_area'], df_cmat], axis=1, sort=False) #df_wedge is out       
+    data = pd.concat([data, df_wedge, df_cmat], axis=1, sort=False)    
 
     return data
 
@@ -169,6 +162,7 @@ def EncodeData(data):
     SeasonList = []
     LocationList = []
     
+    # Split 'profile' into features 'location' and 'season' and remove 'profile' permamently
     for ssp in data['profile']:
         seasons = ['Winter', 'Spring', 'Summer', 'Autumn']
         season = next((s for s in seasons if s in ssp), False)
@@ -343,8 +337,10 @@ dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
 import os
 path = os.getcwd()+'\data\\'
 
-rawdata = LoadData(path)
 ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
 ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
+
+rawdata = LoadData(path)
 data = FeatDuct(rawdata, Input_Only = True)
+data_sspbathy = FeatBathySSP(data, path)
