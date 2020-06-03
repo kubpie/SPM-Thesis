@@ -77,22 +77,13 @@ def FeatDuct(data, Input_Only = True):
         data = data.drop(columns = duct_cols)
     return data
 
-def FeatBathySSP(data, path):
-
+def FeatBathy(data,path):
     
-    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
     Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
-    depth = ssp['DEPTH'].values.tolist()
-
-    #dmin = data['water_depth_min'].values
-    #profile = data['profile'].values
-    #slope = data['wedge_slope'].values
     
-    cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector 
-    weight = np.zeros([len(data),len(depth)]) #weights on the SSP
     wedge = np.zeros([len(data),2]) #wedge parameters, bathymetry info
     
-    for dmin, dmax, profile, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['profile'], data['wedge_slope'], range(len(data)) ):
+    for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ):
         
         ### Wedge Loop
         if slope == 0 or slope == -2:
@@ -111,6 +102,24 @@ def FeatBathySSP(data, path):
         wedge[row, 0] = lenflat
         wedge[row, 1] = lenslope
         
+     
+        
+    df_wedge = pd.DataFrame(wedge)
+    df_wedge.columns = ['len_flat','len_slope']
+    data = pd.concat([data, df_wedge,], axis=1, sort=False)    
+    
+    return data
+    
+def FeatSSP(data, path):
+    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    depth = ssp['DEPTH'].values.tolist()
+    
+    cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector 
+    weight = np.zeros([len(data),len(depth)]) #weights on the SSP
+    
+    
+    for dmin, dmax, profile, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['profile'], data['wedge_slope'], range(len(data)) ):
+
         ### SSP-vec Loop
         
         # d is a depth approximation in case that ssp sampling doesn't match the grid in Bellhop
@@ -148,16 +157,46 @@ def FeatBathySSP(data, path):
         colnames.append("SSPd-"+str(depth[i]))    
     df_cmat = pd.DataFrame(cmat)
     df_cmat.columns = colnames
-    
-    df_wedge = pd.DataFrame(wedge)
-    df_wedge.columns = ['len_flat','len_slope']
-
-    #Overwrite data fiel with new feature columns
-    data = data.drop(columns = 'profile') 
-    data = pd.concat([data, df_wedge, df_cmat], axis=1, sort=False)    
-
+    data = pd.concat([data, df_cmat], axis=1, sort=False)    
+    data = data.drop(columns = 'profile')
     return data
 
+def FeatSSPId(data, path, src_cond):
+    
+    ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
+    # beacause 0 is a meaningful value, to allocate space, use an array of NaNs
+    dat = np.empty([len(data), len(ssp_prop.columns)])
+    dat[:,:] = np.nan
+    df_sid = pd.DataFrame(dat, columns = ssp_prop.columns)
+    
+    for profile,dmax,row in zip(data['profile'], data['water_depth_max'], range(len(data))):
+        match = ssp_prop.loc[(profile == ssp_prop['SSP']) & (dmax == ssp_prop['dmax']), :]
+        if not match.empty:
+            df_sid.loc[row,:] = match.values[0]
+            
+    
+    df_sid = df_sid.drop(columns = ['SSP', 'dmax'])
+    data = pd.concat([data, df_sid], axis=1, sort=False)
+    
+    # With this condition the src position will be checked to indicate whether sound propagates 
+    # in specific duct type SD/BD/DC and not only if those ducts exists on a given SSP
+    # This includes EXPERT KNWOLEDGE in creation of feature vector beyond SSP identification
+    # The SSP_id feature entries of the table will be turned to NaN if the conditions are violated
+    # In effect the SSP_id features are more sparse but represent the 'reality' more precisely
+    if src_cond:
+        dccols = [col for col in data.columns if 'DC' in col ]
+        sldcols = [col for col in data.columns if 'SLD' in col ]
+  
+        for src, sld, dctop, dcbot, row in zip(data['source_depth'], data['SLD_depth'], data['DC_top'], data['DC_bott'], range(len(data))):
+            # no SD/BD propagation
+            if sld < 30 or src >= sld: 
+                data.loc[row,sldcols] = np.nan   
+            #no DC propagation
+            if src < dctop or src > dcbot:
+                data.loc[row,dccols] = np.nan
+                
+    return data
+    
 def EncodeData(data):
     SeasonList = []
     LocationList = []
@@ -193,7 +232,7 @@ def EncodeData(data):
     return data_enc 
 
 
-def CreateSplits(data, level_out = 1, replace = True, plot_distributions = False, plot_correlations = False):
+def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False):
     """
     1. Create 3 separate data splits based on the 'wedge_slope' value
     --- OUTLIERS ---
@@ -232,41 +271,51 @@ def CreateSplits(data, level_out = 1, replace = True, plot_distributions = False
         labels = [label for label in allLabels if constant_per_feature [label] > frac_constant_values]
         
         return labels
-        
-    #check the datasets statistics: class popualtion, ...
-    for t, dat in enumerate([data_00, data_2U, data_2D]):
-        ystat = ClassImbalance(dat, plot = False)
-        distributions.append(ystat)
-        classlist = list(ystat.keys())
-        for r, rayclass in enumerate(ystat):
-            ystatnew = ClassImbalance(dat, plot = False)
-            #remove outliers when sample size < 1% of total samples
-            if ystatnew[rayclass][1] < level_out:              
-                if replace and r <= len(ystat)-3:
-                    propagated_class = ystat[classlist[r]][1] + ystat[classlist[r+1]][1]
-                    if propagated_class >= level_out:
-                        dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
-                    else:
-                        dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
-                        propagated_class = ystat[classlist[r+1]][1] + ystat[classlist[r+2]][1]
+    
+    # using more articulate names for optins in the func. def only
+    replace = replace_outliers
+    remove = remove_outliers
+    if remove == False and replace != True:
+        replace = remove #can't replace without starting remove procedure
+                        #remove = False means no interruption into original distr.
+    if remove == False and replace == True:
+        print('Set remove to True, to allow replacement. This will allow to remove empty classes.')
+        print('No outliers have been corrected')
+    if remove:
+        #check the datasets statistics: class popualtion, ...
+        for t, dat in enumerate([data_00, data_2U, data_2D]):
+            ystat = ClassImbalance(dat, plot = False)
+            distributions.append(ystat)
+            classlist = list(ystat.keys())
+            for r, rayclass in enumerate(ystat):
+                ystatnew = ClassImbalance(dat, plot = False)
+                #remove outliers when sample size < 1% of total samples
+                if ystatnew[rayclass][1] < level_out:              
+                    if replace and r <= len(ystat)-3:
+                        propagated_class = ystat[classlist[r]][1] + ystat[classlist[r+1]][1]
                         if propagated_class >= level_out:
-                            dat.loc[dat['num_rays'] == classlist[r+1], ('num_rays')][1:] = classlist[r+2] 
-
+                            dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
+                        else:
+                            dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
+                            propagated_class = ystat[classlist[r+1]][1] + ystat[classlist[r+2]][1]
+                            if propagated_class >= level_out:
+                                dat.loc[dat['num_rays'] == classlist[r+1], ('num_rays')][1:] = classlist[r+2] 
+    
+                            else:
+                                dat = remove_outliers(dat,rayclass)
+        
+                    if replace and r == len(ystat)-2: #second last class can be propagated only once
+                        propagated_class = ystat[classlist[r]][1] + ystat[classlist[r+1]][1]
+                        if propagated_class >= level_out:
+                            dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
                         else:
                             dat = remove_outliers(dat,rayclass)
-    
-                if replace and r == len(ystat)-2: #second last class can be propagated only once
-                    propagated_class = ystat[classlist[r]][1] + ystat[classlist[r+1]][1]
-                    if propagated_class >= level_out:
-                        dat.loc[dat['num_rays'] == rayclass, ('num_rays')] = classlist[r+1] 
-                    else:
+                                
+                    if replace and r == len(ystat)-1: #last class can be only removed if it's still < 1%
                         dat = remove_outliers(dat,rayclass)
-                            
-                if replace and r == len(ystat)-1: #last class can be only removed if it's still < 1%
-                    dat = remove_outliers(dat,rayclass)
-                    
-                if not replace: #if replace = False then always remove outliers
-                    dat = remove_outliers(dat,rayclass)
+                        
+                    if not replace: #if replace = False then always remove outliers
+                        dat = remove_outliers(dat,rayclass)
         
         #1. TODO: Dirty fix for dat00, for some reason 6000 gets propagated all classes from below
         if t == 0:
@@ -275,7 +324,7 @@ def CreateSplits(data, level_out = 1, replace = True, plot_distributions = False
         ystat = ClassImbalance(dat, plot = plot_distributions)
         distributions.append(ystat)  
         SplitSets.append(dat)  
-    SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
+        SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
     
     #2. TODO : A value is trying to be set on a copy of a slice from a DataFrame.
     #          Try using .loc[row_indexer,col_indexer] = value instead
@@ -339,8 +388,8 @@ path = os.getcwd()+'\data\\'
 
 ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
-ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
 
 rawdata = LoadData(path)
 data = FeatDuct(rawdata, Input_Only = True)
-data_sspbathy = FeatBathySSP(data, path)
+data_bathy = FeatBathy(data, path)
+data_ssp = FeatSSP(data, path)

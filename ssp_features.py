@@ -282,6 +282,7 @@ def SSPId(SSP_Input, path, plot = False, save = False):
         # In depth loop
         #4. (Optional) Plot SSP with props for each depth max   
         if plot == True:
+            
             fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
             axes = axes.flat
             axes[0].invert_yaxis()
@@ -373,10 +374,9 @@ def SSPId(SSP_Input, path, plot = False, save = False):
     ### End of SSP Identification
 
 
-#path = #change path #r'C:\Users\kubap\Documents\THESIS\DATA\\'
-#import os
-#path = os.getcwd()+'\data\\'
-#SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+import os
+path = os.getcwd()+'\data\\'
+SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False)
 #SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
 #SSP_Prop = SSPId(SSP_Input, path, plot = False, save = False)
@@ -405,14 +405,29 @@ if plot_sampling == True:
         axes[i].plot(SSP_Input.iloc[:,1:][ssp][depth.isin(max_depth)], depth[depth.isin(max_depth)], linewidth = 1, label = 'Subsampled Sound Speed Profile')
         axes[i].set_title("{}. {}".format(i, ssp))
 
-from numpy.polynomial import polynomial as polyfit
-
+from numpy.polynomial import Polynomial as polyfit
 def PolyfitSSP(SSP_Input):
     depth = SSP_Input.iloc[:,0]
     ssp_input = SSP_Input.iloc[:,1:]
-    max_depth = [50, 150, 250, 350, 450, 600, 750, 900, 1050, 1200, 1500]
-    results = []
+    resid = []
+    coeff = []
     for ssp in ssp_input.columns:
-        for deg in range(3,6):
-            res = polyfit(ssp_input[ssp], depth, deg, full = True)
-            return res
+        for deg in range(3,10):
+            c, [r, _, _, _] = polyfit._fit(ssp_input[ssp], depth, deg, full = True)
+            coeff.append(c)
+            resid.append(r)
+    return coeff, resid
+
+cff, res = PolyfitSSP(SSP_Input)
+deg = range(3,10)
+ssp = []
+for it in range(len(SSP_Input.columns)-1):
+    ssp.append([cff[it:it+7],res[it:it+7]])
+"""    
+fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
+axes = axes.flat
+axes[0].invert_yaxis()
+for i, s in enumerate(ssp):
+    axes[i].plot(deg, np.ravel(s[1]), linewidth = 2, label = 'Sound Speed Profile' )
+    #axes[i].set_title("{}. {}".format(i, ssp))
+"""
