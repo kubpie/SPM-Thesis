@@ -82,6 +82,7 @@ model = xgb_class
 eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for early stopping
 feval = f1_eval_class
 early_stop = 100
+"""
 ### ICE PLOT FOR THE WHOLE DATASET
 # Model 'fit' before 'predict' inside ICE plot function
 
@@ -100,8 +101,8 @@ print(f'Best iteration: {model_trained.best_iteration}\nF-score: {1-model_traine
 
 # Ice plot for the whole dataset
 ICEdict = ICEPlot(Xt, model_trained, ice_features)
-
 """
+
 ### ICE PLOTS FOR SPLITS
 SplitSets ,_ = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
 for s,subset in enumerate(SplitSets):
@@ -109,12 +110,12 @@ for s,subset in enumerate(SplitSets):
     sub_features = subset.columns.tolist()
     sub_features.remove(target)
     ice_sub_features = [ feat for feat in sub_features if feat not in locations + seasons ]
-    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.20)
+    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.20) #reduced training/test split to 20% because smaller datasets
+
     Xs = dtrain[sub_features]
     ys = dtrain[target]
     Xst = dtest[sub_features]
     yst = dtest[target]
-    #reduced training/test split to 20% because smaller datasets
 
     eval_set = [(Xs.values, ys.values),(Xst.values, yst.values)]
     submodel_trained = model.fit(Xs.values, ys.values, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
@@ -124,14 +125,58 @@ for s,subset in enumerate(SplitSets):
     # Ice plot for the whole dataset
     ICEdict = ICEPlot(Xst, submodel_trained, ice_sub_features)
 
-
+"""
 # an attempt to split the plots further down on wdep_min
 # there's a clear correlation between shallow channel and high ray nr
 # however there are also not enough sample to create a separate model
-
-SplitSets_test, data_dist = CreateSplits(data_ssp, level_out = 1, remove_outliers = False, replace_outliers = False, plot_distributions = False, plot_correlations = False)
-split_neg2 = SplitSets_test[2]
-split_neg2_shallow = split_neg2.loc[data['water_depth_min'] == 50] #only 50m shadowing problem
-
-#sns.pairplot(SplitSets[2])
 """
+
+SplitSets_test, data_dist = CreateSplits(data_enc, level_out = 1, remove_outliers = False, replace_outliers = False, plot_distributions = False, plot_correlations = False)
+split_neg2 = SplitSets_test[2]
+split_0 = SplitSets_test[0]
+split_neg2_shallow = split_neg2.loc[data['water_depth_min'] == 50] #only 50m shadowing problem
+split_0_shallow = split_0.loc[data['water_depth_min'] == 50]
+
+
+from collections import defaultdict
+import operator
+  
+for split in SplitSets_test:
+    ind_feature = 'water_depth_min'
+    f_ind = np.unique(split[ind_feature]).tolist()
+    f_dep = np.unique(split['num_rays']).tolist()
+    calc = pd.DataFrame(np.zeros([len(split),len(f_ind)]), columns = f_ind)
+    Fdict = dict.fromkeys(f_ind)
+    Fmean = dict.fromkeys(f_ind)
+    for fi in f_ind:
+        value_vec = split.loc[split['water_depth_min'] == fi,'num_rays']
+        yclass, ycount = np.unique(value_vec, return_counts=True)
+        yper = ycount/sum(ycount)*100
+
+        empty =  [ val for val in f_dep if val not in yclass ]
+        empty_it = [f_dep.index(it) for it in empty]        
+        ycount = ycount.tolist()
+        yper = yper.tolist()
+        for it in empty_it:
+            ycount.insert(it,0)
+            yper.insert(it,0)
+        y_population = dict(zip(f_dep, zip(ycount, yper)))
+        
+        Fdict[fi] = y_population 
+        Fmean[fi] = np.mean(value_vec)
+    
+    # TODO: Plot with 2 y-axes and mean value over the distributions
+    fig,ax1 = plt.subplots()
+    ax1.plot(list(Fmean.keys()), list(Fmean.values()), label = 'mean')
+    ax1.set_title(['Mean num. rays vs ' + ind_feature])
+    
+    Rdict = defaultdict(list)
+    for key in list(Fdict.keys()):
+        for ray in list(Fdict[key].keys()):
+            Rdict[ray].append(Fdict[key][ray][1])
+    
+    fig,ax = plt.subplots()
+    for raynr in list(Rdict.keys()    ):
+        ax.plot(list(Fdict.keys()), list(Rdict[raynr]), label = f'{raynr}')
+    ax.legend()
+
