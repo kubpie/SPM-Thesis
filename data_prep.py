@@ -319,15 +319,13 @@ def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers =
                     if not replace: #if replace = False then always remove outliers
                         dat = remove_outliers(dat,rayclass)
         
-        #1. TODO: Dirty fix for dat00, for some reason 6000 gets propagated all classes from below
-        if t == 0:
-            dat = remove_outliers(dat, 6000)
-            
-        ystat = ClassImbalance(dat, plot = plot_distributions)
-        distributions.append(ystat)  
-        SplitSets.append(dat)  
+              
+            ystat = ClassImbalance(dat, plot = plot_distributions)
+            distributions.append(ystat)  
+            SplitSets.append(dat)  
+        
         SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
-    
+        
     #2. TODO : A value is trying to be set on a copy of a slice from a DataFrame.
     #          Try using .loc[row_indexer,col_indexer] = value instead
     

@@ -54,7 +54,7 @@ def ICEPlot(data, model, features):
     fig = plot_ice_grid(train_ice_dfs, X, features,
                         ax_ylabel='Pred. Ray Num.', 
                         nrows=4, 
-                        ncols=5,
+                        ncols=4,
                         alpha=0.3, plot_pdp=True,
                         pdp_kwargs={'c': 'blue', 'linewidth': 2.0},
                         linewidth=0.5, c='dimgray')
@@ -96,6 +96,8 @@ data = FeatSSPId(data, path, src_cond = True)
 data_fin = FeatSSP(data, path)
 #data_fin = EncodeData(data)
 
+data_fin = data_fin.fillna(0)
+
 target = 'num_rays'
 features = data_fin.columns.tolist()
 features.remove(target)
@@ -124,14 +126,13 @@ eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for
 feval = f1_eval_class
 early_stop = 100
 
-model_trained = model.fit(X, y, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
+model_trained = model.fit(X.values, y.values, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
 results = model_trained.evals_result()
 print(f'Best iteration: {model_trained.best_iteration}\nF-score: {1-model_trained.best_score}')
 
 ice_features = [ feat for feat in features if "SSP" not in feat ]
 
 ICEdict1 = ICEPlot(Xt, model_trained, ice_features)
-#ICEdict2 = ICEPlot(X, model_trained, ice_features)
 
 # TODO: Modify ice/pdp plots to verify the correctness of prediction!
 # - Joris suggestion, gotta do.

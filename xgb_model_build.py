@@ -86,7 +86,7 @@ model = xgb_class
 # Adding Bathy features for each - filling missing info
 data = FeatBathy(data, path)
 
-
+"""
 ### 1. XGB wihout splits
 data_enc = EncodeData(data)
 features = data_enc.columns.tolist()
@@ -133,18 +133,19 @@ features.remove(target)
 _, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
-""""
+"""
+
 ### XGB with sub-problem splits on slope
-SplitSets, data_dist = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
-for subset in SplitSets:
+data_sspid_con = FeatSSPId(data, path, src_cond = True)
+data_ssp = FeatSSP(data_sspid_con, path)
+SplitSets, data_dist = CreateSplits(data_ssp, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
+for s,subset in enumerate(SplitSets):
     
-    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.25)
+    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.20)
     
     sub_features = subset.columns.tolist()
     sub_features.remove(target)
+    print(f'Training {s} split')
     _, _, _, = ModelFit(model, dtrain, dtest, sub_features, target, early_stop = 100,
-    verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
-"""
+    verbose=False, learningcurve = True, importance = True, plottree = False, savename = False)
 
-
-### ICE PLOTS
