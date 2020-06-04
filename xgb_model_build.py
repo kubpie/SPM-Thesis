@@ -11,7 +11,7 @@ from os import listdir
 
 import xgboost as xgb
 from xgb_mylib import ModelFit
-from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, FeatBathy, FeatSSP, FeatSSPId
+from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat
 
 
 # XGBOOST DATABASE PROCESSING (incl. feature selection)
@@ -64,7 +64,7 @@ model = xgb_class
     - add other features like SSP-id
     - encode the profile with one-hot-encoder 
 3b. if replacing profile with ssp:
-    - make sure to remove the profile inside FeatSSP() function
+    - make sure to remove the profile inside FeatSSPvec() function
     - no need to encode, because no more categorical vars
 4. update feature column name list:    
     features = data_enc.columns.tolist()
@@ -96,7 +96,7 @@ _, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 ### 2. XGB with SSP-vec directly in feature vector (implicit SSP features) & missin bathy info 
-data_ssp = FeatSSP(data, path)
+data_ssp = FeatSSPvec(data, path)
 features = data_ssp.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
@@ -125,7 +125,7 @@ verbose=True, learningcurve = True, importance = True, plottree = False, savenam
 
 # 4. sspvec + sspid with duct check
 data_sspid_con = FeatSSPId(data, path, src_cond = True)
-data_ssp = FeatSSP(data_sspid_con, path)
+data_ssp = FeatSSPvec(data_sspid_con, path)
 features = data_ssp.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
@@ -135,17 +135,23 @@ verbose=True, learningcurve = True, importance = True, plottree = False, savenam
 
 """
 
-### XGB with sub-problem splits on slope
+### XGB with sub-problem splits on slope 
+#and without SSP-vec data because it makes the results worse and harder to interpret
+
 data_sspid_con = FeatSSPId(data, path, src_cond = True)
-data_ssp = FeatSSP(data_sspid_con, path)
-SplitSets, data_dist = CreateSplits(data_ssp, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
+#data_ssp = FeatSSPvec(data_sspid_con, path)
+data_ssp = FeatSSPStat(data_sspid_con,path)
+data_enc = EncodeData(data_ssp)
+SplitSets, data_dist = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
 for s,subset in enumerate(SplitSets):
     
     [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.20)
-    
+    #reduced training/test split to 20% because smaller datasets
     sub_features = subset.columns.tolist()
     sub_features.remove(target)
     print(f'Training {s} split')
     _, _, _, = ModelFit(model, dtrain, dtest, sub_features, target, early_stop = 100,
     verbose=False, learningcurve = True, importance = True, plottree = False, savename = False)
+
+
 

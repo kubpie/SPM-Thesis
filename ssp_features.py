@@ -378,7 +378,7 @@ import os
 path = os.getcwd()+'\data\\'
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False)
-#SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
+#SSP_Stat = SSPStat(SSP_Input, path, plot = True, save = False)
 #SSP_Prop = SSPId(SSP_Input, path, plot = True, save = False)
 
 #######################################################################################
@@ -434,7 +434,7 @@ def PolyfitSSP(SSP_Input):
         best.append([best_it, best_r, best_c])
     
     return best, allres
-
+"""
 best, allres = PolyfitSSP(SSP_Input)
 deg = range(1,11)
 
@@ -455,3 +455,4 @@ for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
     axes[i].plot(ffit, znew)
     axes[i].plot(SSP_Input.iloc[:,i], z)
     axes[i].set_title("{}. {}".format(i, ssp))
+"""

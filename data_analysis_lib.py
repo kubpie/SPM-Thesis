@@ -8,6 +8,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from pycebox.ice import ice, ice_plot
+
 def ClassImbalance(data, plot = False):
     target = 'num_rays'
 
@@ -71,8 +73,57 @@ def PlotCorrelation(dat, features, annotate = True):
         # Tight layout
         f.tight_layout()
         plt.show() 
+
+def plot_ice_grid(dict_of_ice_dfs, data_df, features, ax_ylabel='', nrows=3, 
+                  ncols=3, figsize=(12, 12), sharex=False, sharey=True, 
+                  subplots_kws={}, rug_kws={'color':'k'}, **ice_plot_kws):
+    """A function that plots ICE plots for different features in a grid."""
+    fig, axes = plt.subplots(nrows=nrows, 
+                             ncols=ncols, 
+                             figsize=figsize,
+                             sharex=sharex,
+                             sharey=sharey,
+                             **subplots_kws)
+    # for each feature plot the ice curves and add a rug at the bottom of the 
+    # subplot
+    #max value for y-axis based on water-depth-min which goes through the whole range
+    ymax = dict_of_ice_dfs[features[0]].values.max()
+    
+    for f, ax in zip(features, axes.flatten()):
+        ice_plot(dict_of_ice_dfs[f], ax=ax, **ice_plot_kws)
+        # add the rug
+        sns.distplot(data_df[f], ax=ax, hist=False, kde=False, 
+                     rug=True, rug_kws=rug_kws)
+        #ax.set_title('feature = ' + f)
+        ax.set_ylabel(ax_ylabel)
+        ax.set_ylim(0, ymax)
+        sns.despine()
         
-        
+    # get rid of blank plots
+    for i in range(len(features), nrows*ncols):
+        axes.flatten()[i].axis('off')
+    return fig
+
+def ICEPlot(data, model, features):
+    # create dict of ICE data for grid of ICE plots
+    train_ice_dfs = {feat: ice(data=data, column=feat, predict=model.predict) 
+                     for feat in features}
+    
+    fig = plot_ice_grid(train_ice_dfs, data, features,
+                        ax_ylabel='Pred. Ray Num.', 
+                        nrows=5, 
+                        ncols=4,
+                        alpha=0.3, plot_pdp=True,
+                        pdp_kwargs={'c': 'blue', 'linewidth': 2.0},
+                        linewidth=0.5, c='dimgray')
+    #fig.tight_layout()
+    fig.suptitle('ICE plot: Classification - all training data')
+    fig.subplots_adjust(top=0.89)
+    
+    return train_ice_dfs
+
+
+    
 from matplotlib.backends.backend_pdf import PdfPages
 
 def Multipage(filename, figs=None, dpi=200):

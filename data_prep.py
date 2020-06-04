@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split
 #from imblearn.over_sampling import SMOTENC
 
 from data_analysis_lib import ClassImbalance, PlotCorrelation, Multipage
+from ssp_features import SSPGrad, SSPStat, SSPId
 
 def LoadData(path): 
     
@@ -110,11 +111,11 @@ def FeatBathy(data,path):
     
     return data
     
-def FeatSSP(data, path):
+def FeatSSPvec(data, path):
     ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
     depth = ssp['DEPTH'].values.tolist()
     
-    cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector 
+    cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector   
     weight = np.zeros([len(data),len(depth)]) #weights on the SSP
     
     
@@ -158,7 +159,7 @@ def FeatSSP(data, path):
     df_cmat = pd.DataFrame(cmat)
     df_cmat.columns = colnames
     data = pd.concat([data, df_cmat], axis=1, sort=False)    
-    data = data.drop(columns = 'profile')
+    #data = data.drop(columns = 'profile')
     return data
 
 def FeatSSPId(data, path, src_cond):
@@ -196,7 +197,23 @@ def FeatSSPId(data, path, src_cond):
                 data.loc[row,dccols] = np.nan
                 
     return data
+
+def FeatSSPStat(data, path):
     
+    SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
+    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    depth = ssp['DEPTH'].values.tolist()
+    
+    stats = ['mean_SSP','stdev_SSP','mean_grad','stdev_grad']
+    df_stat = pd.DataFrame(np.zeros([len(data), 4]), columns = stats)
+
+    for profile, dmax, row in zip(data['profile'], data['water_depth_max'], range(len(data))):                
+        df_stat.iloc[row,:] = SSP_Stat[profile].iloc[depth.index(dmax)].values
+    
+    data = pd.concat([data, df_stat], axis=1, sort=False)
+    
+    return data        
 def EncodeData(data):
     SeasonList = []
     LocationList = []
@@ -214,6 +231,7 @@ def EncodeData(data):
         
     for f, feature in enumerate([SeasonList, LocationList]):
         label_encoder = LabelEncoder()
+        alph_srt = sorted(np.unique(feature))
         feature = label_encoder.fit_transform(feature)
         feature = feature.reshape(feature.shape[0], 1)
         onehot_encoder = OneHotEncoder(sparse=False, categories='auto')
@@ -221,7 +239,6 @@ def EncodeData(data):
         #name = ["season", "location"]
         feature = pd.DataFrame(feature)
         #feature.columns = [name[f]+ "-" + str(i) for i in range(feature.shape[1])]
-        alph_srt = sorted(np.unique(feature))
         feature.columns = alph_srt
         data_enc = pd.concat((data_enc, feature), axis=1)
         
@@ -262,7 +279,7 @@ def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers =
         return dat
     
     
-    def constant_features(X, frac_constant_values = 0.90):
+    def constant_features(X, frac_constant_values = 0.95):
         # Get number of rows in X
         num_rows = X.shape[0]
         # Get column labels
@@ -392,4 +409,4 @@ ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
 rawdata = LoadData(path)
 data = FeatDuct(rawdata, Input_Only = True)
 data_bathy = FeatBathy(data, path)
-data_ssp = FeatSSP(data, path)
+data_ssp = FeatSSPvec(data, path)

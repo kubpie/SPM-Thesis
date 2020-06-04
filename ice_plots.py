@@ -5,7 +5,7 @@ Created on Mon Feb 17 15:05:10 2020
 @author: kubap
 """
 
-from pycebox.ice import ice, ice_plot
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,59 +16,50 @@ import seaborn as sns
 from imblearn.under_sampling import RandomUnderSampler
 from collections import Counter
 import os
-from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, FeatBathy, FeatSSP, FeatSSPId
+from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat
 from xgb_mylib import f1_eval_class
+from data_analysis_lib import PlotCorrelation, ICEPlot
 
-def plot_ice_grid(dict_of_ice_dfs, data_df, features, ax_ylabel='', nrows=3, 
-                  ncols=3, figsize=(12, 12), sharex=False, sharey=True, 
-                  subplots_kws={}, rug_kws={'color':'k'}, **ice_plot_kws):
-    """A function that plots ICE plots for different features in a grid."""
-    fig, axes = plt.subplots(nrows=nrows, 
-                             ncols=ncols, 
-                             figsize=figsize,
-                             sharex=sharex,
-                             sharey=sharey,
-                             **subplots_kws)
-    # for each feature plot the ice curves and add a rug at the bottom of the 
-    # subplot
-    for f, ax in zip(features, axes.flatten()):
-        ice_plot(dict_of_ice_dfs[f], ax=ax, **ice_plot_kws)
-        # add the rug
-        sns.distplot(data_df[f], ax=ax, hist=False, kde=False, 
-                     rug=True, rug_kws=rug_kws)
-        #ax.set_title('feature = ' + f)
-        ax.set_ylabel(ax_ylabel)
-        ax.set_ylim(0, 15000)
-        sns.despine()
-        
-    # get rid of blank plots
-    for i in range(len(features), nrows*ncols):
-        axes.flatten()[i].axis('off')
-    return fig
 
-def ICEPlot(data, model, features):
-    # create dict of ICE data for grid of ICE plots
-    train_ice_dfs = {feat: ice(data=data, column=feat, predict=model.predict) 
-                     for feat in features}
-    
-    fig = plot_ice_grid(train_ice_dfs, X, features,
-                        ax_ylabel='Pred. Ray Num.', 
-                        nrows=4, 
-                        ncols=4,
-                        alpha=0.3, plot_pdp=True,
-                        pdp_kwargs={'c': 'blue', 'linewidth': 2.0},
-                        linewidth=0.5, c='dimgray')
-    #fig.tight_layout()
-    fig.suptitle('ICE plot: Classification - all training data')
-    fig.subplots_adjust(top=0.89)
-    
-    return train_ice_dfs
 """"
 A PDP is the average of the lines of an ICE plot.
 Unlike partial dependence plots, ICE curves can uncover heterogeneous relationships.
 PDPs can obscure a heterogeneous relationship created by interactions. 
 PDPs can show you what the average relationship between a feature and the prediction looks like. This only works well if the interactions between the features for which the PDP is calculated and the other features are weak. In case of interactions, the ICE plot will provide much more insight.
 """
+
+path = os.getcwd()+'\data\\'
+rawdata = LoadData(path)
+data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
+data = FeatBathy(data, path)
+data = FeatSSPId(data, path, src_cond = True)
+data = FeatSSPStat(data, path)
+data_enc = EncodeData(data) #data with full features sspid, sspstat, but no ssp-vec
+
+data_enc = data_enc.fillna(0) #ICE plot func has problems with NaNs :(
+
+target = 'num_rays'
+features = data_enc.columns.tolist()
+features.remove(target)
+seasons = ['Autumn', 'Spring', 'Summer', 'Winter']
+locations = ['Labrador-Sea', 'Mediterranean-Sea', 'North-Pacific-Ocean',
+       'Norwegian-Sea', 'South-Atlantic-Ocean', 'South-Pacific-Ocean']
+ice_features = [ feat for feat in features if feat not in locations + seasons ]
+
+"""
+# Undersampling of the TEST SET to avoid overcrowding the ICE plot
+# It reduces all clases to the size of the smallest class 7000: 20 samples
+undersample = RandomUnderSampler(sampling_strategy='auto')
+Xt_under, yt_under = undersample.fit_resample(Xt, yt)
+Xt_under_df = pd.DataFrame(Xt_under, columns = features)
+print(Counter(yt))
+print(Counter(yt_under))
+"""
+
+### TODO: Data correlations?
+
+
+### XGB MODEL SETUP
 
 xgb_class = xgb.XGBClassifier(
         silent = 0,
@@ -88,55 +79,59 @@ xgb_class = xgb.XGBClassifier(
 
 model = xgb_class
 
-path = os.getcwd()+'\data\\'
-rawdata = LoadData(path)
-data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
-data = FeatBathy(data, path)
-data = FeatSSPId(data, path, src_cond = True)
-data_fin = FeatSSP(data, path)
-#data_fin = EncodeData(data)
+eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for early stopping
+feval = f1_eval_class
+early_stop = 100
+### ICE PLOT FOR THE WHOLE DATASET
+# Model 'fit' before 'predict' inside ICE plot function
 
-data_fin = data_fin.fillna(0)
+[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
+eval_set = [(dtrain[features].values, dtrain[target].values),(dtest[features].values, dtest[target].values)]
 
-target = 'num_rays'
-features = data_fin.columns.tolist()
-features.remove(target)
-
-[dtrain, dtest] = TrainTestSplit(data_fin, test_size = 0.25)
 X = dtrain[features]
 y = dtrain[target]
 Xt = dtest[features]
 yt = dtest[target]
-# Undersampling of the TEST SET to avoid overcrowding the ICE plot
-# It reduces all clases to the size of the smallest class 7000: 20 samples
-undersample = RandomUnderSampler(sampling_strategy='auto')
-Xt_under, yt_under = undersample.fit_resample(Xt, yt)
-Xt_under_df = pd.DataFrame(Xt_under, columns = features)
-print(Counter(yt))
-print(Counter(yt_under))
-
-
-# TODO: Check if deliberate fit-predict => 100% correct prediction gives you 
-# real data analysis instead of model analysis
-
-### XGB MODEL SETUP
-# Model 'fit' before 'predict' inside ICE plot function
-eval_set = [(dtrain[features].values, dtrain[target].values),(dtest[features].values, dtest[target].values)]
-eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for early stopping
-feval = f1_eval_class
-early_stop = 100
 
 model_trained = model.fit(X.values, y.values, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
 results = model_trained.evals_result()
 print(f'Best iteration: {model_trained.best_iteration}\nF-score: {1-model_trained.best_score}')
 
-ice_features = [ feat for feat in features if "SSP" not in feat ]
 
-ICEdict1 = ICEPlot(Xt, model_trained, ice_features)
+# Ice plot for the whole dataset
+ICEdict = ICEPlot(Xt, model_trained, ice_features)
 
-# TODO: Modify ice/pdp plots to verify the correctness of prediction!
-# - Joris suggestion, gotta do.
-# PLot line over bar/surface indicating sample population
-# Problem with ICE plots:\
-# correlation, some points are invalid, i.e. min_depth > max_depth, source_depth > max_depth
+"""
+### ICE PLOTS FOR SPLITS
+SplitSets ,_ = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
+for s,subset in enumerate(SplitSets):
+    
+    sub_features = subset.columns.tolist()
+    sub_features.remove(target)
+    ice_sub_features = [ feat for feat in sub_features if feat not in locations + seasons ]
+    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.20)
+    Xs = dtrain[sub_features]
+    ys = dtrain[target]
+    Xst = dtest[sub_features]
+    yst = dtest[target]
+    #reduced training/test split to 20% because smaller datasets
 
+    eval_set = [(Xs.values, ys.values),(Xst.values, yst.values)]
+    submodel_trained = model.fit(Xs.values, ys.values, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
+    results = submodel_trained.evals_result()
+    print(f'Best iteration: {submodel_trained.best_iteration}\nF-score: {1-submodel_trained.best_score}')
+
+    # Ice plot for the whole dataset
+    ICEdict = ICEPlot(Xst, submodel_trained, ice_sub_features)
+
+
+# an attempt to split the plots further down on wdep_min
+# there's a clear correlation between shallow channel and high ray nr
+# however there are also not enough sample to create a separate model
+
+SplitSets_test, data_dist = CreateSplits(data_ssp, level_out = 1, remove_outliers = False, replace_outliers = False, plot_distributions = False, plot_correlations = False)
+split_neg2 = SplitSets_test[2]
+split_neg2_shallow = split_neg2.loc[data['water_depth_min'] == 50] #only 50m shadowing problem
+
+#sns.pairplot(SplitSets[2])
+"""
