@@ -379,7 +379,7 @@ path = os.getcwd()+'\data\\'
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False)
 #SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
-#SSP_Prop = SSPId(SSP_Input, path, plot = False, save = False)
+#SSP_Prop = SSPId(SSP_Input, path, plot = True, save = False)
 
 #######################################################################################
 # TODO:  REFINE SSP APPROXIMATION -> REDUCE THE NR OF ATTRIBUTES AS MUCH AS POSSIBLE
@@ -405,29 +405,53 @@ if plot_sampling == True:
         axes[i].plot(SSP_Input.iloc[:,1:][ssp][depth.isin(max_depth)], depth[depth.isin(max_depth)], linewidth = 1, label = 'Subsampled Sound Speed Profile')
         axes[i].set_title("{}. {}".format(i, ssp))
 
-from numpy.polynomial import Polynomial as polyfit
+#from numpy.polynomial import Polynomial as polyfit
+import numpy.polynomial.polynomial as poly
+from sklearn.preprocessing import normalize
+
 def PolyfitSSP(SSP_Input):
     depth = SSP_Input.iloc[:,0]
     ssp_input = SSP_Input.iloc[:,1:]
     resid = []
     coeff = []
+    rank = 10
     for ssp in ssp_input.columns:
-        for deg in range(3,10):
-            c, [r, _, _, _] = polyfit._fit(ssp_input[ssp], depth, deg, full = True)
+        y = np.array(ssp_input[ssp]).astype(float)
+        x = np.array(depth).astype(float)
+        # TODO: Find out how to unbias the prediction        
+        for deg in range(1,1+rank):
+            c, [r, _, _, _] = poly.polyfit(x, y, deg, full = True)
             coeff.append(c)
             resid.append(r)
-    return coeff, resid
+    allres = []  
+    best = []
+    for it in range(len(SSP_Input.columns)-1):
+        allres.append([coeff[it:it+rank],resid[it:it+rank]])
+        best_it = np.argmin(resid[it:it+rank])
+        best_r = min(resid[it:it+rank])
+        best_c = coeff[it:it+rank][best_it]
 
-cff, res = PolyfitSSP(SSP_Input)
-deg = range(3,10)
-ssp = []
-for it in range(len(SSP_Input.columns)-1):
-    ssp.append([cff[it:it+7],res[it:it+7]])
-"""    
+        best.append([best_it, best_r, best_c])
+    
+    return best, allres
+
+best, allres = PolyfitSSP(SSP_Input)
+deg = range(1,11)
+
+
+z = np.array(SSP_Input.iloc[:,0]).astype(float)
+znew = np.linspace(z[0], z[-1], num=len(z)*5)
+
+#plt.plot(xnew,ffit,x,y)
+
+
 fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
 axes = axes.flat
 axes[0].invert_yaxis()
-for i, s in enumerate(ssp):
-    axes[i].plot(deg, np.ravel(s[1]), linewidth = 2, label = 'Sound Speed Profile' )
-    #axes[i].set_title("{}. {}".format(i, ssp))
-"""
+for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
+    coeff = best[i][2]
+    ffit = poly.polyval(znew, coeff) 
+    
+    axes[i].plot(ffit, znew)
+    axes[i].plot(SSP_Input.iloc[:,i], z)
+    axes[i].set_title("{}. {}".format(i, ssp))

@@ -38,6 +38,24 @@ xgb_class = xgb.XGBClassifier(
         n_jobs = -1
         )
 
+# Tree regression model
+xgb_reg = xgb.XGBRegressor(
+    silent = 0,
+    learning_rate = 0.1, #0.1
+    n_estimators=1000,#4000,
+    max_depth = 10, 
+    min_child_weight= 1.,
+    min_split_loss= 0.,
+    subsample = 1.0,
+    colsample_bytree=1.0,
+    objective= 'reg:squarederror',
+    reg_alpha = 0.,
+    reg_lambda= 1.,
+    seed=27,
+    n_jobs = -1
+)
+
+model = xgb_class
 
 """ ORDER OF ACTIONS """"""
 1. add missing bathy features
@@ -74,7 +92,7 @@ data_enc = EncodeData(data)
 features = data_enc.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
-_, _, _, = ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 ### 2. XGB with SSP-vec directly in feature vector (implicit SSP features) & missin bathy info 
@@ -83,7 +101,7 @@ features = data_ssp.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
 
-_, _, _, = ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 ### XGB with SSP-id and without SSP-vec
@@ -93,7 +111,7 @@ sspid_enc = EncodeData(data_sspid_noc)
 features = sspid_enc.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
-_, _, _, = ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 # 3B. With src condition => full acoustic duct identification for each scenario
@@ -102,7 +120,7 @@ sspid_enc = EncodeData(data_sspid_con)
 features = sspid_enc.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
-_, _, _, = ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 # 4. sspvec + sspid with duct check
@@ -112,7 +130,7 @@ features = data_ssp.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
 
-_, _, _, = ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100,
+_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 """"
@@ -124,6 +142,6 @@ for subset in SplitSets:
     
     sub_features = subset.columns.tolist()
     sub_features.remove(target)
-    _, _, _, = ModelFit(xgb_class, dtrain, dtest, sub_features, target, early_stop = 100,
+    _, _, _, = ModelFit(model, dtrain, dtest, sub_features, target, early_stop = 100,
     verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 """
