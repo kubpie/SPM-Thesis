@@ -218,9 +218,11 @@ def EncodeData(data):
         feature = feature.reshape(feature.shape[0], 1)
         onehot_encoder = OneHotEncoder(sparse=False, categories='auto')
         feature = onehot_encoder.fit_transform(feature)
-        name = ["season", "location"]
+        #name = ["season", "location"]
         feature = pd.DataFrame(feature)
-        feature.columns = [name[f]+ "-" + str(i) for i in range(feature.shape[1])]    
+        #feature.columns = [name[f]+ "-" + str(i) for i in range(feature.shape[1])]
+        alph_srt = sorted(np.unique(feature))
+        feature.columns = alph_srt
         data_enc = pd.concat((data_enc, feature), axis=1)
         
     #TODO: See if encoding target is still necessary with the new method
