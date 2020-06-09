@@ -33,7 +33,6 @@ define
 	
 	SSP_value sub attribute, 
 		datatype double,
-		plays ssvalue,
 		has depth;
 		
 	season sub attribute,

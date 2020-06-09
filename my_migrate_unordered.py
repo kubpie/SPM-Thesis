@@ -153,7 +153,7 @@ def SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat, query_type = 'insert'):
     #TODO: Can this be done better? Less loads into the inner function?
     
     #set floating-point numbers precision
-    precision = 6    
+    precision = 10    
     
     depth = SSP_Input['DEPTH'].values.tolist()
     maxdepth = depth
@@ -212,7 +212,7 @@ def Source_inner(src, query_type = 'insert'):
     return graql_insert_query
 
 def Sonic_Layer_inner(sld, sldgrad, query_type = 'insert'):    
-    precision = 6
+    precision = 10
     graql_insert_query = query_type
     graql_insert_query += ' $sld isa sonic-layer'
     graql_insert_query += f', has depth {sld}'
@@ -228,7 +228,7 @@ def SonicLayer(SSP_Prop):
     return graql_queries
 
 def DeepChannel_inner(dcax, dctop, dcbot, dcgtop, dcgbot, query_type = 'insert'):
-    precision = 6
+    precision = 10
     graql_insert_query = query_type
     graql_insert_query += ' $dc isa deep-channel'
     graql_insert_query += f', has depth {dcax}'
@@ -385,7 +385,7 @@ def rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop):
 
 def rel_SSPvecToDepth(SSP_Input):
     graql_queries = []
-    precision = 6
+    precision = 10
     for column in SSP_Input.columns.tolist()[1:]:
         for depth, sspval in zip(SSP_Input['DEPTH'],SSP_Input[column]):
             graql_insert_query = f'match $sspval isa SSP_value;'
@@ -400,7 +400,7 @@ def rel_SSPvecOrdered(data):
     # all critical depths have been assigned SSP value in the data_complete.csv
     
     graql_queries = []
-    precision = 6
+    precision = 10
     
     crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bott', 'DC_top', 'SLD_depth']
     crit_ssp = ['SSP_wmin', 'SSP_wmax', 'SSP_src', 'SSP_dcax', 'SSP_dcb', 'SSP_dct', 'SSP_sld']
@@ -557,6 +557,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_unordered")
+    #build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_unordered")
     print("Importing data to GRAKN finished OK!")
     

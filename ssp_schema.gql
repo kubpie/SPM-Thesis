@@ -15,7 +15,6 @@ define
 	### Common DEPTH attribute
 
 	depth sub attribute,
-		plays at_depth,
 		datatype long; #integer values only
 	
 
@@ -32,31 +31,32 @@ define
 		
 	### SSP attributes
 	
-	SSP_value sub attribute, 
-		datatype double,
-		plays ssvalue,
-		has depth;
-
-	#SSP_grad sub attribute,
-	#	datatype double;
-	
+	SSP_value sub attribute,
+		plays deep,
+		plays deeper,
+		has depth,
+		datatype double;
+		
 	season sub attribute,
 		datatype string;
 	
 	location sub attribute,
 		datatype string;
+
+	#SSP_grad sub attribute,
+	#	datatype double;
 		
-	mean_SSP sub attribute,
-		datatype double;
+	#mean_SSP sub attribute,
+	#	datatype double;
 		
-	stdev_SSP sub attribute,
-		datatype double;
+	#stdev_SSP sub attribute,
+	#	datatype double;
 	
-	mean_grad sub attribute,
-		datatype double;
+	#mean_grad sub attribute,
+	#	datatype double;
 		
-	stdev_grad sub attribute,
-		datatype double;
+	#stdev_grad sub attribute,
+	#	datatype double;
 	
 	### Duct\Channel attributes 
 	
@@ -192,10 +192,6 @@ define
 		relates channel_count;	
 		
 	SSP-order sub relation,
-		plays deep,
-		plays deeper,
-		relates at_depth,
-		relates ssvalue,
 		relates deep,
 		relates deeper;
 	

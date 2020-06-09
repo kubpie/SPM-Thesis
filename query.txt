@@ -105,9 +105,9 @@ offset 0; limit 150;
 match
 $scn isa sound-propagation-scenario, has scenario_id $sid;
 $ray isa ray-input, has num_rays $nray; 
-$src isa source, has depth $dsrc; 
+$src isa source, has depth $ds; 
 $bs1 isa bottom-segment-1, has depth $dstart, has length $l;
-$ssp isa SSP-vec, has location $loc, has season $ses, has depth $dsspmax, has SSP_value $sspval;
+$ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
 
 $conv($scn, $ray) isa convergence;
 $srcp($scn, $src, $bs1) isa src-position;
@@ -117,19 +117,22 @@ $speed($scn, $ssp) isa sound-speed;
 $duct($ssp, $y) isa SSP-channel;
 $y has attribute $b;
 
-$sspval has depth $dsspval;
-{$dsspval == $dsrc;} or {$dsspval == $dstart;} or {$dsspval == $a;} or {$dsspval == $b;};
-
+$sspval has depth $dssp;
+{$dssp == $ds;} or {$dssp == $dstart;} or {$dssp == $a;} or {$dssp == $b;};
+$sspval2 has depth $dssp2;
+{$dssp2 == $ds;} or {$dssp2 == $dstart;} or {$dssp2 == $a;} or {$dssp2 == $b;};
+$ord($sspval, $sspval2) isa SSP_order;
 
 $sid == 440; #1, 440, 442, 9020
 
 get 
 $scn, $sid, $ray, $nray, $conv,
-$bs1, $dstart, $l, 
-$src, $dsrc, $srcp,
-$bathy, $bt, $x, $a,
-$ssp, $speed, $loc, $ses, $sspval, $dsspmax,
-$dsspval, 
-$duct, $y, $b;
+$src, $ds, $srcp, $bs1, $dstart, $l,
+$bathy, $x, $bt, $a,
+$ssp, $speed, $loc, $ses, $sspval, $dsspmax, $dssp,
+$duct, $y, $b,
+$sspval2, $ord;
+
 offset 0; limit 150;
+
 
