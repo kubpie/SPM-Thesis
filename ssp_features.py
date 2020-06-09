@@ -373,38 +373,6 @@ def SSPId(SSP_Input, path, plot = False, save = False):
     return SSP_Prop
     ### End of SSP Identification
 
-
-import os
-path = os.getcwd()+'\data\\'
-SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-#SSP_Grad = SSPGrad(SSP_Input, path, save = False)
-#SSP_Stat = SSPStat(SSP_Input, path, plot = True, save = False)
-#SSP_Prop = SSPId(SSP_Input, path, plot = True, save = False)
-
-#######################################################################################
-# TODO:  REFINE SSP APPROXIMATION -> REDUCE THE NR OF ATTRIBUTES AS MUCH AS POSSIBLE
- #1. Evaluate the error of downsampling SSP numerically
- #2. Alternatively: numpy.polyfit with deg < len(max_depth) = 12, 
- #   and find best approximation for each SSP cut
- 
-# Plot to see the effect of subsampling SSP for Grakn input
-plot_sampling = False
-if plot_sampling == True:
-    fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
-    axes = axes.flat
-    axes[0].invert_yaxis()
-    
-    # This downsampling is used now in GRAKN. 0 is skipped in favor of first point at 10m
-    # because grad at 0 is 0, which breaks the SSP-vec 'triplet'
-    
-    max_depth = [0, 50, 150, 250, 350, 450, 600, 750, 900, 1050, 1200, 1500]
-    depth = SSP_Input.iloc[:,0]
-
-    for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
-        axes[i].plot(SSP_Input.iloc[:,1:][ssp], depth, linewidth = 2, label = 'Sound Speed Profile' )
-        axes[i].plot(SSP_Input.iloc[:,1:][ssp][depth.isin(max_depth)], depth[depth.isin(max_depth)], linewidth = 1, label = 'Subsampled Sound Speed Profile')
-        axes[i].set_title("{}. {}".format(i, ssp))
-
 #from numpy.polynomial import Polynomial as polyfit
 import numpy.polynomial.polynomial as poly
 from sklearn.preprocessing import normalize
@@ -455,4 +423,31 @@ for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
     axes[i].plot(ffit, znew)
     axes[i].plot(SSP_Input.iloc[:,i], z)
     axes[i].set_title("{}. {}".format(i, ssp))
+
+
+import os
+path = os.getcwd()+'\data\\'
+SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+#SSP_Grad = SSPGrad(SSP_Input, path, save = False)
+#SSP_Stat = SSPStat(SSP_Input, path, plot = True, save = False)
+#SSP_Prop = SSPId(SSP_Input, path, plot = True, save = False)
+
+ 
+# Plot to see the effect of subsampling SSP for Grakn input
+plot_sampling = False
+if plot_sampling == True:
+    fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
+    axes = axes.flat
+    axes[0].invert_yaxis()
+    
+    # This downsampling is used now in GRAKN. 0 is skipped in favor of first point at 10m
+    # because grad at 0 is 0, which breaks the SSP-vec 'triplet'
+    
+    max_depth = [0, 50, 150, 250, 350, 450, 600, 750, 900, 1050, 1200, 1500]
+    depth = SSP_Input.iloc[:,0]
+
+    for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
+        axes[i].plot(SSP_Input.iloc[:,1:][ssp], depth, linewidth = 2, label = 'Sound Speed Profile' )
+        axes[i].plot(SSP_Input.iloc[:,1:][ssp][depth.isin(max_depth)], depth[depth.isin(max_depth)], linewidth = 1, label = 'Subsampled Sound Speed Profile')
+        axes[i].set_title("{}. {}".format(i, ssp))
 """

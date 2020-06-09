@@ -22,7 +22,7 @@ def ClassImbalance(data, plot = False):
     #data.describe()
     
     if plot:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(8, 5))
         width = 0.5
         x = np.arange(len(yclass))
         bars = ax.bar(x, ycount, width, label='Class Distribution')
@@ -42,18 +42,18 @@ def ClassImbalance(data, plot = False):
             textcoords="offset points",
             ha='center', va='bottom')
         
-        fig, ax = plt.subplots()
+        fig2, ax2 = plt.subplots()
         x = np.arange(len(yclass))
-        ax.plot(x, np.cumsum(yper), '-ok')
-        ax.set_ylabel('Per-class Percentage of Total Dataset [%]')
-        ax.set_xlabel('Class: Number of Rays')
-        ax.set_xticks(x)
-        ax.set_xticklabelsmet(yclass)
-        ax.set_title('Cumulative sum plot of class distributions')
-        ax.grid()
+        ax2.plot(x, np.cumsum(yper), '-ok')
+        ax2.set_ylabel('Per-class Percentage of Total Dataset [%]')
+        ax2.set_xlabel('Class: Number of Rays')
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(yclass)
+        ax2.set_title('Cumulative sum plot of class distributions')
+        ax2.grid()
     
         for i, txt in enumerate(np.cumsum(yper)):
-            ax.annotate('{:.2f}%'.format(txt),
+            ax2.annotate('{:.2f}%'.format(txt),
             xy=(x[i], np.cumsum(yper)[i]), 
             xytext=(x[i]-0.65, np.cumsum(yper)[i]+0.2), 
             arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))

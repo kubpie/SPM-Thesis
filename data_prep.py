@@ -16,8 +16,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 #from imblearn.over_sampling import SMOTENC
 
-from data_analysis_lib import ClassImbalance, PlotCorrelation, Multipage
-from ssp_features import SSPGrad, SSPStat, SSPId
+from data_analysis_lib import ClassImbalance, PlotCorrelation
+from ssp_features import SSPStat
 
 def LoadData(path): 
     
@@ -81,7 +81,6 @@ def FeatDuct(data, Input_Only = True):
 def FeatBathy(data,path):
     
     Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
-    
     wedge = np.zeros([len(data),2]) #wedge parameters, bathymetry info
     
     for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ):
@@ -107,7 +106,8 @@ def FeatBathy(data,path):
         
     df_wedge = pd.DataFrame(wedge)
     df_wedge.columns = ['len_flat','len_slope']
-    data = pd.concat([data, df_wedge,], axis=1, sort=False)    
+    # Choose only slope length, len_flat is redundant
+    data = pd.concat([data, df_wedge.iloc[:,1]], axis=1, sort=False)    
     
     return data
     
@@ -213,7 +213,34 @@ def FeatSSPStat(data, path):
     
     data = pd.concat([data, df_stat], axis=1, sort=False)
     
-    return data        
+    return data      
+
+def FeatSSPOnDepth(data_sspid, path, save = False):
+    
+    SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bott', 'DC_top', 'SLD_depth']
+    crit_ssp = ['SSP_wmin', 'SSP_wmax', 'SSP_src', 'SSP_dcax', 'SSP_dcb', 'SSP_dct', 'SSP_sld']
+    dat = np.empty([len(data_sspid),len(crit_ssp)])
+    dat[:,:] = np.nan
+    df_sdep = pd.DataFrame(dat,columns = crit_ssp)
+    
+    for col in data_sspid[crit_depths].columns:
+        for row, dep, profile in zip(range(len(data_sspid)), data_sspid[crit_depths].loc[:,col], data_sspid['profile']):         
+            sspcol = crit_ssp[crit_depths.index(col)]
+            if not np.isnan(dep):    
+                d = min(SSP_Input['DEPTH'], key=lambda x:abs(x-dep))
+                dep = d
+            sspval  = SSP_Input[profile].loc[SSP_Input['DEPTH'] == dep]
+            if not sspval.empty:
+                df_sdep[sspcol].iloc[row] = sspval.values[0]
+    
+    data = pd.concat([data_sspid,df_sdep], axis = 1, sort = False)
+    if save:
+        data.to_csv(path + 'data_complete.csv', index = None, header = True)
+        print("New datafiles have been created!")                
+
+    return data
+
 def EncodeData(data):
     SeasonList = []
     LocationList = []
@@ -375,7 +402,7 @@ def TrainTestSplit(data, save = False, seed = 27, test_size = 0.25):
     
     if save:
         # save into separate .csv files
-        filepath = os.getcwd()+'\data\\xgboost\\'
+        filepath = os.getcwd()+'\data\\'
         dtest.to_csv(filepath + 'dtest_25.csv', index = None, header = True)
         dtrain.to_csv(filepath + 'dtrain_75.csv', index = None, header = True)
         #dtrainup.to_csv(filepath + 'dtrainup.csv', index = None, header = True)
@@ -397,16 +424,28 @@ smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=popul
 X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
 dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
 dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
-
-"""    
+"""
+"""
+# TESTING NEW FEATURES AND THEIR CORRELATIONS
 
 import os
 path = os.getcwd()+'\data\\'
 
-ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
+#ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+#ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
 
 rawdata = LoadData(path)
-data = FeatDuct(rawdata, Input_Only = True)
-data_bathy = FeatBathy(data, path)
-data_ssp = FeatSSPvec(data, path)
+data1 = FeatDuct(rawdata, Input_Only = True)
+data2 = FeatBathy(data1, path)
+data3 = FeatSSPId(data2, path, src_cond = True)
+data4 = FeatSSPStat(data3,path)
+data5 = FeatSSPOnDepth(data4, path, save = True)
+
+
+target = 'num_rays'
+features = data5.columns.tolist()
+features.remove(target)
+
+PlotCorrelation(data5,features, annotate = False)
+ClassImbalance(data4, plot = True)
+"""

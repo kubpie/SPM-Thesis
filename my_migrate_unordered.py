@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Tue Jun  9 12:20:55 2020
+
+@author: kubap
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Apr 22 00:32:19 2020
 
 @author: kubap
@@ -140,7 +147,6 @@ def WedgeSegment(Bathy):
         if slope != 0:          
             graql_queries.append(WedgeSegment_inner(lenslope, slope))
     return graql_queries
-
 
 
 def SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat, query_type = 'insert'):
@@ -388,7 +394,7 @@ def rel_SSPvecToDepth(SSP_Input):
             graql_queries.append(graql_insert_query)
 
     return graql_queries
-
+"""
 def rel_SSPvecOrdered(data):
     # works with pre-processed data to save computation time
     # all critical depths have been assigned SSP value in the data_complete.csv
@@ -417,7 +423,7 @@ def rel_SSPvecOrdered(data):
             graql_queries.append(graql_insert_query)
 
     return graql_queries
-  
+"""
 
             
 ###########################################
@@ -522,13 +528,13 @@ Relations = [
      "QueryList": rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop)
      },
      
-     #{"NodeName": 'relation SSP-value to Depth',
-     #"QueryList": rel_SSPvecToDepth(SSP_Input)
-     #},
+     {"NodeName": 'relation SSP-value to Depth',
+     "QueryList": rel_SSPvecToDepth(SSP_Input)
+     },
      
-      {"NodeName": 'relation SSP-order',
-     "QueryList": rel_SSPvecOrdered(data_complete)
-     }
+     # {"NodeName": 'relation SSP-order',
+     #"QueryList": rel_SSPvecOrdered(data_complete)
+     #}
      
      
      
@@ -551,6 +557,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_test")
+    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_unordered")
     print("Importing data to GRAKN finished OK!")
     

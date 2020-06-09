@@ -82,7 +82,7 @@ model = xgb_class
 eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for early stopping
 feval = f1_eval_class
 early_stop = 100
-"""
+
 ### ICE PLOT FOR THE WHOLE DATASET
 # Model 'fit' before 'predict' inside ICE plot function
 
@@ -101,7 +101,7 @@ print(f'Best iteration: {model_trained.best_iteration}\nF-score: {1-model_traine
 
 # Ice plot for the whole dataset
 ICEdict = ICEPlot(Xt, model_trained, ice_features)
-"""
+
 
 ### ICE PLOTS FOR SPLITS
 SplitSets ,_ = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)

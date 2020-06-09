@@ -11,7 +11,8 @@ from os import listdir
 
 import xgboost as xgb
 from xgb_mylib import ModelFit
-from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat
+from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, \
+FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 
 
 # XGBOOST DATABASE PROCESSING (incl. feature selection)
@@ -83,10 +84,7 @@ model = xgb_class
 
 """
 
-# Adding Bathy features for each - filling missing info
-data = FeatBathy(data, path)
 
-"""
 ### 1. XGB wihout splits
 data_enc = EncodeData(data)
 features = data_enc.columns.tolist()
@@ -133,15 +131,25 @@ features.remove(target)
 _, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
-"""
+### 5. XGB on the whole dataset
+# Final Feature Vec Representation
+# Adding Bathy features for each - filling missing info
+data = FeatBathy(data, path)
+data_sspstat = FeatSSPStat(data,path)
+data_sspid = FeatSSPId(data_sspstat, path, src_cond = True)
+data_final = FeatSSPOnDepth(data_sspid, path, save = False)
+#data with ssp at crit depths
+data_enc = EncodeData(data_final)
 
-### XGB with sub-problem splits on slope 
-#and without SSP-vec data because it makes the results worse and harder to interpret
+features = data_enc.columns.tolist()
+features.remove(target)
+[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
 
-data_sspid_con = FeatSSPId(data, path, src_cond = True)
-#data_ssp = FeatSSPvec(data_sspid_con, path)
-data_ssp = FeatSSPStat(data_sspid_con,path)
-data_enc = EncodeData(data_ssp)
+_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+
+
+### 6. XGB with sub-problem splits on slope 
 SplitSets, data_dist = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
 for s,subset in enumerate(SplitSets):
     
@@ -152,6 +160,4 @@ for s,subset in enumerate(SplitSets):
     print(f'Training {s} split')
     _, _, _, = ModelFit(model, dtrain, dtest, sub_features, target, early_stop = 100,
     verbose=False, learningcurve = True, importance = True, plottree = False, savename = False)
-
-
 
