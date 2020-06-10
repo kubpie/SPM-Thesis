@@ -87,7 +87,7 @@ $duct($ssp, $y) isa SSP-channel;
 $y has attribute $b;
 
 $sspval has depth $dssp;
-{$dssp == $ds;} or {$dssp == $dstart;} or {$dssp == $a;} or {$dssp == $b;};
+{$dssp == $ds;} or {$dssp == $dstart;} or {$dssp == $a;} or {$dssp == $b;} or {$dssp == $dsspmax;} ;
 
 $sid == 440; #1, 440, 442, 9020
 

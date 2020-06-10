@@ -95,9 +95,10 @@ verbose=True, learningcurve = True, importance = True, plottree = False, savenam
 
 ### 2. XGB with SSP-vec directly in feature vector (implicit SSP features) & missin bathy info 
 data_ssp = FeatSSPvec(data, path)
-features = data_ssp.columns.tolist()
+data_enc = EncodeData(data_ssp)
+features = data_enc.columns.tolist()
 features.remove(target)
-[dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
+[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
 
 _, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
 verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
