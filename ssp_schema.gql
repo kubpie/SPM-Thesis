@@ -31,11 +31,9 @@ define
 		
 	### SSP attributes
 	
-	SSP_value sub attribute,
-		plays deep,
-		plays deeper,
-		has depth,
-		datatype double;
+	SSP_value sub attribute, 
+		datatype double,
+		has depth;
 		
 	season sub attribute,
 		datatype string;
@@ -57,6 +55,7 @@ define
 		
 	#stdev_grad sub attribute,
 	#	datatype double;
+	
 	
 	### Duct\Channel attributes 
 	
@@ -125,11 +124,11 @@ define
 		#has stdev_SSP,
 		#has mean_grad,
 		#has stdev_grad,
-		#has SSP_grad,
 		has SSP_value,
-		has depth, 			#limit depth
+		has depth,
 		plays define_SSP,
 		plays find_channel;
+		#has SSP_grad,
 		
 	sonic-layer sub entity,
 		has SLD_avgrad,
@@ -190,10 +189,6 @@ define
 		relates find_channel,
 		relates channel_exists,
 		relates channel_count;	
-		
-	SSP-order sub relation,
-		relates deep,
-		relates deeper;
 	
 	#################
 	##    RULES    ##

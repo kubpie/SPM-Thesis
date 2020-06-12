@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Tue Jun  9 12:20:55 2020
+
+@author: kubap
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Apr 22 00:32:19 2020
 
 @author: kubap
@@ -215,8 +222,8 @@ def Sonic_Layer_inner(sld, sldgrad, query_type = 'insert'):
 
 def SonicLayer(SSP_Prop):
     graql_queries = []
-    for sld, sldgrad in zip(SSP_Prop['SLD_depth'],SSP_Prop["SLD_avgrad"]):
-        if sld:
+    for sld, sldgrad in zip(SSP_Prop['SLD_depth'],SSP_Prop['SLD_avgrad']):
+        if np.isnan(sld) == False:
             graql_queries.append(Sonic_Layer_inner(sld, sldgrad, query_type = 'insert'))
     return graql_queries
 
@@ -236,7 +243,7 @@ def DeepChannel(SSP_Prop):
     graql_queries = []
     for dcax, dctop, dcbot, dcgtop, dcgbot in zip(SSP_Prop['DC_axis'], \
     SSP_Prop['DC_top'], SSP_Prop['DC_bot'], SSP_Prop['DC_avgrad_top'], SSP_Prop['DC_avgrad_bot']):
-        if dcax:
+        if np.isnan(dcax) == False:
             graql_queries.append(DeepChannel_inner(dcax, dctop, dcbot, dcgtop, dcgbot, query_type = 'insert'))
     return graql_queries
         
@@ -343,26 +350,25 @@ def rel_SoundSpeed(data, SSP_Input, SSP_Stat):
 
 
 def rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop):
-    ### TODO: match only on max depth in SSP-vec (fix ssp-vec inner if loop) and profile
-    
     graql_queries = []
     for index, row in SSP_Prop.iterrows():
         graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-        if (row['SLD_depth'] == None and row['DC_axis'] == None):
+        #if (row['SLD_depth'] == None and row['DC_axis'] == None):
+        if (np.isnan(row['SLD_depth']) and np.isnan(row['DC_axis'])):
             graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
             graql_insert_query += DuctExists_inner(nod = 0, query_type = '')
             graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_count: $dex) isa SSP-channel;'
             graql_queries.append(graql_insert_query)
         else:
             nod = 0
-            if row['SLD_depth']:
+            if np.isnan(row['SLD_depth']) == False:
                 graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
                 graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
                 graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel;'
                 graql_queries.append(graql_insert_query)
                 nod += 1
                 
-            if row['DC_axis']:
+            if np.isnan(row['DC_axis']) == False:
                 graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
                 graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
                 graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel;'
@@ -387,7 +393,7 @@ def rel_SSPvecToDepth(SSP_Input):
             graql_queries.append(graql_insert_query)
 
     return graql_queries
-
+"""
 def rel_SSPvecOrdered(data):
     # works with pre-processed data to save computation time
     # all critical depths have been assigned SSP value in the data_complete.csv
@@ -395,15 +401,13 @@ def rel_SSPvecOrdered(data):
     graql_queries = []
     precision = 10
     
-    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bott', 'DC_top', 'SLD_depth']
+    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bottt', 'DC_top', 'SLD_depth']
     crit_ssp = ['SSP_wmin', 'SSP_wmax', 'SSP_src', 'SSP_dcax', 'SSP_dcb', 'SSP_dct', 'SSP_sld']
-    
-    for row, profile in zip(range(len(data[crit_ssp])), data['profile']):         
-        depth = data[crit_depths].iloc[row].values
-        ssp =  data[crit_ssp].iloc[row].values
-        ordered_depth = np.argsort(depth)
-        # sort on depth
-        ordered_ssp = ssp.take(ordered_depth)
+    for row, depth, ssp, profile in zip(range(len(data[crit_ssp])), data[crit_depths], data[crit_ssp], data['profile']):         
+        
+        ordered_depth = np.sort(depth.iloc[row].values)
+        #TODO: Sort on depth
+        ordered_ssp = np.sort(ssp.iloc[row].values)
         ordered_ssp = [s for s in ordered_ssp if np.isnan(s) == False] #remove NaNs
         ordered_ssp = np.unique(ordered_ssp) #remove duplicates
         
@@ -418,7 +422,7 @@ def rel_SSPvecOrdered(data):
             graql_queries.append(graql_insert_query)
 
     return graql_queries
-  
+"""
 
             
 ###########################################
@@ -426,12 +430,13 @@ def rel_SSPvecOrdered(data):
 ###########################################
 import os
 path = os.getcwd()+'\data\\'
-#path = r'C:\Users\kubap\Documents\THESIS\DATA\\'
+
 Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False
-SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
-SSP_Prop = SSPId(SSP_Input, path, plot = False, save = False)
+SSP_Stat = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_STAT")#SSPStat(SSP_Input, path, plot = False, save = False)
+SSP_Prop = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Input, path, plot = False, save = False)
+
 raw_data = LoadData(path)
 data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
@@ -450,16 +455,15 @@ for ssp,dmax,idx in zip(data['profile'],data['water_depth_max'], data.index):
     for SSP,DMAX,SLD,DC in zip(SSP_Prop['SSP'], SSP_Prop['dmax'], SSP_Prop['SLD_depth'], SSP_Prop['DC_axis']):
         ducts[i,0] = idx
         if str(ssp) == str(SSP) and int(dmax) == int(DMAX):
-            if SLD:
+            if np.isnan(SLD)==False:
                 ducts[i,1] = 1
-            if DC:
+            if np.isnan(DC)==False:
                 ducts[i,2] = 1
 
     i += 1
   
 
 Entities = [
-        
     {"NodeName": 'sound-propagation-scenario',
      "QueryList": Scenario(data)
     },
@@ -527,9 +531,9 @@ Relations = [
      "QueryList": rel_SSPvecToDepth(SSP_Input)
      },
      
-      {"NodeName": 'relation SSP-order',
-     "QueryList": rel_SSPvecOrdered(data_complete)
-     }
+     # {"NodeName": 'relation SSP-order',
+     #"QueryList": rel_SSPvecOrdered(data_complete)
+     #}
      
      
      
@@ -552,6 +556,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_ordered")
+    #build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema")
     print("Importing data to GRAKN finished OK!")
     
