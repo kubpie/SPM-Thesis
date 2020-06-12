@@ -556,6 +556,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    #build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema")
+    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema")
     print("Importing data to GRAKN finished OK!")
     
