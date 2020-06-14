@@ -174,12 +174,6 @@ define
 		relates define_src,
 		relates bathy_src_position;
 		
-	#bathy-sloped sub relation,
-	#remove??
-	#	relates is_wedge,
-	#	relates start_segment,
-	#	relates end_segment,
-	#	plays define_bathy;
 		
 	sound-speed sub relation,
 		relates defined_by_SSP,
