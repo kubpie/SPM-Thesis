@@ -50,34 +50,15 @@ define
 	
 	location sub attribute,
 		datatype string;
-
-	#SSP_grad sub attribute,
-	#	datatype double;
-		
-	#mean_SSP sub attribute,
-	#	datatype double;
-		
-	#stdev_SSP sub attribute,
-	#	datatype double;
-	
-	#mean_grad sub attribute,
-	#	datatype double;
-		
-	#stdev_grad sub attribute,
-	#	datatype double;
-	
 	
 	### Duct\Channel attributes 
 	
-	SLD_avgrad sub attribute,
-		datatype double;
-	
-	DC_avgrad_top sub attribute,
+	grad sub attribute,
 		datatype double;
 		
-	DC_avgrad_bot sub attribute,
-		datatype double;
-	# TODO: Goes with duct-exists and could be removed
+	duct_type sub attribute,
+		datatype string;
+	
 	number_of_ducts sub attribute,
 		datatype long;
 		
@@ -101,29 +82,15 @@ define
 		#plays hard_convergence,
 		#plays easy_convergence;
 	
-	bottom-segment-1 sub entity,
+	bottom-segment sub entity,
 		has length,
 		has depth,
+		has slope,
 		plays define_bathy,
 		plays bathy_src_position;
-		#plays start_segment;
-		#plays adverse_mode;
-
-	bottom-segment-2 sub entity,
-		has length,
-		has depth,
-		plays define_bathy;
-		#plays end_segment;
-	
-	wedge-segment sub entity,
-		has length,
-		has slope,
-		plays define_bathy;
-		#plays is_wedge;
-		#plays adverse_mode;
 	
 	source sub entity,
-		has depth, #key?
+		has depth,
 		plays define_src,
 		plays bathy_src_position;
 		#plays supporting_src_pos;
@@ -131,43 +98,25 @@ define
 	SSP-vec sub entity,
 		has season,
 		has location,
-		#has mean_SSP,
-		#has stdev_SSP,
-		#has mean_grad,
-		#has stdev_grad,
 		has SSP_value,
 		has depth,
 		plays define_SSP,
 		plays find_channel;
-		
-	sonic-layer sub entity,
-		has SLD_avgrad,
-		has depth,
-		plays channel_exists;
-		#plays supporting_mode;
-
-		
-	deep-channel sub entity,
-		has depth, #3 depths: DC_ax, DC_top, DC_bot
-		has DC_avgrad_top,
-		has DC_avgrad_bot,
-		plays channel_exists;
-		#plays supporting_mode;
-		
-	# Check if this can be removed or replaced by a more meaningful information. Added to fix the query;
-	#match($ssp, $y) SSP-channel, $y has attribute $b
 	
-	duct-exists sub entity,
-		has number_of_ducts, 
-		plays channel_count;
-		
+	duct sub entity,
+		has depth,
+		has grad,
+		has duct_type,
+		plays channel_exists;
+	
+	
 	#################
 	##  RELATIONS  ##
 	#################
 	
 	convergence sub relation,
 		relates converged_scenario,
-		relates minimum_resolution;
+		relates minimum_resolution,
 		has probability-exists,
 		has probability-non-exists,
 		has probability-preexists;
@@ -187,9 +136,9 @@ define
 		relates define_SSP;
 	
 	SSP-channel sub relation,
+		has number_of_ducts,
 		relates find_channel,
-		relates channel_exists,
-		relates channel_count;
+		relates channel_exists;
 
 	candidate-convergence sub relation,
 		relates candidate_scenario,
@@ -199,16 +148,15 @@ define
 	##    RULES    ##
 	#################
 	
-	add-candidate-convergence sub rule,
-    when {
-        $scn isa scenario;
-        $ray isa ray-input;
-        not{ (converged_scenario: $scn, minimum_resolution: $ray) isa convergence; };
-    }, then {
-        (candidate_scenario: $scn, candidate_resolution: $d) isa candidate-convergence;
-    };
-
-
+	#add-candidate-convergence sub rule,
+    #when {
+    #    $scn isa scenario;
+    #    $ray isa ray-input;
+    #    not{ (converged_scenario: $scn, minimum_resolution: $ray) isa convergence; };
+    #}, then {
+    #    (candidate_scenario: $scn, candidate_resolution: $d) isa candidate-convergence;
+    #};
+	
 
 	
 	#duct-propagation-sld sub rule,

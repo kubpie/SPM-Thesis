@@ -101,11 +101,12 @@ def RayInput(data):
 
 def BottomSegment1_inner(dstart, lenflat, query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += ' $bs1 isa bottom-segment-1'
+    graql_insert_query += ' $bs1 isa bottom-segment'
     graql_insert_query += ', has depth ' + f'{dstart}'
     graql_insert_query += ', has length ' +  f'{lenflat}'
+    graql_insert_query += ', has slope ' +  str(0)
     graql_insert_query += ';'
-    return graql_insert_query
+    return graql_insert_query       
     
 #bottom seg. 1 appears in each scenario
 def BottomSegment1(Bathy):
@@ -117,9 +118,10 @@ def BottomSegment1(Bathy):
 
 def BottomSegment2_inner(dend, lenflat, query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += ' $bs2 isa bottom-segment-2'
+    graql_insert_query += ' $bs2 isa bottom-segment'
     graql_insert_query += ', has depth '  + f'{dend}'
     graql_insert_query += ', has length ' + f'{lenflat}'
+    graql_insert_query += ', has slope ' +  str(0)
     graql_insert_query += ';'  
     return graql_insert_query
 
@@ -131,9 +133,11 @@ def BottomSegment2(Bathy):
             graql_queries.append(BottomSegment2_inner(dend, lenflat))
     return graql_queries
 
-def WedgeSegment_inner(lenslope, slope, query_type = 'insert'):
+def WedgeSegment_inner(dstart, dend, lenslope, slope, query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += ' $ws isa wedge-segment'
+    graql_insert_query += ' $ws isa bottom-segment'
+    graql_insert_query += ', has depth ' + f'{dstart}'
+    graql_insert_query += ', has depth '  + f'{dend}'
     graql_insert_query += ', has slope ' + f'{slope}'
     graql_insert_query += ', has length ' + f'{lenslope}'
     graql_insert_query += ';'
@@ -143,9 +147,9 @@ def WedgeSegment(Bathy):
     #wedge segment only for sloped scn
     #it needs to check only one type, as the other is symmetric
     graql_queries = []
-    for lenslope, slope in zip(Bathy['len_slope'], Bathy['slope']):
+    for dstart, dend, lenslope, slope in zip(Bathy['d_start'],Bathy['d_end'], Bathy['len_slope'], Bathy['slope']):
         if slope != 0:          
-            graql_queries.append(WedgeSegment_inner(lenslope, slope))
+            graql_queries.append(WedgeSegment_inner(dstart, dend, lenslope, slope))
     return graql_queries
 
 
@@ -214,9 +218,10 @@ def Source_inner(src, query_type = 'insert'):
 def Sonic_Layer_inner(sld, sldgrad, query_type = 'insert'):    
     precision = 10
     graql_insert_query = query_type
-    graql_insert_query += ' $sld isa sonic-layer'
+    graql_insert_query += ' $sld isa duct'
     graql_insert_query += f', has depth {sld}'
-    graql_insert_query += f', has SLD_avgrad {Decimal(sldgrad):.{precision}}'
+    graql_insert_query += f', has grad {Decimal(sldgrad):.{precision}}'
+    graql_insert_query += f', has duct_type "SLD"'
     graql_insert_query += ';'
     return graql_insert_query
 
@@ -230,12 +235,13 @@ def SonicLayer(SSP_Prop):
 def DeepChannel_inner(dcax, dctop, dcbot, dcgtop, dcgbot, query_type = 'insert'):
     precision = 10
     graql_insert_query = query_type
-    graql_insert_query += ' $dc isa deep-channel'
+    graql_insert_query += ' $dc isa duct'
     graql_insert_query += f', has depth {dcax}'
     graql_insert_query += f', has depth {dctop}'
     graql_insert_query += f', has depth {dcbot}'
-    graql_insert_query += f', has DC_avgrad_top {Decimal(dcgtop):.{precision}}'
-    graql_insert_query += f', has DC_avgrad_bot {Decimal(dcgbot):.{precision}}'
+    graql_insert_query += f', has grad {Decimal(dcgtop):.{precision}}'
+    graql_insert_query += f', has grad {Decimal(dcgbot):.{precision}}'
+    graql_insert_query += f', has duct_type "DC"'
     graql_insert_query += ';'
     return graql_insert_query
 
@@ -249,14 +255,14 @@ def DeepChannel(SSP_Prop):
         
 def DuctExists():
     graql_queries = []
-    number_of_ducts = [0,1,2]
+    number_of_ducts = [0]
     for nod in number_of_ducts:
-        graql_queries.append(DuctExists_inner(nod,query_type = 'insert'))
+        graql_queries.append(DuctExists_inner(query_type = 'insert'))
     return graql_queries
 
-def DuctExists_inner(nod, query_type = 'insert'):
+def DuctExists_inner(query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += f' $dex isa duct-exists, has number_of_ducts {nod};'
+    graql_insert_query += f' $dex isa duct, has depth 0, has grad 0, has duct_type "None";'
     return graql_insert_query
     
 #########################################################
@@ -333,7 +339,7 @@ def rel_Bathymetry(data, Bathy):
             graql_queries.append(graql_insert_query)
             
             graql_insert_query = Scenario_inner(idx, query_type = 'match')
-            graql_insert_query += WedgeSegment_inner(lenslope, slope, query_type = '')
+            graql_insert_query += WedgeSegment_inner(dstart, dend, lenslope, slope, query_type = '')
             graql_insert_query += ' insert $bathy(define_bathy: $ws, defined_by_bathy: $scn) isa bathymetry;'       
             graql_insert_query += f' $bathy has bottom_type {btype};'
             graql_queries.append(graql_insert_query)
@@ -354,31 +360,37 @@ def rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop):
     for index, row in SSP_Prop.iterrows():
         graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
         #if (row['SLD_depth'] == None and row['DC_axis'] == None):
+        
         if (np.isnan(row['SLD_depth']) and np.isnan(row['DC_axis'])):
+            nod = 0
             graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-            graql_insert_query += DuctExists_inner(nod = 0, query_type = '')
-            graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_count: $dex) isa SSP-channel;'
+            graql_insert_query += DuctExists_inner(query_type = '')
+            graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dex) isa SSP-channel, has number_of_ducts {nod};'
             graql_queries.append(graql_insert_query)
         else:
-            nod = 0
-            if np.isnan(row['SLD_depth']) == False:
+            if np.isnan(row['SLD_depth']) == False and np.isnan(row['DC_axis']) == True:
+                nod = 1
                 graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
                 graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
-                graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel;'
+                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel, has number_of_ducts {nod};'
                 graql_queries.append(graql_insert_query)
-                nod += 1
                 
-            if np.isnan(row['DC_axis']) == False:
+            if np.isnan(row['DC_axis']) == False and np.isnan(row['SLD_depth']) == True:
+                nod = 1
                 graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
                 graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
-                graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel;'
+                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel, has number_of_ducts {nod};'
                 graql_queries.append(graql_insert_query)
-                nod += 1
-                
-            graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-            graql_insert_query += DuctExists_inner(nod = nod, query_type = '')
-            graql_insert_query += ' insert $sspch(find_channel: $ssp, channel_count: $dex) isa SSP-channel;'
-            graql_queries.append(graql_insert_query)
+            if np.isnan(row['SLD_depth']) == False and np.isnan(row['DC_axis']) == False:
+                nod = 2
+                graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
+                graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
+                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel, has number_of_ducts {nod};'
+                graql_queries.append(graql_insert_query)
+                graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
+                graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
+                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel, has number_of_ducts {nod};'
+                graql_queries.append(graql_insert_query)
 
     return graql_queries  
 

@@ -141,3 +141,32 @@ $sspval2, $ord;
 offset 0; limit 150;
 
 
+### KGCN Schema
+
+match
+$scn isa sound-propagation-scenario, has scenario_id $sid;
+$ray isa ray-input, has num_rays $nray; 
+$src isa source, has depth $ds; 
+$seg isa bottom-segment, has depth $dbs, has length $l, has slope $s;
+$ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
+$dct isa duct, has duct_type $td, has grad $g, has depth $ddct, has number_of_ducts $nod;
+
+$conv($scn, $ray) isa convergence;
+$srcp($scn, $src, $bs) isa src-position;
+$bathy($scn, $bsg) isa bathymetry, has bottom_type $bt;
+$speed($scn, $ssp) isa sound-speed;
+$duct($ssp, $dct) isa SSP-channel;
+
+$sid == 440; #1, 440, 442, 9020
+
+get 
+$scn, $sid, $ray, $nray, $conv,
+$src, $ds, $seg, $dbs, $l, $s, $srcp,
+$bathy, $bt,
+$ssp, $speed, $loc, $ses, $sspval, $dsspmax, $dssp,
+$duct, $y, $b,
+
+
+offset 0; limit 150;
+
+
