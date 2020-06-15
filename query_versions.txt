@@ -122,7 +122,6 @@ $speed($scn, $ssp) isa sound-speed;
 $duct($ssp, $y) isa SSP-channel;
 $y has attribute $b;
 
-$sspval has depth $dssp;
 {$dssp == $ds;} or {$dssp == $dstart;} or {$dssp == $a;} or {$dssp == $b;};
 $sspval2 has depth $dssp2;
 {$dssp2 == $ds;} or {$dssp2 == $dstart;} or {$dssp2 == $a;} or {$dssp2 == $b;};
@@ -146,13 +145,14 @@ offset 0; limit 150;
 match
 $scn isa sound-propagation-scenario, has scenario_id $sid;
 $ray isa ray-input, has num_rays $nray; 
-$src isa source, has depth $ds; 
-$seg isa bottom-segment, has depth $dbs, has length $l, has slope $s;
+$src isa source, has depth $dsrc; 
+$seg isa bottom-segment, has depth $dseg, has length $l, has slope $s;
 $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
-$dct isa duct, has duct_type $td, has grad $g, has depth $ddct, has number_of_ducts $nod;
+$sspval has depth $dssp;
+$dct isa duct, has depth $ddct, has duct_type $tdu, has grad $gdu, has number_of_ducts $nod;
 
 $conv($scn, $ray) isa convergence;
-$srcp($scn, $src, $bs) isa src-position;
+$srcp($scn, $src, $seg) isa src-position;
 $bathy($scn, $bsg) isa bathymetry, has bottom_type $bt;
 $speed($scn, $ssp) isa sound-speed;
 $duct($ssp, $dct) isa SSP-channel;
@@ -161,10 +161,11 @@ $sid == 440; #1, 440, 442, 9020
 
 get 
 $scn, $sid, $ray, $nray, $conv,
-$src, $ds, $seg, $dbs, $l, $s, $srcp,
-$bathy, $bt,
-$ssp, $speed, $loc, $ses, $sspval, $dsspmax, $dssp,
-$duct, $y, $b,
+$src, $dsrc, $seg, $dseg, $l, $s, 
+$srcp, $bathy, $bt,
+$ssp, $loc, $ses,  $dsspmax,  $speed,
+#$sspval,$dssp,
+$dct, $ddct, $tdu, $gdu, $nod;
 
 
 offset 0; limit 150;

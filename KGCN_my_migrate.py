@@ -98,10 +98,24 @@ def RayInput(data):
     for ray in ray_input:      
         graql_queries.append(RayInput_inner(ray, query_type = 'insert'))
     return graql_queries    
+    
+#bottom seg. 1 appears in each scenario
+def BottomSegment_ALL(Bathy):
+# Using method of list comprehensions (faster then iterrows) get queries     
+    graql_queries = []
+    for dstart, lenflat in zip(Bathy['d_start'], Bathy['len_flat']):
+        graql_queries.append(BottomSegment1_inner(dstart, lenflat))
+    for dend, lenflat, slope in zip(Bathy['d_end'], Bathy['len_flat'],  Bathy['slope']):
+        if slope != 0:
+            graql_queries.append(BottomSegment2_inner(dend, lenflat))
+    for dstart, dend, lenslope, slope in zip(Bathy['d_start'],Bathy['d_end'], Bathy['len_slope'], Bathy['slope']):
+        if slope != 0:          
+            graql_queries.append(WedgeSegment_inner(dstart, dend, lenslope, slope))
+    return graql_queries
 
 def BottomSegment1_inner(dstart, lenflat, query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += ' $bs1 isa bottom-segment'
+    graql_insert_query += ' $bs isa bottom-segment'
     graql_insert_query += ', has depth ' + f'{dstart}'
     graql_insert_query += ', has length ' +  f'{lenflat}'
     graql_insert_query += ', has slope ' +  str(0)
@@ -118,7 +132,7 @@ def BottomSegment1(Bathy):
 
 def BottomSegment2_inner(dend, lenflat, query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += ' $bs2 isa bottom-segment'
+    graql_insert_query += ' $bs isa bottom-segment'
     graql_insert_query += ', has depth '  + f'{dend}'
     graql_insert_query += ', has length ' + f'{lenflat}'
     graql_insert_query += ', has slope ' +  str(0)
@@ -154,7 +168,8 @@ def WedgeSegment(Bathy):
 
 
 def SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat, query_type = 'insert'):
-    #TODO: Can this be done better? Less loads into the inner function?
+    #TODO: Load from pre-formatted data file, such that SSP-val are already pre-selected for each scenario
+    #       The filter at the end should remove all doubles happpening in the process
     
     #set floating-point numbers precision
     precision = 10    
@@ -294,7 +309,7 @@ def rel_SrcPosition(data, Bathy):
         find_lenflat = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_flat']
         lenflat = find_lenflat.values[0]        
         graql_insert_query += BottomSegment1_inner(dstart, lenflat, query_type = '')
-        graql_insert_query += (' insert $srcp(define_src: $src, defined_by_src: $scn, bathy_src_position: $bs1) isa src-position;')
+        graql_insert_query += (' insert $srcp(define_src: $src, defined_by_src: $scn, bathy_src_position: $bs) isa src-position;')
         graql_queries.append(graql_insert_query)
     return graql_queries
    
@@ -309,7 +324,7 @@ def rel_Bathymetry(data, Bathy):
             lenflat = 44000
             graql_insert_query = Scenario_inner(idx, query_type = 'match')
             graql_insert_query += BottomSegment1_inner(dmin, lenflat, query_type = '')
-            graql_insert_query += ' insert $bathy(define_bathy: $bs1, defined_by_bathy: $scn) isa bathymetry;'       
+            graql_insert_query += ' insert $bathy(define_bathy: $bs, defined_by_bathy: $scn) isa bathymetry;'       
             graql_insert_query += f' $bathy has bottom_type {btype};'
             graql_queries.append(graql_insert_query)
         else:
@@ -328,13 +343,13 @@ def rel_Bathymetry(data, Bathy):
             
             graql_insert_query = Scenario_inner(idx, query_type = 'match')
             graql_insert_query += BottomSegment1_inner(dstart, lenflat, query_type = '')
-            graql_insert_query += ' insert $bathy(define_bathy: $bs1, defined_by_bathy: $scn) isa bathymetry;'       
+            graql_insert_query += ' insert $bathy(define_bathy: $bs, defined_by_bathy: $scn) isa bathymetry;'       
             graql_insert_query += f' $bathy has bottom_type {btype};'
             graql_queries.append(graql_insert_query)
             
             graql_insert_query = Scenario_inner(idx, query_type = 'match')
             graql_insert_query += BottomSegment2_inner(dend, lenflat, query_type = '')
-            graql_insert_query += ' insert $bathy(define_bathy: $bs2, defined_by_bathy: $scn) isa bathymetry;'       
+            graql_insert_query += ' insert $bathy(define_bathy: $bs, defined_by_bathy: $scn) isa bathymetry;'       
             graql_insert_query += f' $bathy has bottom_type {btype};'
             graql_queries.append(graql_insert_query)
             
@@ -457,16 +472,8 @@ Entities = [
      "QueryList": Source(data)
      },
     
-    {"NodeName": 'bottom-segment-1',
-     "QueryList": BottomSegment1(Bathy)
-     },
-     
-    {"NodeName": 'bottom-segment-2',
-     "QueryList": BottomSegment2(Bathy)
-     },
-     
-    {"NodeName": 'wedge-segment',
-     "QueryList": WedgeSegment(Bathy)
+    {"NodeName": 'bottom-segment-ALL',
+     "QueryList": BottomSegment_ALL(Bathy)
      },
     
     {"NodeName": 'SSP-vec',
@@ -488,9 +495,9 @@ Entities = [
 
 Relations = [
         
-    {"NodeName": 'relation: convergence',
-     "QueryList": rel_Convergence(data)
-     },
+    #{"NodeName": 'relation: convergence',
+    # "QueryList": rel_Convergence(data)
+    # },
     
     {"NodeName": 'relation: src-position',
      "QueryList": rel_SrcPosition(data, Bathy)
@@ -537,6 +544,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema_kgcn")
+    build_graph(Inputs=[ Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
     print("Importing data to GRAKN finished OK!")
     
