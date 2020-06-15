@@ -24,6 +24,9 @@ def unique_vars(file):
 file1 = "grakn17-output.txt"
 file2 = 'grakn16-output.txt'
 file3 = 'grakn15-output.txt'
+file4 = 'graknKGCN-output.txt'
 var17,u17 = unique_vars(file1)
 var16,u16 = unique_vars(file2)
 var15,u15 = unique_vars(file3)
+
+var, u = unique_vars(file4)
