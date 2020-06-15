@@ -150,8 +150,8 @@ def BottomSegment2(Bathy):
 def WedgeSegment_inner(dstart, dend, lenslope, slope, query_type = 'insert'):
     graql_insert_query = query_type
     graql_insert_query += ' $ws isa bottom-segment'
-    graql_insert_query += ', has depth ' + f'{dstart}'
-    graql_insert_query += ', has depth '  + f'{dend}'
+    graql_insert_query += ', has depth ' + f'{(dstart+dend)/2}'
+    #graql_insert_query += ', has depth '  + f'{dend}'
     graql_insert_query += ', has slope ' + f'{slope}'
     graql_insert_query += ', has length ' + f'{lenslope}'
     graql_insert_query += ';'
