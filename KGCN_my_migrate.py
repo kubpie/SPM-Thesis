@@ -300,16 +300,16 @@ def rel_SrcPosition(data, Bathy):
         data['water_depth_min'], data['water_depth_max']):
         graql_insert_query = Scenario_inner(idx, query_type = 'match')
         graql_insert_query += Source_inner(src, query_type = '')
-        if slope == 0 or slope == -2:
-            dstart = dmin
-            dend = dmax
-        else:
-            dstart = dmax
-            dend = dmin    
-        find_lenflat = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_flat']
-        lenflat = find_lenflat.values[0]        
-        graql_insert_query += BottomSegment1_inner(dstart, lenflat, query_type = '')
-        graql_insert_query += (' insert $srcp(define_src: $src, defined_by_src: $scn, bathy_src_position: $bs) isa src-position;')
+        #if slope == 0 or slope == -2:
+        #    dstart = dmin
+        #    dend = dmax
+        #else:
+        #    dstart = dmax
+        #    dend = dmin    
+        #find_lenflat = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_flat']
+        #lenflat = find_lenflat.values[0]        
+        #graql_insert_query += BottomSegment1_inner(dstart, lenflat, query_type = '')
+        graql_insert_query += (' insert $srcp(define_src: $src, defined_by_src: $scn) isa src-position;')
         graql_queries.append(graql_insert_query)
     return graql_queries
    
@@ -537,6 +537,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
+    #build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
     print("Importing data to GRAKN finished OK!")
     

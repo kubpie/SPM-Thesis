@@ -86,13 +86,13 @@ define
 		has length,
 		has depth,
 		has slope,
-		plays define_bathy,
-		plays bathy_src_position;
+		plays define_bathy;
+		#plays bathy_src_position;
 	
 	source sub entity,
 		has depth,
-		plays define_src,
-		plays bathy_src_position;
+		plays define_src;
+		#plays bathy_src_position;
 		#plays supporting_src_pos;
 
 	SSP-vec sub entity,
@@ -128,8 +128,8 @@ define
 
 	src-position sub relation,
 		relates defined_by_src,
-		relates define_src,
-		relates bathy_src_position;
+		relates define_src;
+		#relates bathy_src_position;
 		
 	sound-speed sub relation,
 		relates defined_by_SSP,
@@ -148,14 +148,14 @@ define
 	##    RULES    ##
 	#################
 	
-	#add-candidate-convergence sub rule,
-    #when {
-    #    $scn isa scenario;
-    #    $ray isa ray-input;
-    #    not{ (converged_scenario: $scn, minimum_resolution: $ray) isa convergence; };
-    #}, then {
-    #    (candidate_scenario: $scn, candidate_resolution: $d) isa candidate-convergence;
-    #};
+	add-candidate-convergence sub rule,
+    when {
+        $scn isa scenario;
+        $ray isa ray-input;
+        not{ (converged_scenario: $scn, minimum_resolution: $ray) isa convergence; };
+    }, then {
+        (candidate_scenario: $scn, candidate_resolution: $d) isa candidate-convergence;
+    };
 	
 
 	
