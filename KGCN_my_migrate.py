@@ -495,9 +495,9 @@ Entities = [
 
 Relations = [
         
-    #{"NodeName": 'relation: convergence',
-    # "QueryList": rel_Convergence(data)
-    # },
+    {"NodeName": 'relation: convergence',
+     "QueryList": rel_Convergence(data)
+     },
     
     {"NodeName": 'relation: src-position',
      "QueryList": rel_SrcPosition(data, Bathy)
@@ -517,15 +517,8 @@ Relations = [
      
      {"NodeName": 'relation SSP-value to Depth',
      "QueryList": rel_SSPvecToDepth(SSP_Input)
-     },
-     
-     # {"NodeName": 'relation SSP-order',
-     #"QueryList": rel_SSPvecOrdered(data_complete)
-     #}
-     
-     
-     
-    
+     }
+         
 ]
 """
 Entities = [
@@ -544,6 +537,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[ Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
+    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
     print("Importing data to GRAKN finished OK!")
     
