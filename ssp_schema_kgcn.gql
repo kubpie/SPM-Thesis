@@ -6,13 +6,13 @@ define
 	
 	### KGCN attributes
 	
-	probability-exists sub attribute,
+	probability_exists sub attribute,
     datatype double;
 
-	probability-non-exists sub attribute,
+	probability_nonexists sub attribute,
     datatype double;
 
-	probability-preexists sub attribute,
+	probability_preexists sub attribute,
     datatype double;
 	
 	### SCN attributes
@@ -117,9 +117,9 @@ define
 	convergence sub relation,
 		relates converged_scenario,
 		relates minimum_resolution,
-		has probability-exists,
-		has probability-non-exists,
-		has probability-preexists;
+		has probability_exists,
+		has probability_nonexists,
+		has probability_preexists;
 	
 	bathymetry sub relation,
 		relates defined_by_bathy,
@@ -150,11 +150,11 @@ define
 	
 	add-candidate-convergence sub rule,
     when {
-        $scn isa scenario;
+        $scn isa sound-propagation-scenario;
         $ray isa ray-input;
         not{ (converged_scenario: $scn, minimum_resolution: $ray) isa convergence; };
     }, then {
-        (candidate_scenario: $scn, candidate_resolution: $d) isa candidate-convergence;
+        (candidate_scenario: $scn, candidate_resolution: $ray) isa candidate-convergence;
     };
 	
 
@@ -174,13 +174,7 @@ define
 	#}, then {
 	#	(channel_exists: $dc, find_channel: $ssp) isa SSP-channel;
 	#};
-		
 
-		
-	
-
-	
-	
 		
 	
 	
