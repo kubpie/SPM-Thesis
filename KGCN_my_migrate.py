@@ -148,9 +148,13 @@ def BottomSegment2(Bathy):
     return graql_queries
 
 def WedgeSegment_inner(dstart, dend, lenslope, slope, query_type = 'insert'):
+    # Round wedge mid-detph to the resolution of SSP-val grid to avoid disconnected graph
+    # SSP-vals are spaced every 50m
+    dwedge = int(50*round(((dstart+dend)/2)/50))
+    
     graql_insert_query = query_type
     graql_insert_query += ' $ws isa bottom-segment'
-    graql_insert_query += ', has depth ' + f'{(dstart+dend)/2}'
+    graql_insert_query += ', has depth ' + f'{dwedge}'
     #graql_insert_query += ', has depth '  + f'{dend}'
     graql_insert_query += ', has slope ' + f'{slope}'
     graql_insert_query += ', has length ' + f'{lenslope}'
@@ -252,8 +256,9 @@ def DeepChannel_inner(dcax, dctop, dcbot, dcgtop, dcgbot, query_type = 'insert')
     graql_insert_query = query_type
     graql_insert_query += ' $dc isa duct'
     graql_insert_query += f', has depth {dcax}'
-    graql_insert_query += f', has depth {dctop}'
-    graql_insert_query += f', has depth {dcbot}'
+    # TODO: Find a way for grakn to connect all 3 depths, for now use only axis
+    #graql_insert_query += f', has depth {dctop}'
+    #graql_insert_query += f', has depth {dcbot}'
     graql_insert_query += f', has grad {Decimal(dcgtop):.{precision}}'
     graql_insert_query += f', has grad {Decimal(dcgbot):.{precision}}'
     graql_insert_query += f', has duct_type "DC"'
