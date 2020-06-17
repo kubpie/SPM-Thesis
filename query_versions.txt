@@ -140,7 +140,7 @@ $sspval2, $ord;
 offset 0; limit 150;
 
 
-### KGCN Schema
+### KGCN Schema 1 
 
 match
 $scn isa sound-propagation-scenario, has scenario_id $sid;
@@ -174,7 +174,24 @@ $duct, $dct, $ddct, $gd, $dt;
 
 
 offset 0; limit 150;
-
-### KGCN flat
+### KGCN 1 flat
 match $scn isa sound-propagation-scenario, has scenario_id $sid;$ray isa ray-input, has num_rays $nray; $src isa source, has depth $dsrc; $seg1 isa bottom-segment, has depth $dseg1, has length $l1, has slope $s1;$seg2 isa bottom-segment, has depth $dseg2, has length $l2, has slope $s2; $seg1 != $seg2;$bathy2($scn, $seg2) isa bathymetry, has bottom_type $bt;$bathy1($scn, $seg1) isa bathymetry, has bottom_type $bt;$conv($scn, $ray) isa convergence;$srcp($scn, $src, $seg1) isa src-position;$ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;$dct isa duct, has depth $ddct, has duct_type $dt, has grad $gd; $sspval has depth $dssp; {$dssp == $dsrc;} or {$dssp == $dseg1;} or {$dssp == $dseg2;} or {$dssp == $dsspmax;} or {$dssp == $ddct;};$speed($scn, $ssp) isa sound-speed;$duct($ssp, $dct) isa SSP-channel, has number_of_ducts $nod;$sid == 440; get $scn, $sid, $ray, $nray, $conv,$src, $dsrc, $seg1, $dseg1, $l1, $s1,$seg2, $dseg2, $l2, $s2,$srcp, $bathy1, $bathy2, $bt,$ssp, $loc, $ses,  $dsspmax, $speed, $sspval,$dssp,$duct, $dct, $ddct, $gd, $dt;offset 0; limit 150;
+
+### KGCN Schema 2 (w/o src position)
+
+match        
+$scn isa sound-propagation-scenario, has scenario_id 440;
+$ray isa ray-input, has num_rays $nray; 
+$src isa source, has depth $dsrc; 
+$seg isa bottom-segment, has depth $dseg, has length $l, has slope $s;
+$conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;
+$srcp(defined_by_src: $scn, define_src: $src) isa src-position;
+$bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
+$ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
+$dct isa duct, has depth $ddct, has duct_type $dt, has grad $gd; 
+$speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
+$duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
+$sspval has depth $dssp;
+{$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;};
+get; offset 0; limit 300;
 

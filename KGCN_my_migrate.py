@@ -238,7 +238,7 @@ def Sonic_Layer_inner(sld, sldgrad, query_type = 'insert'):
     precision = 10
     graql_insert_query = query_type
     graql_insert_query += ' $sld isa duct'
-    graql_insert_query += f', has depth {sld}'
+    graql_insert_query += f''', has depth {int(sld)}'''
     graql_insert_query += f', has grad {Decimal(sldgrad):.{precision}}'
     graql_insert_query += f', has duct_type "SLD"'
     graql_insert_query += ';'
@@ -255,10 +255,10 @@ def DeepChannel_inner(dcax, dctop, dcbot, dcgtop, dcgbot, query_type = 'insert')
     precision = 10
     graql_insert_query = query_type
     graql_insert_query += ' $dc isa duct'
-    graql_insert_query += f', has depth {dcax}'
+    graql_insert_query += f''', has depth {int(dcax)}'''
     # TODO: Find a way for grakn to connect all 3 depths, for now use only axis
-    #graql_insert_query += f', has depth {dctop}'
-    #graql_insert_query += f', has depth {dcbot}'
+    graql_insert_query += f', has depth {int(dctop)}'
+    graql_insert_query += f', has depth {int(dcbot)}'
     graql_insert_query += f', has grad {Decimal(dcgtop):.{precision}}'
     graql_insert_query += f', has grad {Decimal(dcgbot):.{precision}}'
     graql_insert_query += f', has duct_type "DC"'
@@ -437,7 +437,6 @@ SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False
 SSP_Stat = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_STAT")#SSPStat(SSP_Input, path, plot = False, save = False)
 SSP_Prop = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Input, path, plot = False, save = False)
-
 raw_data = LoadData(path)
 data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
