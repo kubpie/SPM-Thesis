@@ -40,23 +40,12 @@ URI = "localhost:48555"
 import os
 from data_prep import LoadData, FeatDuct
 path = os.getcwd()+'\data\\'
-
-Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
-SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-#SSP_Grad = SSPGrad(SSP_Input, path, save = False
-SSP_Stat = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_STAT")#SSPStat(SSP_Input, path, plot = False, save = False)
-SSP_Prop = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Input, path, plot = False, save = False)
-
 raw_data = LoadData(path)
 data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
 
 # DATA SELECTION FOR GRAKN TESTING
 data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
-ssp_select = ["Mediterranean Sea Winter","Mediterranean Sea Spring","South Pacific Ocean Spring"]
-SSP_Stat[ssp_select][:]
-SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
-SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -76,7 +65,7 @@ for ssp in data_complete['profile']:
 loc = np.unique(locations)
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
-                          'location': loc,
+                          'location': loc.tolist(),
                           'duct_type': ['None','SLD','DC']}
 # Continuous Attribute types and their min and max values
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
@@ -290,11 +279,11 @@ def get_query_handles(scenario_idx):
         $srcp(defined_by_src: $scn, define_src: $src) isa src-position;
         $bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
         $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
-        $sspval has depth $dssp;
-        $dct isa duct, has depth $ddct, has duct_type $dt, has grad $gd; 
-        {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;};
+        $dct isa duct, has depth $ddct, has duct_type $dt, has grad $gd;
         $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
         $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
+        $sspval has depth $dssp;
+        {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
         get;'''
         )
     
@@ -424,10 +413,11 @@ def convergence_example(data, num_graphs=100,
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)
     
-    example_idx = data.index.tolist() #TODO! data idx for reduced nr of samples
+    example_idx = data.index.tolist() #TODO! data idx for reduced nr of samples, get idx from pd index
+    example_idx = example_idx[0:3]
     
     graphs = create_concept_graphs(example_idx, session) 
-    """
+    
     with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
         node_types = get_thing_types(tx)
@@ -454,7 +444,7 @@ def convergence_example(data, num_graphs=100,
 
     session.close()
     client.close()
-    """
+    
     return graphs#, ge_graphs, solveds_tr, solveds_ge
 
 graphs =  convergence_example(data, num_graphs=100,

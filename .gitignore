@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 
+# TF output files
+events/
+
 # VS-compiled folders
 .vs/
 
