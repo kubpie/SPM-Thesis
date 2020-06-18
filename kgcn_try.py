@@ -23,6 +23,8 @@ from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing
 from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 
+from sklearn.model_selection import train_test_split
+
 import tensorflow as tf
 #config = tf.compat.v1.ConfigProto()
 #config.gpu_options.allow_growth=True
@@ -36,7 +38,6 @@ from functools import reduce
 
 KEYSPACE = "ssp_schema_kgcn"
 URI = "localhost:48555"
-
 import os
 from data_prep import LoadData, FeatDuct
 path = os.getcwd()+'\data\\'
@@ -386,7 +387,81 @@ def write_predictions_to_grakn(graphs, tx):
                     tx.query(query)
     tx.commit()
 
-def convergence_example(data, num_graphs=100,
+    
+def preprare_data(train_split=0.70, validation_split=0.33, data, session):
+        """
+        train_split = size of the train set
+        validaton_split = size of the validaton set
+        test set is further split down into test and validation
+        test_set size = (1-train_split)*(1-validation_split)
+        """
+        y = data.pop('num_rays').to_frame()
+        X = data
+        # divide whole dataset into train\test
+        X_train, X_test, y_train, y_test = train_test_split(
+        X, y, stratify=y, shuffle = True, test_size=1-train_split)
+        #divide test dataset into test\validation subsets
+        X_test, X_val, y_test, y_val = train_test_split(
+        X_test, y_test, stratify=y_test, shuffle = True, test_size=validation_split)
+        
+        # data was split and shuffled while mainating original indices 
+        # now the training and test set indices are merged once again
+        # and will be split again inside the grakn pipeline until tr_ge_split, without shuffle
+        
+        num_tr_graphs = len(X_test) + len(X_train)    
+        example_idx_tr = X_train.index.tolist() + X_test.index.tolist()
+        example_idx_val = X_val.index.tolist()
+        tr_ge_split = int(num_tr_graphs * train_split)  # Define split in train / test set
+        val_ge_split = int(len(X_val)*(1-validation_split))
+        train_graphs = create_concept_graphs(example_idx_tr, session)  # Create graphs in networkX
+        val_graphs = create_concept_graphs(example_idx_val, session)
+        
+        with session.transaction().read() as tx:
+            # Change the terminology here onwards from thing -> node and role -> edge
+            node_types = get_thing_types(tx)
+            [node_types.remove(el) for el in TYPES_TO_IGNORE]
+            edge_types = get_role_types(tx)
+            [edge_types.remove(el) for el in ROLES_TO_IGNORE]
+
+            print(f'Found node types: {self.node_types}')
+            print(f'Found edge types: {self.edge_types}')
+    return train_graphs, val_graphs, tr_ge_split, val_ge_split, node_types, edge_types
+
+def go_train(train_graphs, tr_ge_split, node_types, edge_types, num_processing_steps_tr=10, num_processing_steps_ge=10, num_training_iterations=200, continuous_attributes = CONTINUOUS_ATTRIBUTES, categorical_attributes =CATEGORICAL_ATTRIBUTES): 
+    # write_all_predictions=True, use_weighted=False, save_fle='save_model.ckpt'
+     ge_graphs, solveds_tr, solveds_ge = pipeline(train_graphs,             # Run the pipeline with prepared graph
+                                                  tr_ge_split,
+                                                  node_types,
+                                                  edge_types,
+                                                  num_processing_steps_tr=num_processing_steps_tr,
+                                                  num_processing_steps_ge=num_processing_steps_ge,
+                                                  num_training_iterations=num_training_iterations,
+                                                  continuous_attributes=continuous_attributes,
+                                                  categorical_attributes=categorical_attributes,
+                                                  output_dir=f"./events/{time.time()}/")
+)
+     return ge_graphs, solveds_tr, solveds_ge
+def go_test(self, write_all_predictions=True, num_graphs=100, reload_fle='save_model.ckpt',
+                num_processing_steps_tr=10, num_processing_steps_ge=10):
+        self.open_sessions()
+        self.preprare_data(num_graphs=num_graphs) # WHY PREPARE DATA FOR TEST AND NOT FOR TRAIN?
+        self.graphs_test = self.graphs
+        ge_graphs, solveds_tr, solveds_ge = pipeline(self.graphs_test,  # Run the pipeline with prepared graph
+                                                     self.tr_ge_split,
+                                                     self.node_types,
+                                                     self.edge_types,
+                                                     num_processing_steps_tr=num_processing_steps_tr,
+                                                     num_processing_steps_ge=num_processing_steps_ge,
+                                                     continuous_attributes=self.continuous_attributes,
+                                                     categorical_attributes=self.categorical_attributes,
+                                                     output_dir=self.result_dir, reload_fle=reload_fle, do_test=True)
+
+        with self.session.transaction().write() as tx:
+            self.write_predictions_to_grakn(ge_graphs, write_all_predictions)  # Write predictions to grakn with learned probabilities
+
+        self.close_sessions()
+
+def convergence_example(data, num_graphs=len(data),
                       num_processing_steps_tr=5,
                       num_processing_steps_ge=5,
                       num_training_iterations=300,
@@ -406,28 +481,15 @@ def convergence_example(data, num_graphs=100,
         Final accuracies for training and for testing
     """
 
-    tr_ge_split = int(num_graphs*0.5) #training-test solit 50/50
-
     #generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri)
 
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)
     
-    example_idx = data.index.tolist() #TODO! data idx for reduced nr of samples, get idx from pd index
-    example_idx = example_idx[0:6]
+    train_graphs, val_graphs, tr_ge_split, val_ge_split, node_types, edge_types = preprare_data(train_split=0.70, validation_split=0.33, data, session)
     
-    graphs = create_concept_graphs(example_idx, session) 
+    ge_graphs, solveds_tr, solveds_ge = go_train(train_graphs, tr_ge_split, node_types, edge_types, num_processing_steps_tr=10, num_processing_steps_ge=10, num_training_iterations=200)
     
-    with session.transaction().read() as tx:
-        # Change the terminology here onwards from thing -> node and role -> edge
-        node_types = get_thing_types(tx)
-        [node_types.remove(el) for el in TYPES_TO_IGNORE]
-
-        edge_types = get_role_types(tx)
-        [edge_types.remove(el) for el in ROLES_TO_IGNORE]
-        print(f'Found node types: {node_types}')
-        print(f'Found edge types: {edge_types}')
-
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs,
                                                  tr_ge_split,
                                                  node_types,
@@ -455,3 +517,4 @@ graphs =  convergence_example(data, num_graphs=6, #len(data)
 
 # TODO: shuffle data before feeding to grakn!!!
 # TODO: Leave out validation set
+# TODO: go_train\go_test split with re-loading the model
