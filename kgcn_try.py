@@ -25,9 +25,9 @@ from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-config = tf.compat.v1.ConfigProto()
-config.gpu_options.allow_growth=True
-sess = tf.compat.v1.Session(config=config)
+#config = tf.compat.v1.ConfigProto()
+#config.gpu_options.allow_growth=True
+#sess = tf.compat.v1.Session(config=config)
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
@@ -495,11 +495,11 @@ def convergence_example(data,
                       num_processing_steps_tr=10,
                       num_processing_steps_ge=10,
                       num_training_iterations=300,
-                      keyspace=KEYSPACE, uri=URI):
-                      #types_to_ignore = TYPES_TO_IGNORE,
-                      #roles_to_ignore = ROLES_TO_IGNORE,
-                      #continuous_attributes = CONTINUOUS_ATTRIBUTES,
-                      #categorical_attributes = CATEGORICAL_ATTRIBUTES):
+                      keyspace=KEYSPACE, uri=URI,
+                      types_to_ignore = TYPES_TO_IGNORE,
+                      roles_to_ignore = ROLES_TO_IGNORE,
+                      continuous_attributes = CONTINUOUS_ATTRIBUTES,
+                      categorical_attributes = CATEGORICAL_ATTRIBUTES):
     """
     Run the diagnosis example from start to finish, including traceably ingesting predictions back into Grakn
 
@@ -521,22 +521,22 @@ def convergence_example(data,
     with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
         node_types = get_thing_types(tx)
-        [node_types.remove(el) for el in TYPES_TO_IGNORE]
+        [node_types.remove(el) for el in types_to_ignore]
         edge_types = get_role_types(tx)
-        [edge_types.remove(el) for el in ROLES_TO_IGNORE]
+        [edge_types.remove(el) for el in roles_to_ignore]
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}') 
    
     #node_types = ['SSP-vec', 'bottom-segment', 'duct', 'ray-input', 'sound-propagation-scenario', 'source', 'SSP_value', 'season', 'grad', 'duct_type', 'depth', 'num_rays', 'location', 'slope', 'bottom_type', 'length', 'number_of_ducts', 'src-position', 'bathymetry', 'sound-speed', 'SSP-channel', 'convergence']
     #edge_types = ['has', 'define_SSP', 'find_channel', 'minimum_resolution', 'defined_by_SSP', 'defined_by_bathy', 'channel_exists', 'defined_by_src', 'define_src', 'define_bathy', 'converged_scenario']
-    kwargs = {'continuous_attributes': CONTINUOUS_ATTRIBUTES,
-          'categorical_attributes': CATEGORICAL_ATTRIBUTES,
+    kwargs = {'continuous_attributes': continuous_attributes,
+          'categorical_attributes': categorical_attributes,
           'num_processing_steps_tr': num_processing_steps_tr,
           'num_processing_steps_ge': num_processing_steps_ge,
-          'num_training_iterations':num_training_iterations,
+          'num_training_iterations': num_training_iterations,
           'node_types': node_types,
           'edge_types': edge_types,
-          'output_dir':f"./kgcnmodels/{time.time()}/"}    
+          'output_dir': f"C:/Users/kubap/Documents/THESIS/gitrepo/kgcnmodels/{time.time()}/"}    
     """'session': session,
           'client': client,
           'uri': uri,
@@ -556,7 +556,7 @@ def convergence_example(data,
 train_graphs, val_graphs,  inputs  = convergence_example(data,
                                       num_processing_steps_tr=5, 
                                       num_processing_steps_ge=5, 
-                                      num_training_iterations=100,
-                                      )
+                                      num_training_iterations=200,
+                                      keyspace=KEYSPACE, uri=URI)
 
 
