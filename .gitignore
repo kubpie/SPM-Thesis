@@ -5,6 +5,12 @@ __pycache__/
 # TF output files
 events/
 
+# Saved KGCN models
+kgcnmodels/
+
+# Saved NetworkX graphs
+networkx/
+
 # VS-compiled folders
 .vs/
 

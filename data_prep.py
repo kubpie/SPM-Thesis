@@ -411,7 +411,23 @@ def TrainTestSplit(data, save = False, seed = 27, test_size = 0.25):
     
     return dtrain, dtest
 
-
+def UndersampleData(data, max_sample):
+    
+    target = np.unique(data['num_rays'])
+    random_state = 27
+    y_population = ClassImbalance(data,plot = False)
+    
+    data_sampled = pd.DataFrame(columns = data.columns)
+    
+    for raynr in target:
+        if y_population[raynr][0] > max_sample:
+            data_slice = data.loc[data['num_rays'] == raynr]
+            data_sample = data_slice.sample(n = max_sample, random_state = random_state)
+            data_sampled = data_sampled.append(data_sample, ignore_index = False)
+        else:
+            data_sampled = data_sampled.append(data.loc[data['num_rays'] == raynr], ignore_index= False)
+            
+    return data_sampled
 """
 # Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
 #categorical_var = np.hstack([2, np.arange(5,33)])

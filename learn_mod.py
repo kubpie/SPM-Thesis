@@ -24,7 +24,7 @@ import tensorflow as tf
 from pathlib import Path
 
 from kglib.kgcn.learn.feed import create_placeholders, create_feed_dict, make_all_runnable_in_session
-from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty
+from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty #TODO: You may want to modify the loss function!
 from kglib.kgcn.learn.metrics import existence_accuracy
 
 from graph_nets import utils_np
@@ -88,6 +88,8 @@ class KGCNLearner:
         tf.summary.scalar('loss_op_ge', loss_op_ge)
 
         # Optimizer
+        # TODO: Optimize learning rate?? Adaptive learning_raye\sqrt(time) for example? vars: learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False
+        # https://www.tensorflow.org/api_docs/python/tf/compat/v1/train/AdamOptimizer
         optimizer = tf.train.AdamOptimizer(learning_rate)
         gradients, variables = zip(*optimizer.compute_gradients(loss_op_tr))
 

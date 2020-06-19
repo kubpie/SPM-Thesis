@@ -17,7 +17,7 @@ import pandas as pd
 #import sys
 #sys.path.append(r'C:\Users\kubap\Documents\THESIS\DATA_PREP')
 from ssp_features import SSPGrad, SSPStat, SSPId
-from data_prep import LoadData, FeatDuct, FeatBathy, FeatSSPId, FeatSSPOnDepth
+from data_prep import LoadData, FeatDuct, FeatBathy, FeatSSPId, FeatSSPOnDepth, UndersampleData
 from decimal import Decimal
 
 # 1. Insert ENTITIES  
@@ -370,7 +370,7 @@ def rel_SoundSpeed(data, SSP_Input, SSP_Stat):
     for idx, ssp, dmax in zip(data.index, data['profile'], data['water_depth_max']): 
         graql_insert_query = Scenario_inner(idx, query_type = 'match')
         graql_insert_query += SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat, query_type = '')
-        graql_insert_query += ' insert $bathy(define_SSP: $ssp, defined_by_SSP: $scn) isa sound-speed;'
+        graql_insert_query += ' insert $speed(define_SSP: $ssp, defined_by_SSP: $scn) isa sound-speed;'
         graql_queries.append(graql_insert_query)
     return graql_queries
 
@@ -440,14 +440,15 @@ SSP_Prop = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Inp
 raw_data = LoadData(path)
 data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
-
+"""
 # DATA SELECTION FOR GRAKN TESTING
 data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
 ssp_select = ["Mediterranean Sea Winter","Mediterranean Sea Spring","South Pacific Ocean Spring"]
 SSP_Stat[ssp_select][:]
 SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
 SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
-
+"""
+data = UndersampleData(data, max_sample = 100)
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
@@ -541,6 +542,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
+    build_graph(Inputs=[Entities, Relations], keyspace_name = "sampled_ssp_schema_kgcn") #Entities,
     print("Importing data to GRAKN finished OK!")
     

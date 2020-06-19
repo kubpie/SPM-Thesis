@@ -35,7 +35,7 @@ import tensorflow as tf
 import warnings
 from functools import reduce
 
-KEYSPACE = "ssp_schema_kgcn"
+KEYSPACE = "sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
@@ -46,16 +46,18 @@ CANDIDATE = 1
 TO_INFER = 2
 
 import os
-from data_prep import LoadData, FeatDuct
-path = os.getcwd()+'\data\\'
-ALLDATA = LoadData(path)
+from data_prep import LoadData, FeatDuct, UndersampleData
+datapath = os.getcwd()+'\data\\'
+ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-data_complete = pd.read_csv(path+"data_complete.csv") #pre-processed data file with already made input feature vectors (rows)
+data_complete = pd.read_csv(datapath+"data_complete.csv") #pre-processed data file with already made input feature vectors (rows)
 
 # DATA SELECTION FOR GRAKN TESTING
 #data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
-#data = pd.concat([ALLDATA.iloc[0:30,:],ALLDATA.iloc[440:480,:],ALLDATA.iloc[9000:9031,:]])
-data = ALLDATA
+data = UndersampleData(ALLDATA, max_sample = 100)
+# Furtrher reduce database for initial testing
+data = UndersampleData(data, max_sample = 50) #leaves out around 800 samples
+
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
 locations = []
@@ -217,26 +219,44 @@ def create_concept_graphs(example_indices, grakn_session):
         In-memory graphs of Grakn subgraphs
     """
     #for scnenario_id with open grakn session:
-        #1. get_query_handles()
-        #2. build_graph_from_queries()
-        #3. obfuscate_labels() whatever it means
-        #4. graph.name = scenario_idx
-        #5. append graph to list of graphs
-        
+        #0. check if the nx.graph for example doesn't exists already in the output directory
+        #if yes: load nx.graph from pickle file
+        #if no: 
+            #1. get_query_handles()
+            #2. build_graph_from_queries()
+            #3. obfuscate_labels() whatever it means
+            #4. graph.name = scenario_idx
+            #5. save ns.graph as pickle file
+            #6. append graph to list of graphs and return the list as func. output
+            
     graphs = []
     infer = True
-    
+    savepath = f"./networkx/"
+        
     for scenario_idx in example_indices:
-        print(f'Creating graph for example {scenario_idx}')
-        graph_query_handles = get_query_handles(scenario_idx)
-        with grakn_session.transaction().read() as tx:
-            # Build a graph from the queries, samplers, and query graphs
-            graph = build_graph_from_queries(graph_query_handles, tx, infer=infer)
-
-        obfuscate_labels(graph, TYPES_AND_ROLES_TO_OBFUSCATE)
-
-        graph.name = scenario_idx
+        graph_filename = f'graph_{scenario_idx}.gpickle'
+        
+        if not os.path.exists(savepath+graph_filename):
+            print(f'Creating graph for example {scenario_idx}')
+            graph_query_handles = get_query_handles(scenario_idx)
+            with grakn_session.transaction().read() as tx:
+                # Build a graph from the queries, samplers, and query graphs
+                graph = build_graph_from_queries(graph_query_handles, tx, infer=infer)
+    
+            obfuscate_labels(graph, TYPES_AND_ROLES_TO_OBFUSCATE)
+    
+            graph.name = scenario_idx
+            nx.write_gpickle(graph, savepath+graph_filename)
+        
+        else:
+            print(f'NetworkX graph already exists: {graph_filename}')
+            graph = nx.read_gpickle(savepath+graph_filename)    
+        
         graphs.append(graph)
+        
+        # new_graph = networkx.Graph(graph)
+        # nx.draw(new_graph)
+        # plt.show()
 
     return graphs
 
@@ -249,7 +269,6 @@ def obfuscate_labels(graph, types_and_roles_to_obfuscate):
                 break
 
 
-
 def get_query_handles(scenario_idx):
     
     # Contains Schema-Specific queries that retrive sub-graphs from grakn!
@@ -257,12 +276,8 @@ def get_query_handles(scenario_idx):
     """
     Creates an iterable, each element containing a Graql query, a function to sample the answers, and a QueryGraph
     object which must be the Grakn graph representation of the query. This tuple is termed a "query_handle"
-
     Args:
-        scenario_idx: A uniquely identifiable attribute value used to anchor the results of the queries to a specific
-                    subgraph
-        ===>>> SINGLE SCENARIO_ID
-
+        scenario_idx: A uniquely identifiable attribute value used to anchor the results of the queries to a specific subgraph
     Returns:
         query handles
     """
@@ -328,23 +343,20 @@ def get_query_handles(scenario_idx):
                              .add_role_edge(speed, ssp, 'define_SSP', PREEXISTS)
                              .add_role_edge(duct, ssp, 'find_channel', PREEXISTS)
                              .add_role_edge(duct, dct, 'channel_exists', PREEXISTS)
-)
-
+                             )
     # === Candidate Convergence ===
     candidate_convergence_query = inspect.cleandoc(f'''match
            $scn isa sound-propagation-scenario, has scenario_id {scenario_idx};
            $ray isa ray-input, has num_rays $nray;
            $conv(candidate_scenario: $scn, candidate_resolution: $ray) isa candidate-convergence; 
-           get;''')
+           get;''')    
            
-
     candidate_convergence_query_graph = (QueryGraph()
                                        .add_vars([conv], CANDIDATE)
                                        .add_vars([scn, ray, nray], PREEXISTS)
                                        .add_has_edge(ray, nray, PREEXISTS)
                                        .add_role_edge(conv, scn, 'candidate_scenario', CANDIDATE)
                                        .add_role_edge(conv, ray, 'candidate_resolution', CANDIDATE))
-
     return [
         (convergence_query, lambda x: x, convergence_query_graph),
         (candidate_convergence_query, lambda x: x, candidate_convergence_query_graph)
@@ -390,7 +402,7 @@ def write_predictions_to_grakn(graphs, tx):
     tx.commit()
 
     
-def preprare_data(data, session, train_split, validation_split):
+def preprare_data(session,data, train_split, validation_split):
     """
     Args:
         data: full dataset with sorted scenario_id's that will be used for querying grakn
@@ -402,14 +414,16 @@ def preprare_data(data, session, train_split, validation_split):
         so i.e. train_split = 0.7, validation_split=0.33 results in:
         70% training set, 20.1% test set, 9.9% validation set
     """
+    seed = 420
+    
     y = data.pop('num_rays').to_frame()
     X = data
     # divide whole dataset into stratified train\test 
     X_train, X_test, y_train, y_test = train_test_split(
-    X, y, stratify=y, shuffle = True, test_size=1-train_split)
+    X, y, stratify=y, shuffle = True, random_state = seed, test_size=1-train_split)
     #divide test dataset into stratified test\validation subsets
     X_test, X_val, y_test, y_val = train_test_split(
-    X_test, y_test, stratify=y_test, shuffle = True, test_size=validation_split)
+    X_test, y_test, stratify=y_test, shuffle = True, random_state = seed, test_size=validation_split)
     
     # data was split and shuffled while mainating original indices 
     # now the training and test set indices are merged once again
@@ -423,20 +437,11 @@ def preprare_data(data, session, train_split, validation_split):
     train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
     val_graphs = create_concept_graphs(example_idx_val, session) # Create training graphs in networkX
     
-    with session.transaction().read() as tx:
-        # Change the terminology here onwards from thing -> node and role -> edge
-        node_types = get_thing_types(tx)
-        [node_types.remove(el) for el in TYPES_TO_IGNORE]
-        edge_types = get_role_types(tx)
-        [edge_types.remove(el) for el in ROLES_TO_IGNORE]
+    return train_graphs, val_graphs, tr_ge_split, val_ge_split
 
-        print(f'Found node types: {self.node_types}')
-        print(f'Found edge types: {self.edge_types}')
-    return train_graphs, val_graphs, tr_ge_split, val_ge_split, node_types, edge_types
-
-def go_train(train_graphs, tr_ge_split, save_file = "test_model.ckpt", **kwargs): 
-    # write_all_predictions=True, use_weighted=False, save_fle='save_model.ckpt'
-    ge_graphs, solveds_tr, solveds_ge = pipeline(train_graphs,             # Run the pipeline with prepared graph
+def go_train(train_graphs, tr_ge_split, save_file, **kwargs):
+# Run the pipeline with prepared networkx graph
+    ge_graphs, solveds_tr, solveds_ge = pipeline(train_graphs,             
                                              tr_ge_split,
                                              node_types=node_types,
                                              edge_types=edge_types,
@@ -451,40 +456,50 @@ def go_train(train_graphs, tr_ge_split, save_file = "test_model.ckpt", **kwargs)
                                              do_test=False)
     
     with session.transaction().write() as tx:
-        write_predictions_to_grakn(ge_graphs)  # Write predictions to grakn with learned probabilities
+        write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
     
-    close_sessions()
+    session.close()
+    client.close()    
+    # Grakn session will be closed here due to write\insert query
     
     training_output = [ge_graphs, solveds_tr, solveds_ge]   
     return training_output
  
-def go_test(val_graphs, val_ge_split, reload_file='test_model.ckpt', **kwargs):
-        ge_graphs, solveds_tr, solveds_ge = pipeline(val_graphs,  # Run the pipeline with prepared graph
-                                                     val_ge_split,
-                                                     node_types=node_types,
-                                                     edge_types=edge_types,
-                                                     num_processing_steps_tr=num_processing_steps_tr,
-                                                     num_processing_steps_ge=num_processing_steps_ge,
-                                                     num_training_iterations=num_training_iterations,
-                                                     continuous_attributes=continuous_attributes,
-                                                     categorical_attributes=categorical_attributes,
-                                                     output_dir=output_dir,
-                                                     save_fle="",
-                                                     reload_fle=reload_file, 
-                                                     do_test=True)
-
-        with session.transaction().write() as tx:
-            write_predictions_to_grakn(ge_graphs)  # Write predictions to grakn with learned probabilities
-
-        close_sessions()
-        validation_output = [ge_graphs, solveds_tr, solveds_ge] 
-        return validation_output
+def go_test(val_graphs, val_ge_split, reload_file, **kwargs):
+    
+    # opens session once again, if closed after training
+    client = GraknClient(uri=uri)
+    session = client.session(keyspace=keyspace)
+    
+    ge_graphs, solveds_tr, solveds_ge = pipeline(val_graphs,  # Run the pipeline with prepared graph
+                                                 val_ge_split,
+                                                 node_types=node_types,
+                                                 edge_types=edge_types,
+                                                 num_processing_steps_tr=num_processing_steps_tr,
+                                                 num_processing_steps_ge=num_processing_steps_ge,
+                                                 num_training_iterations=num_training_iterations,
+                                                 continuous_attributes=continuous_attributes,
+                                                 categorical_attributes=categorical_attributes,
+                                                 output_dir=output_dir,
+                                                 save_fle="",
+                                                 reload_fle=reload_file, 
+                                                 do_test=True)
+    
+    with session.transaction().write() as tx:
+        write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
+    
+    session.close()
+    client.close()
+    # Grakn session will be closed here due to write\insert query
+    
+    validation_output = [ge_graphs, solveds_tr, solveds_ge] 
+    return validation_output
 
 
 def convergence_example(data,
-                      num_processing_steps_tr=5,
-                      num_processing_steps_ge=5,
-                      num_training_iterations=200,
+                      num_processing_steps_tr=10,
+                      num_processing_steps_ge=10,
+                      num_training_iterations=300,
                       keyspace=KEYSPACE, uri=URI):
     """
     Run the diagnosis example from start to finish, including traceably ingesting predictions back into Grakn
@@ -501,34 +516,46 @@ def convergence_example(data,
         Final accuracies for training and for testing
     """
 
-
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)
     
-    train_graphs, val_graphs, tr_ge_split, val_ge_split, node_types, edge_types = preprare_data(data, session, train_split=0.50, validation_split=0.2)
+    with session.transaction().read() as tx:
+        # Change the terminology here onwards from thing -> node and role -> edge
+        node_types = get_thing_types(tx)
+        [node_types.remove(el) for el in TYPES_TO_IGNORE]
+        edge_types = get_role_types(tx)
+        [edge_types.remove(el) for el in ROLES_TO_IGNORE]
+        print(f'Found node types: {node_types}')
+        print(f'Found edge types: {edge_types}') 
     
     kwargs = {'continuous_attributes': CONTINUOUS_ATTRIBUTES,
-              'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-              'num_processing_steps_tr': num_processing_steps_tr,
-              'num_processing_steps_ge': num_processing_steps_ge,
-              'num_training_iterations':num_training_iterations,
-              'node_types': node_types,
-              'edge_types': edge_types,
-              'session': session,
-              'output_dir':f"./kgcnout/{time.time()}/"}
+          'categorical_attributes': CATEGORICAL_ATTRIBUTES,
+          'num_processing_steps_tr': num_processing_steps_tr,
+          'num_processing_steps_ge': num_processing_steps_ge,
+          'num_training_iterations':num_training_iterations,
+          'node_types': node_types,
+          'edge_types': edge_types,
+          'session': session,
+          'client': client,
+          'uri': uri,
+          'keyspace': keyspace,
+          'output_dir':f"./kgcnmodels/{time.time()}/"}    
     
-    training_output = go_train(train_graphs, tr_ge_split, save_file = "test_model.ckpt", **kwargs) #_output = [ge_graphs, solveds_tr, solveds_ge]
-    validation_output =  go_test(val_graphs, val_ge_split, reload_file="test_model.ckpt",**kwargs)
-
-    client.close()
+    # Create networkX graphs or retrieve them from previously created copies
+    train_graphs, val_graphs, tr_ge_split, val_ge_split = preprare_data(session, data, train_split=0.50, validation_split=0.2)
+    # Train the model
+    #training_output = go_train(train_graphs, tr_ge_split, save_file = "test_model.ckpt", **kwargs)
+    # Validate the model
+    #validation_output =  go_test(val_graphs, val_ge_split, reload_file= "test_model.ckpt",**kwargs)
     
     return training_output, validation_output
 
 
-
+#*_output = [ge_graphs, solveds_tr, solveds_ge]
 training_output, validation_output  = convergence_example(data,
-                                      num_processing_steps_tr=5, #5
-                                      num_processing_steps_ge=5, #5
-                                      num_training_iterations=100, #300
+                                      num_processing_steps_tr=5, 
+                                      num_processing_steps_ge=5, 
+                                      num_training_iterations=100,
                                       keyspace=KEYSPACE, uri=URI)
+
 
