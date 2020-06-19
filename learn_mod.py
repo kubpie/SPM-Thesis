@@ -35,7 +35,7 @@ class KGCNLearner:
     """
     Responsible for running a KGCN model
     """
-    def __init__(self, model, num_processing_steps_tr=10, num_processing_steps_ge=10):
+    def __init__(self, model, save_fle, reload_fle, num_processing_steps_tr=10, num_processing_steps_ge=10):
         """Args:
             save_fle: Name to save the trained model to.
             reload_fle: Name to load saved model from, when doing inference.
@@ -43,7 +43,8 @@ class KGCNLearner:
         self._model = model
         self._num_processing_steps_tr = num_processing_steps_tr
         self._num_processing_steps_ge = num_processing_steps_ge
-
+        self.save_fle = save_fle
+        self.reload_fle = reload_fle
     def train(self,
                  tr_input_graphs,
                  tr_target_graphs,
@@ -53,7 +54,7 @@ class KGCNLearner:
                  learning_rate=1e-3,
                  log_every_epochs=20,
                  log_dir=None,
-                 save_file='save_model.txt'):
+                 save_fle='save_model.txt'):
         """
         Args:
             tr_graphs: In-memory graphs of Grakn concepts for training
@@ -67,7 +68,7 @@ class KGCNLearner:
         Returns:
 
         """
-        save_fle = Path(save_file)
+        save_fle = Path(save_fle)
         tf.set_random_seed(1)
 
         input_ph, target_ph = create_placeholders(tr_input_graphs, tr_target_graphs)

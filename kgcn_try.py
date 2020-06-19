@@ -25,9 +25,9 @@ from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-#config = tf.compat.v1.ConfigProto()
-#config.gpu_options.allow_growth=True
-#sess = tf.compat.v1.Session(config=config)
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth=True
+sess = tf.compat.v1.Session(config=config)
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
@@ -56,7 +56,7 @@ data_complete = pd.read_csv(datapath+"data_complete.csv") #pre-processed data fi
 #data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
 data = UndersampleData(ALLDATA, max_sample = 100)
 # Furtrher reduce database for initial testing
-data = UndersampleData(data, max_sample = 50) #leaves out around 800 samples
+data = UndersampleData(data, max_sample = 10) #leaves out around 800 samples
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -233,11 +233,11 @@ def create_concept_graphs(example_indices, grakn_session):
     infer = True
     savepath = f"./networkx/"
         
-    for scenario_idx in example_indices:
+    for it, scenario_idx in enumerate(example_indices):
         graph_filename = f'graph_{scenario_idx}.gpickle'
-        
+        total = len(example_indices)
         if not os.path.exists(savepath+graph_filename):
-            print(f'Creating graph for example {scenario_idx}')
+            print(f'[{it+1}|{total}] Creating graph for example {scenario_idx}')
             graph_query_handles = get_query_handles(scenario_idx)
             with grakn_session.transaction().read() as tx:
                 # Build a graph from the queries, samplers, and query graphs
@@ -249,7 +249,7 @@ def create_concept_graphs(example_indices, grakn_session):
             nx.write_gpickle(graph, savepath+graph_filename)
         
         else:
-            print(f'NetworkX graph already exists: {graph_filename}')
+            print(f'[{it+1}|{total}] NetworkX graph loaded {graph_filename}')
             graph = nx.read_gpickle(savepath+graph_filename)    
         
         graphs.append(graph)
@@ -429,32 +429,27 @@ def preprare_data(session,data, train_split, validation_split):
     # now the training and test set indices are merged once again
     # and will be split again inside the grakn pipeline until tr_ge_split, without shuffle
     
-    num_tr_graphs = len(X_test) + len(X_train)    
+    num_tr_graphs = len(X_test) + len(X_train)   
+    num_val_graphs = len(X_val)
     example_idx_tr = X_train.index.tolist() + X_test.index.tolist() #training and test sets indices merged for training
     example_idx_val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     val_ge_split = int(len(X_val)*(1-validation_split))
+    print(f'\nCREATING {num_tr_graphs} TRAINING\TEST GRAPHS')
     train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
+    print(f'\nCREATING {num_val_graphs} VALIDATION GRAPHS')
     val_graphs = create_concept_graphs(example_idx_val, session) # Create training graphs in networkX
     
     return train_graphs, val_graphs, tr_ge_split, val_ge_split
 
-def go_train(train_graphs, tr_ge_split, save_file, **kwargs):
+def go_train(session, client, train_graphs, tr_ge_split, save_file, **kwargs):
 # Run the pipeline with prepared networkx graph
-    ge_graphs, solveds_tr, solveds_ge = pipeline(train_graphs,             
-                                             tr_ge_split,
-                                             node_types=node_types,
-                                             edge_types=edge_types,
-                                             num_processing_steps_tr=num_processing_steps_tr,
-                                             num_processing_steps_ge=num_processing_steps_ge,
-                                             num_training_iterations=num_training_iterations,
-                                             continuous_attributes=continuous_attributes,
-                                             categorical_attributes=categorical_attributes,
-                                             output_dir=output_dir,
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs=train_graphs,             
+                                             tr_ge_split=tr_ge_split,                         
+                                             do_test=False,
                                              save_fle=save_file,
-                                             reload_fle="",                            
-                                             do_test=False)
-    
+                                              **kwargs)
+
     with session.transaction().write() as tx:
         write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
     
@@ -465,11 +460,11 @@ def go_train(train_graphs, tr_ge_split, save_file, **kwargs):
     training_output = [ge_graphs, solveds_tr, solveds_ge]   
     return training_output
  
-def go_test(val_graphs, val_ge_split, reload_file, **kwargs):
+def go_test(session, client, val_graphs, val_ge_split, reload_file, **kwargs):
     
     # opens session once again, if closed after training
-    client = GraknClient(uri=uri)
-    session = client.session(keyspace=keyspace)
+    #client = GraknClient(uri=uri)
+    #session = client.session(keyspace=keyspace)
     
     ge_graphs, solveds_tr, solveds_ge = pipeline(val_graphs,  # Run the pipeline with prepared graph
                                                  val_ge_split,
@@ -501,6 +496,10 @@ def convergence_example(data,
                       num_processing_steps_ge=10,
                       num_training_iterations=300,
                       keyspace=KEYSPACE, uri=URI):
+                      #types_to_ignore = TYPES_TO_IGNORE,
+                      #roles_to_ignore = ROLES_TO_IGNORE,
+                      #continuous_attributes = CONTINUOUS_ATTRIBUTES,
+                      #categorical_attributes = CATEGORICAL_ATTRIBUTES):
     """
     Run the diagnosis example from start to finish, including traceably ingesting predictions back into Grakn
 
@@ -527,7 +526,9 @@ def convergence_example(data,
         [edge_types.remove(el) for el in ROLES_TO_IGNORE]
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}') 
-    
+   
+    #node_types = ['SSP-vec', 'bottom-segment', 'duct', 'ray-input', 'sound-propagation-scenario', 'source', 'SSP_value', 'season', 'grad', 'duct_type', 'depth', 'num_rays', 'location', 'slope', 'bottom_type', 'length', 'number_of_ducts', 'src-position', 'bathymetry', 'sound-speed', 'SSP-channel', 'convergence']
+    #edge_types = ['has', 'define_SSP', 'find_channel', 'minimum_resolution', 'defined_by_SSP', 'defined_by_bathy', 'channel_exists', 'defined_by_src', 'define_src', 'define_bathy', 'converged_scenario']
     kwargs = {'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
           'num_processing_steps_tr': num_processing_steps_tr,
@@ -535,27 +536,27 @@ def convergence_example(data,
           'num_training_iterations':num_training_iterations,
           'node_types': node_types,
           'edge_types': edge_types,
-          'session': session,
+          'output_dir':f"./kgcnmodels/{time.time()}/"}    
+    """'session': session,
           'client': client,
           'uri': uri,
-          'keyspace': keyspace,
-          'output_dir':f"./kgcnmodels/{time.time()}/"}    
-    
+          'keyspace': keyspace,"""
     # Create networkX graphs or retrieve them from previously created copies
     train_graphs, val_graphs, tr_ge_split, val_ge_split = preprare_data(session, data, train_split=0.50, validation_split=0.2)
     # Train the model
-    #training_output = go_train(train_graphs, tr_ge_split, save_file = "test_model.ckpt", **kwargs)
+    training_output = go_train(session, client, train_graphs, tr_ge_split, save_file = 'test_model.ckpt', **kwargs)
     # Validate the model
-    #validation_output =  go_test(val_graphs, val_ge_split, reload_file= "test_model.ckpt",**kwargs)
+    #validation_output =  go_test(session, client, val_graphs, val_ge_split, reload_file= "test_model.ckpt",**kwargs)
     
-    return training_output, validation_output
+    return train_graphs, val_graphs,  inputs#, validation_output
 
 
+#training_output, validation_output 
 #*_output = [ge_graphs, solveds_tr, solveds_ge]
-training_output, validation_output  = convergence_example(data,
+train_graphs, val_graphs,  inputs  = convergence_example(data,
                                       num_processing_steps_tr=5, 
                                       num_processing_steps_ge=5, 
                                       num_training_iterations=100,
-                                      keyspace=KEYSPACE, uri=URI)
+                                      )
 
 
