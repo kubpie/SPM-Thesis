@@ -421,6 +421,7 @@ def preprare_data(session,data, train_split, validation_split):
     # divide whole dataset into stratified train\test 
     X_train, X_test, y_train, y_test = train_test_split(
     X, y, stratify=y, shuffle = True, random_state = seed, test_size=1-train_split)
+    #if validation_split > 0:
     #divide test dataset into stratified test\validation subsets
     X_test, X_val, y_test, y_val = train_test_split(
     X_test, y_test, stratify=y_test, shuffle = True, random_state = seed, test_size=validation_split)
@@ -544,16 +545,16 @@ def convergence_example(data,
     # Create networkX graphs or retrieve them from previously created copies
     train_graphs, val_graphs, tr_ge_split, val_ge_split = preprare_data(session, data, train_split=0.50, validation_split=0.2)
     # Train the model
-    training_output = go_train(session, client, train_graphs, tr_ge_split, save_file = 'test_model.ckpt', **kwargs)
+    #training_output = go_train(session, client, train_graphs, tr_ge_split, save_file = 'test_model.ckpt', **kwargs)
     # Validate the model
     #validation_output =  go_test(session, client, val_graphs, val_ge_split, reload_file= "test_model.ckpt",**kwargs)
     
-    return train_graphs, val_graphs,  inputs#, validation_output
+    return train_graphs, val_graphs#,  inputs#, validation_output
 
 
 #training_output, validation_output 
 #*_output = [ge_graphs, solveds_tr, solveds_ge]
-train_graphs, val_graphs,  inputs  = convergence_example(data,
+train_graphs, val_graphs = convergence_example(data,
                                       num_processing_steps_tr=5, 
                                       num_processing_steps_ge=5, 
                                       num_training_iterations=200,
