@@ -1,4 +1,4 @@
-.\gr# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Fri Jun 12 14:50:54 2020
 
@@ -32,11 +32,12 @@ import tensorflow as tf
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+tf.reset_default_graph()
 
 import warnings
 from functools import reduce
 
-KEYSPACE = "sampled_ssp_schema_kgcn"
+KEYSPACE =  "ssp_schema_kgcn"#"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
@@ -55,10 +56,13 @@ data_complete = pd.read_csv(datapath+"data_complete.csv") #pre-processed data fi
 
 # DATA SELECTION FOR GRAKN TESTING
 #data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
-data = UndersampleData(ALLDATA, max_sample = 100)
-# Furtrher reduce database for initial testing
-data = UndersampleData(data, max_sample = 5) #leaves out around 800 samples
-data = data[:3]
+#data = UndersampleData(ALLDATA, max_sample = 100)
+#data = data[:6]
+
+# DATA SELECTION FOR GRAKN TESTING
+data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]], ignore_index = False)
+data = data[:5]
+
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
 locations = []
@@ -207,18 +211,9 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
 
     concept_graph = combine_n_graphs(query_concept_graphs)
     return concept_graph
-
+"""
 def create_concept_graphs(example_indices, grakn_session):
-    """
-    Builds an in-memory graph for each example, with an scenario_id as an anchor for each example subgraph.
-    Args:
-        example_indices: The values used to anchor the subgraph queries within the entire knowledge graph
-        =>> SCENARIO_ID
-        grakn_session: Grakn Session
-
-    Returns:
-        In-memory graphs of Grakn subgraphs
-    """
+  
     #for scnenario_id with open grakn session:
         #0. check if the nx.graph for example doesn't exists already in the output directory
         #if yes: load nx.graph from pickle file
@@ -233,10 +228,10 @@ def create_concept_graphs(example_indices, grakn_session):
     graphs = []
     infer = True
     savepath = f"./networkx/"
-        
+    total = len(example_indices)
+    
     for it, scenario_idx in enumerate(example_indices):
         graph_filename = f'graph_{scenario_idx}.gpickle'
-        total = len(example_indices)
         if not os.path.exists(savepath+graph_filename):
             print(f'[{it+1}|{total}] Creating graph for example {scenario_idx}')
             graph_query_handles = get_query_handles(scenario_idx)
@@ -247,11 +242,12 @@ def create_concept_graphs(example_indices, grakn_session):
             obfuscate_labels(graph, TYPES_AND_ROLES_TO_OBFUSCATE)
     
             graph.name = scenario_idx
-            nx.write_gpickle(graph, savepath+graph_filename)
+            #nx.write_gpickle(graph, savepath+graph_filename)
         
         else:
             print(f'[{it+1}|{total}] NetworkX graph loaded {graph_filename}')
             graph = nx.read_gpickle(savepath+graph_filename)    
+        
         graphs.append(graph)
         
         # new_graph = networkx.Graph(graph)
@@ -268,6 +264,50 @@ def obfuscate_labels(graph, types_and_roles_to_obfuscate):
                 data.update(type=with_label)
                 break
 
+"""
+
+def create_concept_graphs(example_indices, grakn_session):
+    """
+    Builds an in-memory graph for each example, with an scenario_id as an anchor for each example subgraph.
+    Args:
+        example_indices: The values used to anchor the subgraph queries within the entire knowledge graph
+        =>> SCENARIO_ID
+        grakn_session: Grakn Session
+
+    Returns:
+        In-memory graphs of Grakn subgraphs
+    """
+    #for scnenario_id with open grakn session:
+        #1. get_query_handles()
+        #2. build_graph_from_queries()
+        #3. obfuscate_labels() whatever it means
+        #4. graph.name = scenario_idx
+        #5. append graph to list of graphs
+        
+    graphs = []
+    infer = True
+    
+    for scenario_idx in example_indices:
+        print(f'Creating graph for example {scenario_idx}')
+        graph_query_handles = get_query_handles(scenario_idx)
+        with grakn_session.transaction().read() as tx:
+            # Build a graph from the queries, samplers, and query graphs
+            graph = build_graph_from_queries(graph_query_handles, tx, infer=infer)
+
+        obfuscate_labels(graph, TYPES_AND_ROLES_TO_OBFUSCATE) #???
+
+        graph.name = scenario_idx
+        graphs.append(graph)
+
+    return graphs
+
+def obfuscate_labels(graph, types_and_roles_to_obfuscate):
+    # Remove label leakage - change type labels that indicate candidates into non-candidates
+    for data in multidigraph_data_iterator(graph):
+        for label_to_obfuscate, with_label in types_and_roles_to_obfuscate.items():
+            if data['type'] == label_to_obfuscate:
+                data.update(type=with_label)
+                break
 
 def get_query_handles(scenario_idx):
     
@@ -448,6 +488,12 @@ def go_train(data, num_processing_steps_tr, num_processing_steps_ge, num_trainin
     client = GraknClient(uri=URI)
     session = client.session(keyspace=KEYSPACE)
 
+    #tr_ge_split, example_idx_tr = prepare_data(session, data, train_split=0.5, validation_split=0.2)
+    
+    print(tr_ge_split, example_idx_tr)
+    tr_ge_split = len(data)*0.5
+    example_idx_tr = data.index.tolist()
+    train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
     with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
         node_types = get_thing_types(tx)
@@ -456,11 +502,9 @@ def go_train(data, num_processing_steps_tr, num_processing_steps_ge, num_trainin
         [edge_types.remove(el) for el in ROLES_TO_IGNORE]
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')        
-    
-    tr_ge_split, example_idx_tr = prepare_data(session, data, train_split=0.5, validation_split=0.2)
-    train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
-
+        
     # Run the pipeline with prepared networkx graph
+  
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,
                                                  tr_ge_split= tr_ge_split,
                                                  node_types = node_types,
@@ -471,33 +515,25 @@ def go_train(data, num_processing_steps_tr, num_processing_steps_ge, num_trainin
                                                  continuous_attributes=CONTINUOUS_ATTRIBUTES,
                                                  categorical_attributes=CATEGORICAL_ATTRIBUTES,
                                                  output_dir=f"./events/{time.time()}/")
-    """
-                                                 node_types,
-                                                 edge_types,
-                                                 num_processing_steps_tr=num_processing_steps_tr,
-                                                 num_processing_steps_ge=num_processing_steps_ge,
-                                                 num_training_iterations=num_training_iterations,
-                                                 continuous_attributes=CONTINUOUS_ATTRIBUTES,
-                                                 categorical_attributes=CATEGORICAL_ATTRIBUTES,
-                                                 output_dir=f"./events/{time.time()}/")
-    """
+ 
+
     
-    """
+    
     pipeline(graphs=train_graphs,             
                                              tr_ge_split=tr_ge_split,                         
                                              do_test=False,
                                              save_fle=save_file,
                                               **kwargs)
-    """
-    with session.transaction().write() as tx:
-        write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
+    
+    #with session.transaction().write() as tx:
+    #    write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
     
     session.close()
     client.close()    
     # Grakn session will be closed here due to write\insert query
     
     training_output = [ge_graphs, solveds_tr, solveds_ge]   
-    return training_output, train_graphs
+    return train_graphs, training_output
  
 def go_test(session, client, val_graphs, val_ge_split, reload_file, **kwargs):
     
@@ -530,4 +566,4 @@ def go_test(session, client, val_graphs, val_ge_split, reload_file, **kwargs):
     return validation_output
 
 
-training_output, train_graphs = go_train(data, num_processing_steps_tr =5, num_processing_steps_ge=5, num_training_iterations=100)
+train_graphs, training_output = go_train(data, num_processing_steps_tr =5, num_processing_steps_ge=5, num_training_iterations=100)

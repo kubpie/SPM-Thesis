@@ -282,7 +282,7 @@ def DuctExists():
 
 def DuctExists_inner(query_type = 'insert'):
     graql_insert_query = query_type
-    graql_insert_query += f' $dex isa duct, has depth 0, has grad 0, has duct_type "None";'
+    graql_insert_query += f' $dex isa duct, has depth 0, has grad 0, has duct_type "NotDuct";'
     return graql_insert_query
     
 #########################################################
@@ -440,15 +440,13 @@ SSP_Prop = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Inp
 raw_data = LoadData(path)
 data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
-"""
 # DATA SELECTION FOR GRAKN TESTING
 data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
 ssp_select = ["Mediterranean Sea Winter","Mediterranean Sea Spring","South Pacific Ocean Spring"]
 SSP_Stat[ssp_select][:]
 SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
 SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
-"""
-data = UndersampleData(data, max_sample = 100)
+#data = UndersampleData(data, max_sample = 100)
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
@@ -542,6 +540,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = "sampled_ssp_schema_kgcn") #Entities,
+    build_graph(Inputs=[Entities, Relations], keyspace_name = "ssp_schema_kgcn") #Entities,
     print("Importing data to GRAKN finished OK!")
     

@@ -45,8 +45,8 @@ data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
 
 # DATA SELECTION FOR GRAKN TESTING
-data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
-data = data[:5]
+#data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
+data = data.iloc[440:446,:]
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
 # Candidates are neither present in the input nor in the solution, they are negative samples
@@ -66,7 +66,7 @@ loc = np.unique(locations)
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc.tolist(),
-                          'duct_type': ['None','SLD','DC']}
+                          'duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
                          'num_rays': (500, 1500), 
@@ -407,15 +407,14 @@ def convergence_example(data, num_graphs=100,
     """
 
     tr_ge_split = int(num_graphs*0.5) #training-test solit 50/50
-
-    #generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri)
+    print(tr_ge_split)
 
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)
     
-    example_idx = data.index.tolist() #TODO! data idx for reduced nr of samples, get idx from pd index
+    example_idx = data.index.tolist()
     #example_idx = example_idx[0:6]
-    
+    print(example_idx)
     graphs = create_concept_graphs(example_idx, session) 
     
     with session.transaction().read() as tx:
@@ -427,7 +426,7 @@ def convergence_example(data, num_graphs=100,
         [edge_types.remove(el) for el in ROLES_TO_IGNORE]
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')
-
+  
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs,
                                                  tr_ge_split,
                                                  node_types,
@@ -439,15 +438,15 @@ def convergence_example(data, num_graphs=100,
                                                  categorical_attributes=CATEGORICAL_ATTRIBUTES,
                                                  output_dir=f"./events/{time.time()}/")
 
-    with session.transaction().write() as tx:
-        write_predictions_to_grakn(ge_graphs, tx)
-
+    #with session.transaction().write() as tx:
+    #    write_predictions_to_grakn(ge_graphs, tx)
+  
     session.close()
     client.close()
     
-    return graphs#, ge_graphs, solveds_tr, solveds_ge
+    return graphs, ge_graphs, solveds_tr, solveds_ge
 
-graphs =  convergence_example(data, num_graphs=len(data), #len(data)
+graphs, ge_graphs, solveds_tr, solveds_ge =  convergence_example(data, num_graphs=len(data), #len(data)
                       num_processing_steps_tr=1, #5
                       num_processing_steps_ge=1, #5
                       num_training_iterations=100, #300
