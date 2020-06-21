@@ -18,7 +18,7 @@ from grakn.client import GraknClient
 from kglib.kgcn.pipeline.pipeline import pipeline
 from kglib.utils.graph.iterate import multidigraph_data_iterator
 from kglib.utils.graph.query.query_graph import QueryGraph
-#from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
+from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
 from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing in vehicle
 from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
@@ -89,121 +89,6 @@ ROLES_TO_IGNORE = ['candidate_resolution', 'candidate_scenario']
 TYPES_AND_ROLES_TO_OBFUSCATE = {'candidate-convergence': 'convergence',
                                 'candidate_resolution': 'minimum_resolution',
                                 'candidate_scenario': 'converged_scenario'}
-
-def concept_dict_from_concept_map(concept_map, tx):
-    """
-    Given a concept map, build a dictionary of the variables present and the concepts they refer to, locally storing any
-    information required about those concepts.
-
-    Args:
-        concept_map: A dict of Concepts provided by Grakn keyed by query variables
-
-    Returns:
-        A dictionary of concepts keyed by query variables
-    """
-    return {variable: build_thing(grakn_concept) for variable, grakn_concept in concept_map.map().items()}
-
-
-def combine_2_graphs(graph1, graph2):
-    """
-    Combine two graphs into one. Do this by recognising common nodes between the two.
-
-    Args:
-        graph1: Graph to compare
-        graph2: Graph to compare
-
-    Returns:
-        Combined graph
-    """
-
-    for node, data in graph1.nodes(data=True):
-        if graph2.has_node(node):
-            data2 = graph2.nodes[node]
-            if data2 != data:
-                raise ValueError((f'Found non-matching node properties for node {node} '
-                                  f'between graphs {graph1} and {graph2}:\n'
-                                  f'In graph {graph1}: {data}\n'
-                                  f'In graph {graph2}: {data2}'))
-
-    for sender, receiver, keys, data in graph1.edges(data=True, keys=True):
-        if graph2.has_edge(sender, receiver, keys):
-            data2 = graph2.edges[sender, receiver, keys]
-            if data2 != data:
-                raise ValueError((f'Found non-matching edge properties for edge {sender, receiver, keys} '
-                                  f'between graphs {graph1} and {graph2}:\n'
-                                  f'In graph {graph1}: {data}\n'
-                                  f'In graph {graph2}: {data2}'))
-
-    return nx.compose(graph1, graph2)
-
-
-def combine_n_graphs(graphs_list):
-    # TODO: Rewrite this to combine multiple sub-graphs from a single query => repeated variables!
-    # instead of multiple queries
-    """
-    Combine N graphs into one. Do this by recognising common nodes between the two.
-
-    Args:
-        graphs_list: List of graphs to combine
-
-    Returns:
-        Combined graph
-    """
-    
-    
-    
-    return reduce(lambda x, y: combine_2_graphs(x, y), graphs_list)
-
-
-def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transaction,
-                             concept_dict_converter=concept_dict_to_graph, infer=True):
-    """
-    Builds a graph of Things, interconnected by roles (and *has*), from a set of queries and graphs representing those
-    queries (variable graphs)of those queries, over a Grakn transaction
-
-    Args:
-        infer: whether to use Grakn's inference engine
-        query_sampler_variable_graph_tuples: A list of tuples, each tuple containing a query, a sampling function,
-            and a variable_graph
-        grakn_transaction: A Grakn transaction
-        concept_dict_converter: The function to use to convert from concept_dicts to a Grakn model. This could be
-            a typical model or a mathematical model
-
-    Returns:
-        A networkx graph
-    """
-
-    query_concept_graphs = []
-
-    for query, sampler, variable_graph in query_sampler_variable_graph_tuples:
-    
-        concept_maps = sampler(grakn_transaction.query(query, infer=infer))
-        concept_dicts = [concept_dict_from_concept_map(concept_map, grakn_transaction) for concept_map in concept_maps]
-
-        answer_concept_graphs = []
-        for concept_dict in concept_dicts:
-            try:
-                answer_concept_graphs.append(concept_dict_converter(concept_dict, variable_graph))
-            except ValueError as e:
-                raise ValueError(str(e) + f'Encountered processing query:\n \"{query}\"')
-
-        if len(answer_concept_graphs) > 1:
-            query_concept_graph = combine_n_graphs(answer_concept_graphs) # !!! This is the combine function
-            query_concept_graphs.append(query_concept_graph)
-        else:
-            if len(answer_concept_graphs) > 0:
-                query_concept_graphs.append(answer_concept_graphs[0])
-            else:
-                warnings.warn(f'There were no results for query: \n\"{query}\"\nand so nothing will be added to the '
-                              f'graph for this query')
-
-    if len(query_concept_graphs) == 0:
-        # Raise exception when none of the queries returned any results
-        raise RuntimeError(f'The graph from queries: {[query_sampler_variable_graph_tuple[0] for query_sampler_variable_graph_tuple in query_sampler_variable_graph_tuples]}\n'
-                           f'could not be created, since none of these queries returned results')
-
-    concept_graph = combine_n_graphs(query_concept_graphs)
-    return concept_graph
 
 def create_concept_graphs(example_indices, grakn_session):
     """
