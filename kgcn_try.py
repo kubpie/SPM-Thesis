@@ -33,10 +33,10 @@ import tensorflow as tf
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-tf.reset_default_graph()
+tf.reset_default_graph() #fix bugs with tensor of uknonw size
+tf.get_logger().setLevel('INFO') #filter out annoying messages about name format with ':'
 
-import warnings
-from functools import reduce
+import os
 
 KEYSPACE =  "sampled_ssp_schema_kgcn"#"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
@@ -48,7 +48,6 @@ CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
 
-import os
 from data_prep import LoadData, FeatDuct, UndersampleData
 datapath = os.getcwd()+'\data\\'
 ALLDATA = LoadData(datapath)
@@ -275,15 +274,15 @@ def write_predictions_to_grakn(graphs, tx):
 
                     p = data['probabilities']
                     query = (f'match'
-                             f'$scn id {scenario.id};'
-                             f'$ray id {ray.id};'
-                             #f'$kgcn isa kgcn;'
+                             f'$scn isa sound-propagation-scenario, has scenario_id {scenario.id};'
+                             f'$ray isa ray-input, has num_rays {ray.id};'
                              f'insert'
-                             f'$conv(sound-propagation-scenario: $scn, ray-input: $ray) isa convergence,'
+                             f'$conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence,'
                              f'has probability_exists {p[2]:.3f},'
                              f'has probability_nonexists {p[1]:.3f},'  
                              f'has probability_preexists {p[0]:.3f};')
                     tx.query(query)
+                    print(query)
     tx.commit()
 
     
@@ -383,7 +382,7 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 
 # DATA SELECTION FOR GRAKN TESTING
 data = UndersampleData(ALLDATA, max_sample = 100)
-data = data[:10]
+data = data[:5]
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
