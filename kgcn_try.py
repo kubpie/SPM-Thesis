@@ -329,45 +329,45 @@ def prepare_data(session, data, train_split, validation_split):
     return  train_graphs, tr_ge_split #, val_graphs,  val_ge_split
 
 def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
+    """
+    Args:
+           
+    Parameters
+    ----------
+    train_graphs : networkx graphs obtained from grakn queries - the set contains both train and test graphs!
+    tr_ge_split : int. value marking the number of training graphs in train_graphs
+    save_fle : model filename to be saved as tf. checkpoin
+    **kwargs : TYPE
 
+    Returns:
+    ge_graphs: Encoded in-memory graphs of Grakn concepts for generalisation
+    solveds_tr: training fraction examples solved correctly
+    solveds_ge: test/generalization fraction examples solved correctly
+
+    """
     # Run the pipeline with prepared networkx graph
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,             
-                                             tr_ge_split = tr_ge_split,                         
-                                             do_test = False,
-                                             save_fle = save_fle,
-                                             reload_fle = "",
-                                              **kwargs)
-    
-    """
-    pipeline(graphs = train_graphs,
-                                                 tr_ge_split= tr_ge_split,
-                                                 **kwargs)
-    """
-
+                                                tr_ge_split = tr_ge_split,                         
+                                                do_test = False,
+                                                save_fle = save_fle,
+                                                reload_fle = "",
+                                                **kwargs)
     
     training_evals= [solveds_tr, solveds_ge]   
-    return train_graphs, ge_graphs, training_evals
+    return ge_graphs, training_evals
  
-def go_test(val_graphs, val_ge_split, **kwargs):
+def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     
-    # opens session once again, if closed after training
-  
+    # opens session once again, if closed after training  
     client = GraknClient(uri=URI)
     session = client.session(keyspace=KEYSPACE)
 
-    ge_graphs, solveds_tr, solveds_ge = pipeline(val_graphs,  # Run the pipeline with prepared graph
-                                                 val_ge_split,
-                                                 node_types=node_types,
-                                                 edge_types=edge_types,
-                                                 num_processing_steps_tr=num_processing_steps_tr,
-                                                 num_processing_steps_ge=num_processing_steps_ge,
-                                                 num_training_iterations=num_training_iterations,
-                                                 continuous_attributes=CONTINUOUS_ATTRIBUTES,
-                                                 categorical_attributes=CATEGORICAL_ATTRIBUTES,
-                                                 output_dir=output_dir,
-                                                 save_fle="",
-                                                 reload_fle=model_file, 
-                                                 do_test=True)
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = val_graphs,  # Run the pipeline with prepared graph
+                                                 tr_ge_split = val_ge_split,
+                                                 do_test = True,
+                                                 save_fle = "",
+                                                 reload_fle = reload_fle, 
+                                                 **kwargs)
     
     with session.transaction().write() as tx:
         write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
@@ -376,14 +376,14 @@ def go_test(val_graphs, val_ge_split, **kwargs):
     client.close()
     # Grakn session will be closed here due to write\insert query
     
-    validation_output = [ge_graphs, solveds_tr, solveds_ge] 
-    return validation_output
+    validation_evals = [solveds_tr, solveds_ge] 
+    return ge_graphs, validation_evals
 
     
 
 # DATA SELECTION FOR GRAKN TESTING
 data = UndersampleData(ALLDATA, max_sample = 100)
-data = data[:2]
+data = data[:10]
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
@@ -398,7 +398,7 @@ with session.transaction().read() as tx:
         print(f'Found edge types: {edge_types}')   
 
 train_graphs, tr_ge_split = prepare_data(session, data, train_split=0.5, validation_split = 0.2)
-
+#, val_graphs,  val_ge_split
 kgcn_vars = {
           'num_processing_steps_tr': 5,
           'num_processing_steps_ge': 5,
@@ -411,12 +411,14 @@ kgcn_vars = {
           }           
 
 
-train_graphs, ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
+tr_ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
-#with session.transaction().write() as tx:
-    #    write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
+with session.transaction().write() as tx:
+        write_predictions_to_grakn(tr_ge_graphs, tx)  # Write predictions to grakn with learned probabilities
     
 session.close()
-client.close()    
+client.close()
+
+#val_ge_graphs, validation_evals = go_train(val_graphs, val_ge_split, reload_fle = "test_model.ckpt", **kgcn_vars)    
 # Close transaction, session and client due to write query
     

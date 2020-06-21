@@ -199,9 +199,9 @@ class KGCNLearner:
     
     # New function to infer / apply without training
     # Inspired from: https://medium.com/@prasadpal107/saving-freezing-optimizing-for-inference-restoring-of-tensorflow-models-b4146deb21b5
-    def infer(self, input_graphs, target_graphs, log_dir, reload_fle):
+    def infer(self, input_graphs, target_graphs):
 
-        reload_file = Path(reload_fle)
+        reload_file = Path(self._reload_fle)
 
         input_ph, target_ph = create_placeholders(input_graphs, target_graphs)
         input_ph, target_ph = make_all_runnable_in_session(input_ph, target_ph)

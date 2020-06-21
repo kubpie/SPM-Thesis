@@ -96,8 +96,8 @@ def pipeline(graphs,
     if not (Path(output_dir) / reload_fle).is_dir() and do_test is True:
         print("\n\nVALIDATION ONLY\n\n")
         test_values, tr_info = learner.infer(ge_input_graphs,
-                                            ge_target_graphs,
-                                            log_dir=output_dir)
+                                            ge_target_graphs)
+                                            #,log_dir=output_dir)
     # train
     else:
         print("\n\nTRAINING\n\n")
@@ -106,8 +106,7 @@ def pipeline(graphs,
                                                  ge_input_graphs,
                                                  ge_target_graphs,
                                                  num_training_iterations=num_training_iterations)
-                                                 
-                                                 #,log_dir=output_dir)
+                                                    #,log_dir=output_dir)
 
 
     plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
