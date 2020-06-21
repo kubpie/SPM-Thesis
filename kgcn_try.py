@@ -164,52 +164,6 @@ def obfuscate_labels(graph, types_and_roles_to_obfuscate):
                 data.update(type=with_label)
                 break
 
-"""
-
-def create_concept_graphs(example_indices, grakn_session):
-    
-    Builds an in-memory graph for each example, with an scenario_id as an anchor for each example subgraph.
-    Args:
-        example_indices: The values used to anchor the subgraph queries within the entire knowledge graph
-        =>> SCENARIO_ID
-        grakn_session: Grakn Session
-
-    Returns:
-        In-memory graphs of Grakn subgraphs
-    
-    #for scnenario_id with open grakn session:
-        #1. get_query_handles()
-        #2. build_graph_from_queries()
-        #3. obfuscate_labels() whatever it means
-        #4. graph.name = scenario_idx
-        #5. append graph to list of graphs
-        
-    graphs = []
-    infer = True
-    
-    for scenario_idx in example_indices:
-        print(f'Creating graph for example {scenario_idx}')
-        graph_query_handles = get_query_handles(scenario_idx)
-        with grakn_session.transaction().read() as tx:
-            # Build a graph from the queries, samplers, and query graphs
-            graph = build_graph_from_queries(graph_query_handles, tx, infer=infer)
-
-        obfuscate_labels(graph, TYPES_AND_ROLES_TO_OBFUSCATE) #???
-
-        graph.name = scenario_idx
-        graphs.append(graph)
-
-    return graphs
-
-def obfuscate_labels(graph, types_and_roles_to_obfuscate):
-    # Remove label leakage - change type labels that indicate candidates into non-candidates
-    for data in multidigraph_data_iterator(graph):
-        for label_to_obfuscate, with_label in types_and_roles_to_obfuscate.items():
-            if data['type'] == label_to_obfuscate:
-                data.update(type=with_label)
-                break
-"""
-
 def get_query_handles(scenario_idx):
     
     # Contains Schema-Specific queries that retrive sub-graphs from grakn!
@@ -378,42 +332,19 @@ def prepare_data(session, data, train_split, validation_split):
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
     print(f'\nCREATING {num_tr_graphs} TRAINING\TEST GRAPHS')
-    #train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
+    train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
     #print(f'\nCREATING {num_val_graphs} VALIDATION GRAPHS')
     #val_graphs = create_concept_graphs(example_idx_val, session) # Create training graphs in networkX
     
-    return tr_ge_split, example_idx_tr #train_graphs,tr_ge_split#, val_graphs,  val_ge_split
+    return  train_graphs, tr_ge_split #, val_graphs,  val_ge_split
 
-def go_train(data, num_processing_steps_tr, num_processing_steps_ge, num_training_iterations):
-     
-    client = GraknClient(uri=URI)
-    session = client.session(keyspace=KEYSPACE)
+def go_train(train_graphs, tr_ge_split, **kwargs):
 
-    tr_ge_split, example_idx_tr = prepare_data(session, data, train_split=0.5, validation_split=0.2)
-    
-    train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
-   
-    with session.transaction().read() as tx:
-        # Change the terminology here onwards from thing -> node and role -> edge
-        node_types = get_thing_types(tx)
-        [node_types.remove(el) for el in TYPES_TO_IGNORE]
-        edge_types = get_role_types(tx)
-        [edge_types.remove(el) for el in ROLES_TO_IGNORE]
-        print(f'Found node types: {node_types}')
-        print(f'Found edge types: {edge_types}')        
-        
     # Run the pipeline with prepared networkx graph
   
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,
                                                  tr_ge_split= tr_ge_split,
-                                                 node_types = node_types,
-                                                 edge_types = edge_types,
-                                                 num_processing_steps_tr=num_processing_steps_tr,
-                                                 num_processing_steps_ge=num_processing_steps_ge,
-                                                 num_training_iterations=num_training_iterations,
-                                                 continuous_attributes=CONTINUOUS_ATTRIBUTES,
-                                                 categorical_attributes=CATEGORICAL_ATTRIBUTES,
-                                                 output_dir=f"./events/{time.time()}/")
+                                                 **kwargs)
  
 
     
@@ -421,25 +352,22 @@ def go_train(data, num_processing_steps_tr, num_processing_steps_ge, num_trainin
     pipeline(graphs=train_graphs,             
                                              tr_ge_split=tr_ge_split,                         
                                              do_test=False,
-                                             save_fle=save_file,
+                                             save_fle=model_file,
+                                             reload_fle = "",
                                               **kwargs)
     
-    #with session.transaction().write() as tx:
-    #    write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
     """
-    session.close()
-    client.close()    
-    # Grakn session will be closed here due to write\insert query
     
-    training_output = [ge_graphs, solveds_tr, solveds_ge]   
-    return train_graphs, training_output
+    training_eval_output = [solveds_tr, solveds_ge]   
+    return train_graphs, ge_graphs, training_eval_output
  
-def go_test(session, client, val_graphs, val_ge_split, reload_file, **kwargs):
+def go_test(val_graphs, val_ge_split, **kwargs):
     
     # opens session once again, if closed after training
-    #client = GraknClient(uri=uri)
-    #session = client.session(keyspace=keyspace)
-    
+  
+    client = GraknClient(uri=URI)
+    session = client.session(keyspace=KEYSPACE)
+
     ge_graphs, solveds_tr, solveds_ge = pipeline(val_graphs,  # Run the pipeline with prepared graph
                                                  val_ge_split,
                                                  node_types=node_types,
@@ -447,11 +375,11 @@ def go_test(session, client, val_graphs, val_ge_split, reload_file, **kwargs):
                                                  num_processing_steps_tr=num_processing_steps_tr,
                                                  num_processing_steps_ge=num_processing_steps_ge,
                                                  num_training_iterations=num_training_iterations,
-                                                 continuous_attributes=continuous_attributes,
-                                                 categorical_attributes=categorical_attributes,
+                                                 continuous_attributes=CONTINUOUS_ATTRIBUTES,
+                                                 categorical_attributes=CATEGORICAL_ATTRIBUTES,
                                                  output_dir=output_dir,
                                                  save_fle="",
-                                                 reload_fle=reload_file, 
+                                                 reload_fle=model_file, 
                                                  do_test=True)
     
     with session.transaction().write() as tx:
@@ -464,5 +392,43 @@ def go_test(session, client, val_graphs, val_ge_split, reload_file, **kwargs):
     validation_output = [ge_graphs, solveds_tr, solveds_ge] 
     return validation_output
 
+    
 
-train_graphs, training_output = go_train(data, num_processing_steps_tr =5, num_processing_steps_ge=5, num_training_iterations=100)
+
+
+client = GraknClient(uri=URI)
+session = client.session(keyspace=KEYSPACE)
+
+with session.transaction().read() as tx:
+        # Change the terminology here onwards from thing -> node and role -> edge
+        node_types = get_thing_types(tx)
+        [node_types.remove(el) for el in TYPES_TO_IGNORE]
+        edge_types = get_role_types(tx)
+        [edge_types.remove(el) for el in ROLES_TO_IGNORE]
+        print(f'Found node types: {node_types}')
+        print(f'Found edge types: {edge_types}')   
+
+train_graphs, tr_ge_split = prepare_data(session, data, train_split=0.5, validation_split = 0.2)
+
+kgcn_vars = {
+          'num_processing_steps_tr': 5,
+          'num_processing_steps_ge': 5,
+          'num_training_iterations': 100,
+          'node_types': node_types,
+          'edge_types': edge_types,
+          'continuous_attributes': CONTINUOUS_ATTRIBUTES,
+          'categorical_attributes': CATEGORICAL_ATTRIBUTES,
+          #'model_file': "test_model.ckpt",
+          'output_dir': f"./events/{time.time()}/"
+          }           
+
+
+train_graphs, ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+
+#with session.transaction().write() as tx:
+    #    write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities
+    
+session.close()
+client.close()    
+# Close transaction, session and client due to write query
+    
