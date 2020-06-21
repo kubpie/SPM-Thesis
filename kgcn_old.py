@@ -30,7 +30,7 @@ import tensorflow as tf
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-
+tf.reset_default_graph()
 import warnings
 from functools import reduce
 
@@ -46,7 +46,7 @@ data_complete = pd.read_csv(path+"data_complete.csv")
 
 # DATA SELECTION FOR GRAKN TESTING
 data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
-
+data = data[:5]
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
 # Candidates are neither present in the input nor in the solution, they are negative samples
@@ -414,7 +414,7 @@ def convergence_example(data, num_graphs=100,
     session = client.session(keyspace=keyspace)
     
     example_idx = data.index.tolist() #TODO! data idx for reduced nr of samples, get idx from pd index
-    example_idx = example_idx[0:6]
+    #example_idx = example_idx[0:6]
     
     graphs = create_concept_graphs(example_idx, session) 
     
@@ -447,7 +447,7 @@ def convergence_example(data, num_graphs=100,
     
     return graphs#, ge_graphs, solveds_tr, solveds_ge
 
-graphs =  convergence_example(data, num_graphs=6, #len(data)
+graphs =  convergence_example(data, num_graphs=len(data), #len(data)
                       num_processing_steps_tr=1, #5
                       num_processing_steps_ge=1, #5
                       num_training_iterations=100, #300

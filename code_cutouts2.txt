@@ -1,0 +1,67 @@
+
+"""
+def convergence_example(data,
+                      num_processing_steps_tr = 10,
+                      num_processing_steps_ge = 10,
+                      num_training_iterations = 300,
+                      keyspace=KEYSPACE, uri=URI,
+                      types_to_ignore = TYPES_TO_IGNORE,
+                      roles_to_ignore = ROLES_TO_IGNORE,
+                      continuous_attributes = CONTINUOUS_ATTRIBUTES,
+                      categorical_attributes = CATEGORICAL_ATTRIBUTES):
+    """
+    """
+    Run the diagnosis example from start to finish, including traceably ingesting predictions back into Grakn
+
+    Args:
+        data: data input file that will be used to retrive train\test\validation indices and generate graphs from Grakn
+        num_processing_steps_tr: The number of message-passing steps for training
+        num_processing_steps_ge: The number of message-passing steps for testing
+        num_training_iterations: The number of training epochs
+        keyspace: The name of the keyspace to retrieve example subgraphs from
+        uri: The uri of the running Grakn instance
+
+    Returns:
+        Final accuracies for training and for testing
+    """
+    """
+
+    client = GraknClient(uri=uri)
+    session = client.session(keyspace=keyspace)
+    
+   
+    #node_types = ['SSP-vec', 'bottom-segment', 'duct', 'ray-input', 'sound-propagation-scenario', 'source', 'SSP_value', 'season', 'grad', 'duct_type', 'depth', 'num_rays', 'location', 'slope', 'bottom_type', 'length', 'number_of_ducts', 'src-position', 'bathymetry', 'sound-speed', 'SSP-channel', 'convergence']
+    #edge_types = ['has', 'define_SSP', 'find_channel', 'minimum_resolution', 'defined_by_SSP', 'defined_by_bathy', 'channel_exists', 'defined_by_src', 'define_src', 'define_bathy', 'converged_scenario']
+    kwargs = {'continuous_attributes': continuous_attributes,
+          'categorical_attributes': categorical_attributes,
+          'num_processing_steps_tr': num_processing_steps_tr,
+          'num_processing_steps_ge': num_processing_steps_ge,
+          'num_training_iterations': num_training_iterations,
+          'node_types': node_types,
+          'edge_types': edge_types,
+          'output_dir': f"C:/Users/kubap/Documents/THESIS/gitrepo/kgcnmodels/{time.time()}/"}    
+    
+    
+    # Create networkX graphs or retrieve them from previously created copies
+    #train_graphs, tr_ge_split = preprare_data(session, data, train_split=0.50, validation_split=0.2) #,val_graphs, val_ge_split
+    # Train the model
+    training_output = go_train(
+    session, client, train_graphs, tr_ge_split, num_processing_steps_tr,num_processing_steps_ge,node_types,
+                                                 edge_types,num_training_iterations,continuous_attributes,categorical_attributes) #session, client, train_graphs, tr_ge_split, **kwargs
+     #save_file = 'test_model.ckpt',
+    # Validate the model
+    #validation_output =  go_test(session, client, val_graphs, val_ge_split, reload_file= "test_model.ckpt",**kwargs)
+    
+    return training_output#train_graphs#, val_graphs#,  inputs#, validation_output
+
+
+#training_output, validation_output 
+#*_output = [ge_graphs, solveds_tr, solveds_ge]
+training_output = convergence_example(data,
+                                      num_processing_steps_tr=5, 
+                                      num_processing_steps_ge=5, 
+                                      num_training_iterations=200)
+
+
+#, val_graphs
+"""
