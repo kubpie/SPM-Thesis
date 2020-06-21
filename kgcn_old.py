@@ -46,7 +46,8 @@ data_complete = pd.read_csv(path+"data_complete.csv")
 
 # DATA SELECTION FOR GRAKN TESTING
 #data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
-data = data.iloc[440:446,:]
+#data = pd.concat([data.iloc[0:3,:],data.iloc[440:443,:]])
+data = data.iloc[9020:9026,:]
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
 # Candidates are neither present in the input nor in the solution, they are negative samples
@@ -69,7 +70,7 @@ CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
-                         'num_rays': (500, 1500), 
+                         'num_rays': (500, 15000), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
@@ -426,7 +427,7 @@ def convergence_example(data, num_graphs=100,
         [edge_types.remove(el) for el in ROLES_TO_IGNORE]
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')
-  
+    
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs,
                                                  tr_ge_split,
                                                  node_types,
@@ -440,13 +441,13 @@ def convergence_example(data, num_graphs=100,
 
     #with session.transaction().write() as tx:
     #    write_predictions_to_grakn(ge_graphs, tx)
-  
+    
     session.close()
     client.close()
     
-    return graphs, ge_graphs, solveds_tr, solveds_ge
+    return graphs#, ge_graphs, solveds_tr, solveds_ge
 
-graphs, ge_graphs, solveds_tr, solveds_ge =  convergence_example(data, num_graphs=len(data), #len(data)
+graphs =  convergence_example(data, num_graphs=len(data), #len(data)
                       num_processing_steps_tr=1, #5
                       num_processing_steps_ge=1, #5
                       num_training_iterations=100, #300

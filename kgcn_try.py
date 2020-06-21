@@ -76,10 +76,10 @@ loc = np.unique(locations).tolist()
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc,
-                          'duct_type': ['None','SLD','DC']}
+                          'duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
-                         'num_rays': (500, 1500), 
+                         'num_rays': (500, 15000), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
@@ -211,9 +211,8 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
 
     concept_graph = combine_n_graphs(query_concept_graphs)
     return concept_graph
-"""
+
 def create_concept_graphs(example_indices, grakn_session):
-  
     #for scnenario_id with open grakn session:
         #0. check if the nx.graph for example doesn't exists already in the output directory
         #if yes: load nx.graph from pickle file
@@ -242,7 +241,7 @@ def create_concept_graphs(example_indices, grakn_session):
             obfuscate_labels(graph, TYPES_AND_ROLES_TO_OBFUSCATE)
     
             graph.name = scenario_idx
-            #nx.write_gpickle(graph, savepath+graph_filename)
+            nx.write_gpickle(graph, savepath+graph_filename)
         
         else:
             print(f'[{it+1}|{total}] NetworkX graph loaded {graph_filename}')
@@ -253,7 +252,6 @@ def create_concept_graphs(example_indices, grakn_session):
         # new_graph = networkx.Graph(graph)
         # nx.draw(new_graph)
         # plt.show()
-
     return graphs
 
 def obfuscate_labels(graph, types_and_roles_to_obfuscate):
@@ -308,6 +306,7 @@ def obfuscate_labels(graph, types_and_roles_to_obfuscate):
             if data['type'] == label_to_obfuscate:
                 data.update(type=with_label)
                 break
+"""
 
 def get_query_handles(scenario_idx):
     
@@ -494,6 +493,7 @@ def go_train(data, num_processing_steps_tr, num_processing_steps_ge, num_trainin
     tr_ge_split = len(data)*0.5
     example_idx_tr = data.index.tolist()
     train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
+   
     with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
         node_types = get_thing_types(tx)
