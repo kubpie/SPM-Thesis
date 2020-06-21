@@ -15,8 +15,8 @@ import networkx as nx
 import pandas as pd
 
 from grakn.client import GraknClient
-#from pipeline_mod import pipeline
-from kglib.kgcn.pipeline.pipeline import pipeline
+from pipeline_mod import pipeline
+#from kglib.kgcn.pipeline.pipeline import pipeline
 from kglib.utils.graph.iterate import multidigraph_data_iterator
 from kglib.utils.graph.query.query_graph import QueryGraph
 from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing in vehicle
@@ -53,16 +53,6 @@ from data_prep import LoadData, FeatDuct, UndersampleData
 datapath = os.getcwd()+'\data\\'
 ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-data_complete = pd.read_csv(datapath+"data_complete.csv") #pre-processed data file with already made input feature vectors (rows)
-
-# DATA SELECTION FOR GRAKN TESTING
-data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
-data = UndersampleData(ALLDATA, max_sample = 100)
-data = data[:2]
-
-# DATA SELECTION FOR GRAKN TESTING
-#data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]], ignore_index = False)
-#data = data[:5]
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -338,28 +328,25 @@ def prepare_data(session, data, train_split, validation_split):
     
     return  train_graphs, tr_ge_split #, val_graphs,  val_ge_split
 
-def go_train(train_graphs, tr_ge_split, **kwargs):
+def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
 
     # Run the pipeline with prepared networkx graph
-  
-    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,
-                                                 tr_ge_split= tr_ge_split,
-                                                 **kwargs)
- 
-
-    
-    """
-    pipeline(graphs=train_graphs,             
-                                             tr_ge_split=tr_ge_split,                         
-                                             do_test=False,
-                                             save_fle=model_file,
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,             
+                                             tr_ge_split = tr_ge_split,                         
+                                             do_test = False,
+                                             save_fle = save_fle,
                                              reload_fle = "",
                                               **kwargs)
     
     """
+    pipeline(graphs = train_graphs,
+                                                 tr_ge_split= tr_ge_split,
+                                                 **kwargs)
+    """
+
     
-    training_eval_output = [solveds_tr, solveds_ge]   
-    return train_graphs, ge_graphs, training_eval_output
+    training_evals= [solveds_tr, solveds_ge]   
+    return train_graphs, ge_graphs, training_evals
  
 def go_test(val_graphs, val_ge_split, **kwargs):
     
@@ -394,7 +381,9 @@ def go_test(val_graphs, val_ge_split, **kwargs):
 
     
 
-
+# DATA SELECTION FOR GRAKN TESTING
+data = UndersampleData(ALLDATA, max_sample = 100)
+data = data[:2]
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
@@ -418,12 +407,11 @@ kgcn_vars = {
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          #'model_file': "test_model.ckpt",
           'output_dir': f"./events/{time.time()}/"
           }           
 
 
-train_graphs, ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+train_graphs, ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
 #with session.transaction().write() as tx:
     #    write_predictions_to_grakn(ge_graphs, tx)  # Write predictions to grakn with learned probabilities

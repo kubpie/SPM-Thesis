@@ -35,16 +35,17 @@ class KGCNLearner:
     """
     Responsible for running a KGCN model
     """
-    def __init__(self, model, save_fle, reload_fle, num_processing_steps_tr=10, num_processing_steps_ge=10):
+    def __init__(self, model, save_fle, reload_fle, log_dir, num_processing_steps_tr=10, num_processing_steps_ge=10):
         """Args:
             save_fle: Name to save the trained model to.
             reload_fle: Name to load saved model from, when doing inference.
         """
+        self._log_dir = log_dir
+        self._save_fle = save_fle
+        self._reload_fle = reload_fle
         self._model = model
         self._num_processing_steps_tr = num_processing_steps_tr
         self._num_processing_steps_ge = num_processing_steps_ge
-        #self.save_fle = save_fle
-        #self.reload_fle = reload_fle
     def train(self,
                  tr_input_graphs,
                  tr_target_graphs,
@@ -52,9 +53,7 @@ class KGCNLearner:
                  ge_target_graphs,
                  num_training_iterations=1000,
                  learning_rate=1e-3,
-                 log_every_epochs=20,
-                 log_dir=None,
-                 save_fle='save_model.txt'):
+                 log_every_epochs=20):
         """
         Args:
             tr_graphs: In-memory graphs of Grakn concepts for training
@@ -63,12 +62,14 @@ class KGCNLearner:
             num_processing_steps_ge: Number of processing (message-passing) steps for generalization.
             num_training_iterations: Number of training iterations
             log_every_seconds: The time to wait between logging and printing the next set of results.
-            log_dir: Directory to store TensorFlow events files
+            log_dir: Directory to store TensorFlow events files, output graphs & saved models!
 
         Returns:
 
         """
-        save_fle = Path(save_fle)
+        save_fle = Path(self._save_fle)
+        print(f'Saving output to directory:{save_fle}\n')
+
         tf.set_random_seed(1)
 
         input_ph, target_ph = create_placeholders(tr_input_graphs, tr_target_graphs)
@@ -111,8 +112,8 @@ class KGCNLearner:
 
         train_writer = None
 
-        if log_dir is not None:
-            train_writer = tf.summary.FileWriter(log_dir, sess.graph)
+        if self._log_dir is not None:
+            train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
 
         sess.run(tf.global_variables_initializer())
         model_saver = tf.train.Saver()
@@ -187,10 +188,12 @@ class KGCNLearner:
                     feed_dict=feed_dict)
                 
         # Train the model and save it in the end
+        # TODO: Could modify saver to save model checkpoint every n-epochs
         if not save_fle.is_dir():
-            model_saver.save(sess, save_fle.as_posix())
-            tf.train.write_graph(sess.graph.as_graph_def(), logdir=save_fle.parent.as_posix(), name=save_fle.with_suffix('.pbtxt').as_posix(), as_text=True)
-
+            model_saver.save(sess, save_fle.as_posix())  #global_step = 
+            #save_fle.with_suffix('.pbtxt').as_posix() = 
+            tf.train.write_graph(sess.graph.as_graph_def(), logdir=self._log_dir, name='graph_model.pbtxt', as_text=True) 
+            #print(f'Saved model to {log_dir+save_fle}')
         training_info = logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge
         return train_values, test_values, training_info
     
