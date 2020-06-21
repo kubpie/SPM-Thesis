@@ -45,9 +45,9 @@ data = FeatDuct(raw_data, Input_Only = True) #leave only model input
 data_complete = pd.read_csv(path+"data_complete.csv")
 
 # DATA SELECTION FOR GRAKN TESTING
-#data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
+data = pd.concat([data.iloc[0:10,:],data.iloc[440:446,:],data.iloc[9020:9026,:]])
 #data = pd.concat([data.iloc[0:3,:],data.iloc[440:443,:]])
-data = data.iloc[9020:9026,:]
+#data = data.iloc[9020:9022,:]
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
 # Candidates are neither present in the input nor in the solution, they are negative samples
@@ -66,8 +66,10 @@ for ssp in data_complete['profile']:
 loc = np.unique(locations)
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
-                          'location': loc.tolist(),
-                          'duct_type': ["NotDuct","SLD","DC"]}
+                          'location': loc.tolist()}
+
+                          #'duct_type': ["NotDuct","SLD","DC"]}
+                          
 # Continuous Attribute types and their min and max values
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
                          'num_rays': (500, 15000), 
@@ -266,10 +268,11 @@ def get_query_handles(scenario_idx):
     """
     # === Convergence ===
     conv, scn, ray, nray, src, dsrc, seg, dseg, l, s, srcp, bathy, bt, ssp, loc, ses,\
-    sspval, dsspmax, speed, dssp, dct, ddct, dt, gd, duct, nod = 'conv','scn','ray', 'nray',\
+    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct, nod = 'conv','scn','ray', 'nray',\
     'src', 'dsrc', 'seg', 'dseg','l','s','srcp','bathy','bt','ssp','loc','ses',\
-    'sspval','dsspmax','speed','dssp','dct','ddct','dt','gd','duct','nod'
+    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct','nod'                        
     
+    #dt,'dt',
     convergence_query = inspect.cleandoc(
         f'''match 
         $scn isa sound-propagation-scenario, has scenario_id {scenario_idx};'''
@@ -280,13 +283,13 @@ def get_query_handles(scenario_idx):
         $srcp(defined_by_src: $scn, define_src: $src) isa src-position;
         $bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
         $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
-        $dct isa duct, has depth $ddct, has duct_type $dt, has grad $gd;
+        $dct isa duct, has depth $ddct, has grad $gd;
         $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
         $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
         $sspval has depth $dssp;
         {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
         get;'''
-        )
+        ) # has duct_type $dt,
     
     '''
     get $scn, $sid, $ray, $nray, $conv,
@@ -300,7 +303,7 @@ def get_query_handles(scenario_idx):
                              .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
                                         l, s, srcp, bathy, bt, ssp, loc, ses, \
                                         sspval, dsspmax, speed, dssp, dct, ddct,\
-                                        dt, gd, duct, nod], PREEXISTS)
+                                         gd, duct, nod], PREEXISTS) #dt,
                              .add_has_edge(ray, nray, PREEXISTS)
                              .add_has_edge(src, dsrc, PREEXISTS)
                              .add_has_edge(seg, dseg, PREEXISTS)
@@ -311,7 +314,7 @@ def get_query_handles(scenario_idx):
                              .add_has_edge(ssp, sspval, PREEXISTS)
                              .add_has_edge(ssp, dsspmax, PREEXISTS)
                              .add_has_edge(dct, ddct, PREEXISTS)
-                             .add_has_edge(dct, dt, PREEXISTS)
+                             #.add_has_edge(dct, dt, PREEXISTS)
                              .add_has_edge(dct, gd, PREEXISTS)
                              .add_has_edge(bathy, bt, PREEXISTS)
                              .add_has_edge(duct, nod, PREEXISTS)
