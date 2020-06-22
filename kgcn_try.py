@@ -20,7 +20,8 @@ from pipeline_mod import pipeline
 from kglib.utils.graph.iterate import multidigraph_data_iterator
 from kglib.utils.graph.query.query_graph import QueryGraph
 from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing in vehicle
-from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
+#from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
+from kglib.utils.graph.thing.queries_to_graph import combine_2_graphs, combine_n_graphs, concept_dict_from_concept_map
 from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 
@@ -34,7 +35,11 @@ import tensorflow as tf
 # TODO: Issues with GPU acceleration
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 tf.reset_default_graph() #fix bugs with tensor of uknonw size
-tf.get_logger().setLevel('INFO') #filter out annoying messages about name format with ':'
+
+import warnings
+import matplotlib.cbook
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filter out mpl warnings
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
 import os
 
@@ -66,7 +71,7 @@ loc = np.unique(locations).tolist()
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc}
-                          #'duct_type': ["NotDuct","SLD","DC"]}
+                          #duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
                          'num_rays': (500, 15000), 
@@ -87,7 +92,68 @@ TYPES_AND_ROLES_TO_OBFUSCATE = {'candidate-convergence': 'convergence',
                                 'candidate_resolution': 'minimum_resolution',
                                 'candidate_scenario': 'converged_scenario'}
 
+def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transaction,
+                             concept_dict_converter=concept_dict_to_graph, infer=True):
+    """
+    Builds a graph of Things, interconnected by roles (and *has*), from a set of queries and graphs representing those
+    queries (variable graphs)of those queries, over a Grakn transaction
 
+    Args:
+        infer: whether to use Grakn's inference engine
+        query_sampler_variable_graph_tuples: A list of tuples, each tuple containing a query, a sampling function,
+            and a variable_graph
+        grakn_transaction: A Grakn transaction
+        concept_dict_converter: The function to use to convert from concept_dicts to a Grakn model. This could be
+            a typical model or a mathematical model
+
+    Returns:
+        A networkx graph
+    """
+    query_concept_graphs = []
+
+    for query, sampler, variable_graph in query_sampler_variable_graph_tuples:
+
+        concept_maps = sampler(grakn_transaction.query(query, infer=infer))
+        concept_dicts = [concept_dict_from_concept_map(concept_map) for concept_map in concept_maps]
+        """
+        #print(concept_dicts)
+        notaduct = 0
+        for cd in concept_dicts:
+            for key, value in cd.items():
+                if key == 'gd':#and '0.0' in value:
+                    print(key, value)
+                    val = 'grad' in cd['gd']
+                    print(val)
+                    #if '0.0' in value:
+                    #    print('asdasda')
+        """
+        answer_concept_graphs = []
+        for concept_dict in concept_dicts:
+            try:
+                answer_concept_graphs.append(concept_dict_converter(concept_dict, variable_graph))
+            except ValueError as e:
+                raise ValueError(str(e) + f'Encountered processing query:\n \"{query}\"')
+
+        if len(answer_concept_graphs) > 1:
+            query_concept_graph = combine_n_graphs(answer_concept_graphs)
+            query_concept_graphs.append(query_concept_graph)
+        else:
+            if len(answer_concept_graphs) > 0:
+                query_concept_graphs.append(answer_concept_graphs[0])
+            else:
+                warnings.warn(f'There were no results for query: \n\"{query}\"\nand so nothing will be added to the '
+                              f'graph for this query')
+
+    if len(query_concept_graphs) == 0:
+        # Raise exception when none of the queries returned any results
+        raise RuntimeError(f'The graph from queries: {[query_sampler_variable_graph_tuple[0] for query_sampler_variable_graph_tuple in query_sampler_variable_graph_tuples]}\n'
+                           f'could not be created, since none of these queries returned results')
+
+    concept_graph = combine_n_graphs(query_concept_graphs)
+    #TODO: Remove NotDuct result from NetworkX graph completely: entity duct, attr grad 0, depth 0
+     
+    
+    return concept_graph
 
 def create_concept_graphs(example_indices, grakn_session):
     """
@@ -246,7 +312,7 @@ def get_query_handles(scenario_idx):
         (candidate_convergence_query, lambda x: x, candidate_convergence_query_graph)
         ]
 
-def write_predictions_to_grakn(graphs, tx):
+def write_predictions_to_grakn(graphs, tx, commit = True):
     """
     Take predictions from the ML model, and insert representations of those predictions back into the graph.
 
@@ -257,11 +323,14 @@ def write_predictions_to_grakn(graphs, tx):
     Returns: None
 
     """
+    
+    #TODO: Revise these loops and see why nothing is being predicted as data['prediction']=2 (exists?)
     for graph in graphs:
         for node, data in graph.nodes(data=True):
             if data['prediction'] == 2:
                 concept = data['concept']
                 concept_type = concept.type_label
+                #print(concept)
                 if concept_type == 'convergence' or concept_type == 'candidate-convergence':
                     neighbours = graph.neighbors(node)
 
@@ -273,18 +342,18 @@ def write_predictions_to_grakn(graphs, tx):
                             ray = concept
 
                     p = data['probabilities']
-                    query = (f'match'
-                             f'$scn isa sound-propagation-scenario, has scenario_id {scenario.id};'
-                             f'$ray isa ray-input, has num_rays {ray.id};'
-                             f'insert'
-                             f'$conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence,'
-                             f'has probability_exists {p[2]:.3f},'
-                             f'has probability_nonexists {p[1]:.3f},'  
+                    query = (f'match '
+                             f'$scn id {scenario.id}; '
+                             f'$ray id {ray.id}; '
+                             f'insert '
+                             f'$conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence, '
+                             f'has probability_exists {p[2]:.3f}, '
+                             f'has probability_nonexists {p[1]:.3f}, '  
                              f'has probability_preexists {p[0]:.3f};')
-                    tx.query(query)
                     print(query)
-    tx.commit()
-
+                    tx.query(query)
+    if commit:
+        tx.commit()
     
 def prepare_data(session, data, train_split, validation_split):
     """
@@ -382,7 +451,7 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 
 # DATA SELECTION FOR GRAKN TESTING
 data = UndersampleData(ALLDATA, max_sample = 100)
-data = data[:5]
+data = data[:100]
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
@@ -399,9 +468,9 @@ with session.transaction().read() as tx:
 train_graphs, tr_ge_split = prepare_data(session, data, train_split=0.5, validation_split = 0.2)
 #, val_graphs,  val_ge_split
 kgcn_vars = {
-          'num_processing_steps_tr': 5,
-          'num_processing_steps_ge': 5,
-          'num_training_iterations': 100,
+          'num_processing_steps_tr': 10,
+          'num_processing_steps_ge': 10,
+          'num_training_iterations': 200,
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
@@ -413,7 +482,7 @@ kgcn_vars = {
 tr_ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
 with session.transaction().write() as tx:
-        write_predictions_to_grakn(tr_ge_graphs, tx)  # Write predictions to grakn with learned probabilities
+        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
     
 session.close()
 client.close()

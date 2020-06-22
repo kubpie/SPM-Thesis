@@ -113,8 +113,8 @@ class KGCNLearner:
         train_writer = None
 
         if self._log_dir is not None:
-            train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
-
+            #train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
+            train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
         sess.run(tf.global_variables_initializer())
         model_saver = tf.train.Saver()
 
