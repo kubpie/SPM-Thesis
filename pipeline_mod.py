@@ -121,6 +121,7 @@ def pipeline(graphs,
     for ge_graph in ge_graphs:
         for data in multidigraph_data_iterator(ge_graph):
             data['probabilities'] = softmax(data['logits'])
+            # assing 0,1,2 based argmax of logits -> TODO: threshold
             data['prediction'] = int(np.argmax(data['probabilities']))
 
     _, _, _, _, _, solveds_tr, solveds_ge = tr_info
