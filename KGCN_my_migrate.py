@@ -447,6 +447,7 @@ data_complete = pd.read_csv(path+"data_complete.csv")
 #SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
 #SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
 data = UndersampleData(data, max_sample = 100)
+
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0

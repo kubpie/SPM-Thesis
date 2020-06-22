@@ -428,6 +428,8 @@ def UndersampleData(data, max_sample):
             data_sampled = data_sampled.append(data.loc[data['num_rays'] == raynr], ignore_index= False)
             
     return data_sampled
+
+
 """
 # Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
 #categorical_var = np.hstack([2, np.arange(5,33)])
@@ -452,16 +454,17 @@ path = os.getcwd()+'\data\\'
 
 rawdata = LoadData(path)
 data1 = FeatDuct(rawdata, Input_Only = True)
-data2 = FeatBathy(data1, path)
-data3 = FeatSSPId(data2, path, src_cond = True)
-data4 = FeatSSPStat(data3,path)
-data5 = FeatSSPOnDepth(data4, path, save = True)
+#data2 = FeatBathy(data1, path)
+#data3 = FeatSSPId(data2, path, src_cond = True)
+#data4 = FeatSSPStat(data3,path)
+#data5 = FeatSSPOnDepth(data4, path, save = True)
+data = UndersampleData(data1, 100)
+ClassImbalance(data, plot = True)
 
 
-target = 'num_rays'
-features = data5.columns.tolist()
-features.remove(target)
+#target = 'num_rays'
+#features = data5.columns.tolist()
+#features.remove(target)
 
-PlotCorrelation(data5,features, annotate = False)
-ClassImbalance(data4, plot = True)
+#PlotCorrelation(data5,features, annotate = False)
 """

@@ -447,7 +447,7 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     validation_evals = [solveds_tr, solveds_ge] 
     return ge_graphs, validation_evals
 
-    
+##### RUN THE PIPELINE  #####  
 
 # DATA SELECTION FOR GRAKN TESTING
 data = UndersampleData(ALLDATA, max_sample = 100)
