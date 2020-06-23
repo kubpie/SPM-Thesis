@@ -10,6 +10,7 @@ kgcnmodels/
 
 # Saved NetworkX graphs
 networkx/
+nx_backup/
 
 # VS-compiled folders
 .vs/
