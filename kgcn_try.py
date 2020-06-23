@@ -57,6 +57,8 @@ from data_prep import LoadData, FeatDuct, UndersampleData
 datapath = os.getcwd()+'\data\\'
 ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
+PROCESSED_DATA = pd.read_csv(datapath+"data_complete.csv")
+
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -115,15 +117,21 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
 
         concept_maps = sampler(grakn_transaction.query(query, infer=infer))
         concept_dicts = [concept_dict_from_concept_map(concept_map) for concept_map in concept_maps]
+        #TODO: Implement removal of NotDuct cases at NetworkX level instead of query workaround
         """
         #print(concept_dicts)
         notaduct = 0
         for cd in concept_dicts:
-            for key, value in cd.items():
-                if key == 'gd':#and '0.0' in value:
-                    print(key, value)
-                    val = 'grad' in cd['gd']
-                    print(val)
+            print(cd)
+            for variable, thing in cd.items(): #key, value
+                if variable == 'gd' and thing.value == 0.0:#and '0.0' in value:
+                    print(variable, thing.value)
+                    #cd.pop('gd')
+                    #cd.pop('dct')
+                    #cd.pop('SSP-channel')
+                    #cd.pop()
+                    #val = 'grad' in cd['gd']
+                    #print(val)
                     #if '0.0' in value:
                     #    print('asdasda')
         """
@@ -186,11 +194,17 @@ def create_concept_graphs(example_indices, grakn_session):
     savepath = f"./networkx/"
     total = len(example_indices)
     
+    not_duct_idx = []
+    for idx, sld, dc in zip(range(len(PROCESSED_DATA)),PROCESSED_DATA['SLD_depth'],PROCESSED_DATA['DC_axis']):
+        if np.isnan(sld) and np.isnan(dc):
+            not_duct_idx.append(idx)
+        
     for it, scenario_idx in enumerate(example_indices):
         graph_filename = f'graph_{scenario_idx}.gpickle'
         if not os.path.exists(savepath+graph_filename):
             print(f'[{it+1}|{total}] Creating graph for example {scenario_idx}')
-            graph_query_handles = get_query_handles(scenario_idx)
+            graph_query_handles = get_query_handles(scenario_idx, not_duct_idx)
+            #print(graph_query_handles)
             with grakn_session.transaction().read() as tx:
                 # Build a graph from the queries, samplers, and query graphs
                 graph = build_graph_from_queries(graph_query_handles, tx, infer=infer)
@@ -219,10 +233,8 @@ def obfuscate_labels(graph, types_and_roles_to_obfuscate):
                 data.update(type=with_label)
                 break
 
-def get_query_handles(scenario_idx):
-    
-    # Contains Schema-Specific queries that retrive sub-graphs from grakn!
-    
+def get_query_handles(scenario_idx, not_duct_idx):
+        
     """
     Creates an iterable, each element containing a Graql query, a function to sample the answers, and a QueryGraph
     object which must be the Grakn graph representation of the query. This tuple is termed a "query_handle"
@@ -231,69 +243,14 @@ def get_query_handles(scenario_idx):
     Returns:
         query handles
     """
-    # === Convergence ===
+    # === Query variables ===
     conv, scn, ray, nray, src, dsrc, seg, dseg, l, s, srcp, bathy, bt, ssp, loc, ses,\
     sspval, dsspmax, speed, dssp, dct, ddct, gd, duct, nod = 'conv','scn','ray', 'nray',\
     'src', 'dsrc', 'seg', 'dseg','l','s','srcp','bathy','bt','ssp','loc','ses',\
     'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct','nod'
     # dt, 'dt'
-    convergence_query = inspect.cleandoc(
-        f'''match 
-        $scn isa sound-propagation-scenario, has scenario_id {scenario_idx};'''
-        '''$ray isa ray-input, has num_rays $nray; 
-        $src isa source, has depth $dsrc; 
-        $seg isa bottom-segment, has depth $dseg, has length $l, has slope $s;
-        $conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;
-        $srcp(defined_by_src: $scn, define_src: $src) isa src-position;
-        $bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
-        $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
-        $dct isa duct, has depth $ddct, has grad $gd;
-        $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
-        $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
-        $sspval has depth $dssp;
-        {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
-        get;'''
-        )
-    # has duct_type $dt,
-    '''
-    get $scn, $sid, $ray, $nray, $conv,
-    $src, $dsrc, $seg, $dseg, $l, $s, $srcp, $bathy, $bt,
-    $ssp, $loc, $ses,  $dsspmax, $speed, $sspval, $dssp,
-    $dct, $ddct, $gd, $dt, $duct, $nod;
-    '''
-
-    convergence_query_graph = (QueryGraph()
-                             .add_vars([conv], TO_INFER)
-                             .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
-                                        l, s, srcp, bathy, bt, ssp, loc, ses, \
-                                        sspval, dsspmax, speed, dssp, dct, ddct,\
-                                        gd, duct, nod], PREEXISTS) #dt,
-                             .add_has_edge(ray, nray, PREEXISTS)
-                             .add_has_edge(src, dsrc, PREEXISTS)
-                             .add_has_edge(seg, dseg, PREEXISTS)
-                             .add_has_edge(seg, l, PREEXISTS)
-                             .add_has_edge(seg, s, PREEXISTS)
-                             .add_has_edge(ssp, loc, PREEXISTS)
-                             .add_has_edge(ssp, ses, PREEXISTS)
-                             .add_has_edge(ssp, sspval, PREEXISTS)
-                             .add_has_edge(ssp, dsspmax, PREEXISTS)
-                             .add_has_edge(dct, ddct, PREEXISTS)
-                             #.add_has_edge(dct, dt, PREEXISTS)
-                             .add_has_edge(dct, gd, PREEXISTS)
-                             .add_has_edge(bathy, bt, PREEXISTS)
-                             .add_has_edge(duct, nod, PREEXISTS)
-                             .add_has_edge(sspval, dssp, PREEXISTS)
-                             .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
-                             .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
-                             .add_role_edge(srcp, scn, 'defined_by_src', PREEXISTS)
-                             .add_role_edge(srcp, src, 'define_src', PREEXISTS)
-                             .add_role_edge(bathy, scn, 'defined_by_bathy', PREEXISTS)
-                             .add_role_edge(bathy, seg, 'define_bathy', PREEXISTS)
-                             .add_role_edge(speed, scn, 'defined_by_SSP', PREEXISTS)
-                             .add_role_edge(speed, ssp, 'define_SSP', PREEXISTS)
-                             .add_role_edge(duct, ssp, 'find_channel', PREEXISTS)
-                             .add_role_edge(duct, dct, 'channel_exists', PREEXISTS)
-                             )
+    
+    
     # === Candidate Convergence ===
     candidate_convergence_query = inspect.cleandoc(f'''match
            $scn isa sound-propagation-scenario, has scenario_id {scenario_idx};
@@ -307,10 +264,117 @@ def get_query_handles(scenario_idx):
                                        .add_has_edge(ray, nray, PREEXISTS)
                                        .add_role_edge(conv, scn, 'candidate_scenario', CANDIDATE)
                                        .add_role_edge(conv, ray, 'candidate_resolution', CANDIDATE))
-    return [
-        (convergence_query, lambda x: x, convergence_query_graph),
-        (candidate_convergence_query, lambda x: x, candidate_convergence_query_graph)
-        ]
+
+   
+    
+    if scenario_idx not in not_duct_idx:
+        # === Convergence: SCN with ducts ===    
+        convergence_query_full = inspect.cleandoc(
+            f'''match 
+            $scn isa sound-propagation-scenario, has scenario_id {scenario_idx};'''
+            '''$ray isa ray-input, has num_rays $nray; 
+            $src isa source, has depth $dsrc; 
+            $seg isa bottom-segment, has depth $dseg, has length $l, has slope $s;
+            $conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;
+            $srcp(defined_by_src: $scn, define_src: $src) isa src-position;
+            $bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
+            $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
+            $dct isa duct, has depth $ddct, has grad $gd;
+            $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
+            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
+            $sspval has depth $dssp;
+            {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
+            get;'''
+            )
+        # has duct_type $dt,
+        
+        convergence_query_full_graph = (QueryGraph()
+                                 .add_vars([conv], TO_INFER)
+                                 .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
+                                            l, s, srcp, bathy, bt, ssp, loc, ses, \
+                                            sspval, dsspmax, speed, dssp, dct, ddct,\
+                                            gd, duct, nod], PREEXISTS) #dt,
+                                 .add_has_edge(ray, nray, PREEXISTS)
+                                 .add_has_edge(src, dsrc, PREEXISTS)
+                                 .add_has_edge(seg, dseg, PREEXISTS)
+                                 .add_has_edge(seg, l, PREEXISTS)
+                                 .add_has_edge(seg, s, PREEXISTS)
+                                 .add_has_edge(ssp, loc, PREEXISTS)
+                                 .add_has_edge(ssp, ses, PREEXISTS)
+                                 .add_has_edge(ssp, sspval, PREEXISTS)
+                                 .add_has_edge(ssp, dsspmax, PREEXISTS)
+                                 .add_has_edge(dct, ddct, PREEXISTS)
+                                 #.add_has_edge(dct, dt, PREEXISTS)
+                                 .add_has_edge(dct, gd, PREEXISTS)
+                                 .add_has_edge(bathy, bt, PREEXISTS)
+                                 .add_has_edge(duct, nod, PREEXISTS)
+                                 .add_has_edge(sspval, dssp, PREEXISTS)
+                                 .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
+                                 .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
+                                 .add_role_edge(srcp, scn, 'defined_by_src', PREEXISTS)
+                                 .add_role_edge(srcp, src, 'define_src', PREEXISTS)
+                                 .add_role_edge(bathy, scn, 'defined_by_bathy', PREEXISTS)
+                                 .add_role_edge(bathy, seg, 'define_bathy', PREEXISTS)
+                                 .add_role_edge(speed, scn, 'defined_by_SSP', PREEXISTS)
+                                 .add_role_edge(speed, ssp, 'define_SSP', PREEXISTS)
+                                 .add_role_edge(duct, ssp, 'find_channel', PREEXISTS)
+                                 .add_role_edge(duct, dct, 'channel_exists', PREEXISTS)
+                                 )
+        return [
+            (convergence_query_full, lambda x: x, convergence_query_full_graph),
+            (candidate_convergence_query, lambda x: x, candidate_convergence_query_graph)
+            ]
+    
+    
+    else:        
+        # === Convergence: SCN with\without ducts ===
+        convergence_query_reduced = inspect.cleandoc(
+                f'''match 
+                $scn isa sound-propagation-scenario, has scenario_id {scenario_idx};'''
+                '''$ray isa ray-input, has num_rays $nray; 
+                $src isa source, has depth $dsrc; 
+                $seg isa bottom-segment, has depth $dseg, has length $l, has slope $s;
+                $conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;
+                $srcp(defined_by_src: $scn, define_src: $src) isa src-position;
+                $bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
+                $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
+                $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
+                $sspval has depth $dssp;
+                {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $dsspmax;}; 
+                get;'''
+                )
+            
+        convergence_query_reduced_graph = (QueryGraph()
+                                 .add_vars([conv], TO_INFER)
+                                 .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
+                                            l, s, srcp, bathy, bt, ssp, loc, ses, \
+                                            sspval, dsspmax, speed, dssp], PREEXISTS)
+                                 .add_has_edge(ray, nray, PREEXISTS)
+                                 .add_has_edge(src, dsrc, PREEXISTS)
+                                 .add_has_edge(seg, dseg, PREEXISTS)
+                                 .add_has_edge(seg, l, PREEXISTS)
+                                 .add_has_edge(seg, s, PREEXISTS)
+                                 .add_has_edge(ssp, loc, PREEXISTS)
+                                 .add_has_edge(ssp, ses, PREEXISTS)
+                                 .add_has_edge(ssp, sspval, PREEXISTS)
+                                 .add_has_edge(ssp, dsspmax, PREEXISTS)
+                                 .add_has_edge(bathy, bt, PREEXISTS)                           
+                                 .add_has_edge(sspval, dssp, PREEXISTS)
+                                 .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
+                                 .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
+                                 .add_role_edge(srcp, scn, 'defined_by_src', PREEXISTS)
+                                 .add_role_edge(srcp, src, 'define_src', PREEXISTS)
+                                 .add_role_edge(bathy, scn, 'defined_by_bathy', PREEXISTS)
+                                 .add_role_edge(bathy, seg, 'define_bathy', PREEXISTS)
+                                 .add_role_edge(speed, scn, 'defined_by_SSP', PREEXISTS)
+                                 .add_role_edge(speed, ssp, 'define_SSP', PREEXISTS)
+                                 )    
+            
+
+        return [
+            (convergence_query_reduced, lambda x: x, convergence_query_reduced_graph),
+            (candidate_convergence_query, lambda x: x, candidate_convergence_query_graph)
+            ]
 
 def write_predictions_to_grakn(graphs, tx, commit = True):
     """
@@ -330,7 +394,6 @@ def write_predictions_to_grakn(graphs, tx, commit = True):
             if data['prediction'] == 2:
                 concept = data['concept']
                 concept_type = concept.type_label
-                #print(concept)
                 if concept_type == 'convergence' or concept_type == 'candidate-convergence':
                     neighbours = graph.neighbors(node)
 
@@ -450,8 +513,13 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 ##### RUN THE PIPELINE  #####  
 
 # DATA SELECTION FOR GRAKN TESTING
+from data_analysis_lib import ClassImbalance
 data = UndersampleData(ALLDATA, max_sample = 100)
-data = data[:100]
+data = UndersampleData(data, max_sample = 50)
+#class_population = ClassImbalance(data, plot = False)
+#print(class_population)
+#data = data[131:141]
+
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
@@ -470,7 +538,7 @@ train_graphs, tr_ge_split = prepare_data(session, data, train_split=0.5, validat
 kgcn_vars = {
           'num_processing_steps_tr': 10,
           'num_processing_steps_ge': 10,
-          'num_training_iterations': 200,
+          'num_training_iterations': 300,
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,

@@ -57,7 +57,6 @@ def ClassImbalance(data, plot = False):
             xy=(x[i], np.cumsum(yper)[i]), 
             xytext=(x[i]-0.65, np.cumsum(yper)[i]+0.2), 
             arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
-    
     return y_population
 
 
