@@ -101,7 +101,7 @@ def pipeline(graphs,
     # train
     else:
         print("\n\nTRAINING\n\n")
-        train_values, test_values, tr_info = learner.train(tr_input_graphs,
+        train_values, test_values, tr_info = learner.train(tr_input_graphs, #input_graphs
                                                  tr_target_graphs,
                                                  ge_input_graphs,
                                                  ge_target_graphs,

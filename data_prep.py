@@ -278,7 +278,7 @@ def EncodeData(data):
     return data_enc 
 
 
-def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False):
+def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False, plot_distributions = False, plot_correlations = False):
     """
     1. Create 3 separate data splits based on the 'wedge_slope' value
     --- OUTLIERS ---
@@ -376,17 +376,18 @@ def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers =
     ### End of Outlier Correction
     
     ### Feature dropout
-    # Remove redundant features with constant values in each set 
-    for i in range(len(SplitSets)):
-        features = data.columns.tolist()
-        redF = constant_features(SplitSets[i][features], frac_constant_values = 0.99)
-        print('Removed constant features ' + f'{redF} '  'for SplitSets ' f'{i}' )
-        SplitSets[i] = SplitSets[i].drop(columns = redF)
-        features.remove('num_rays')
-        features = [f for f in features if f not in redF]
-        
-        if plot_correlations:
-            PlotCorrelation(SplitSets[i], features, annotate = True)
+    if feature_dropout:
+        # Remove redundant features with constant values in each set 
+        for i in range(len(SplitSets)):
+            features = data.columns.tolist()
+            redF = constant_features(SplitSets[i][features], frac_constant_values = 0.99)
+            print('Removed constant features ' + f'{redF} '  'for SplitSets ' f'{i}' )
+            SplitSets[i] = SplitSets[i].drop(columns = redF)
+            features.remove('num_rays')
+            features = [f for f in features if f not in redF]
+            
+            if plot_correlations:
+                PlotCorrelation(SplitSets[i], features, annotate = True)
 
     
     return SplitSets, distributions

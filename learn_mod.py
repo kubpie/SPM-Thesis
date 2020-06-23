@@ -24,7 +24,8 @@ import tensorflow as tf
 from pathlib import Path
 
 from kglib.kgcn.learn.feed import create_placeholders, create_feed_dict, make_all_runnable_in_session
-from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty #TODO: You may want to modify the loss function!
+#from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty #TODO: You may want to modify the loss function!
+from loss_mod import loss_ops_preexisting_no_penalty
 from kglib.kgcn.learn.metrics import existence_accuracy
 
 from graph_nets import utils_np
@@ -79,13 +80,13 @@ class KGCNLearner:
         output_ops_ge = self._model(input_ph, self._num_processing_steps_ge)
 
         # Training loss.
-        loss_ops_tr = loss_ops_preexisting_no_penalty(target_ph, output_ops_tr)
+        loss_ops_tr = loss_ops_preexisting_no_penalty(target_ph, output_ops_tr, weighted = False) #LOSS FUNCTION
         # Loss across processing steps.
         loss_op_tr = sum(loss_ops_tr) / self._num_processing_steps_tr
 
         tf.summary.scalar('loss_op_tr', loss_op_tr)
         # Test/generalization loss.
-        loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge)
+        loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge, weighted = False) #LOSS FUNCTION
         loss_op_ge = loss_ops_ge[-1]  # Loss from final processing step.
         tf.summary.scalar('loss_op_ge', loss_op_ge)
 
@@ -160,6 +161,8 @@ class KGCNLearner:
                         "outputs": output_ops_ge
                     },
                     feed_dict=feed_dict)
+                #print(f'target: {train_values["target"]}') #my add
+                #print(f'output: {train_values["outputs"]}')
                 correct_tr, solved_tr = existence_accuracy(
                     train_values["target"], train_values["outputs"][-1], use_edges=False)
                 correct_ge, solved_ge = existence_accuracy(

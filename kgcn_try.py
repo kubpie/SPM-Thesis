@@ -43,7 +43,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoyi
 
 import os
 
-KEYSPACE =  "sampled_ssp_schema_kgcn"#"sampled_ssp_schema_kgcn"
+KEYSPACE =  "ssp_schema_slope0" #"sampled_ssp_schema_kgcn" #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
@@ -514,11 +514,18 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 
 # DATA SELECTION FOR GRAKN TESTING
 from data_analysis_lib import ClassImbalance
-data = UndersampleData(ALLDATA, max_sample = 100)
-data = UndersampleData(data, max_sample = 50)
-#class_population = ClassImbalance(data, plot = False)
+from data_prep import CreateSplits
+#data = UndersampleData(ALLDATA, max_sample = 100)
+#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 #print(class_population)
 #data = data[131:141]
+
+# === Flat bottom data only ==== #
+SplitSets ,_ = CreateSplits(ALLDATA, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False)
+data = SplitSets[0]
+data = UndersampleData(data, max_sample = 30)
+
+class_population = ClassImbalance(data, plot = False)
 
 
 client = GraknClient(uri=URI)
@@ -538,7 +545,7 @@ train_graphs, tr_ge_split = prepare_data(session, data, train_split=0.5, validat
 kgcn_vars = {
           'num_processing_steps_tr': 10,
           'num_processing_steps_ge': 10,
-          'num_training_iterations': 300,
+          'num_training_iterations': 100,
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
