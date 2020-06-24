@@ -4,13 +4,6 @@ Created on Tue Jun  9 12:20:55 2020
 
 @author: kubap
 """
-
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr 22 00:32:19 2020
-
-@author: kubap
-"""
 from grakn.client import GraknClient
 import numpy as np
 import pandas as pd
