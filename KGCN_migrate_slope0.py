@@ -451,7 +451,7 @@ data_complete = pd.read_csv(path+"data_complete.csv")
 
 SplitSets , popu = CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False)
 data0 = SplitSets[0]
-data = UndersampleData(data0, max_sample = 30)
+data = UndersampleData(data0, max_sample = 50)
 
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
