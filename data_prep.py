@@ -369,6 +369,7 @@ def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers =
             SplitSets.append(dat)  
         
         SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
+        distributions[1] = ClassImbalance(SplitSets[0], plot = plot_distributions)
         
     #2. TODO : A value is trying to be set on a copy of a slice from a DataFrame.
     #          Try using .loc[row_indexer,col_indexer] = value instead

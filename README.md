@@ -7,8 +7,8 @@ Workbase 1.2.7
 To run GRAKN execute following steps:
 1. download files and unpack to a single folder
 2. start grakn server
-3. upload the ssp_schema.gql as --keyspcae ssp_schema
-.\grakn console --keyspace ssp_schema --file path-to-folder\ssp_schema.gql
+3. upload the ssp_schema_kgcn.gql as --keyspcae ssp_schema
+.\grakn console --keyspace ssp_schema --file path-to-folder\ssp_schema_kgcn.gql
 4. run my_migrate from python interpreter or cmd. This will upload only a small fraction of selected data, shouldn't take longer than 2-3min.
 5. use the query below in GRAKN Workbase (or flattened version directily in grakn console) to display the graph for scenario.
 The query takes a single input scenario_id $sid and should return a graph with all entities and attributes as in the draft block diagram.
