@@ -9,7 +9,7 @@ events/
 kgcnmodels/
 
 # Saved NetworkX graphs
-#networkx/
+networkx/
 nx_backup/
 
 # VS-compiled folders
