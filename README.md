@@ -9,43 +9,30 @@ To run GRAKN execute following steps:
 2. start grakn server
 3. upload the ssp_schema_kgcn.gql as --keyspcae ssp_schema
 .\grakn console --keyspace ssp_schema --file path-to-folder\ssp_schema_kgcn.gql
-4. run my_migrate from python interpreter or cmd. This will upload only a small fraction of selected data, shouldn't take longer than 2-3min.
-5. use the query below in GRAKN Workbase (or flattened version directily in grakn console) to display the graph for scenario.
-The query takes a single input scenario_id $sid and should return a graph with all entities and attributes as in the draft block diagram.
+4. In kgcn_data_migrate.py specify subset of the data you want to be migrated to grakn. Uploading the whole dataset will take a lot time.
+5. use the query below in GRAKN Workbase (or flattened version directily in grakn console) to display the graph for each scenario $sid. 
+The query takes a single input scenario_id $sid and should return a graph with all entities and attributes as in the draft block diagram. Replace $sid == {} with the scneario number.
 
 ### Troubleshooting
 In case you run into issues with indices being out of range, I'd recommend updating your pandas to version 1.0.3 and\or numpy to 1.18.1.
 
-
 ### Query 
-match
+match        
 $scn isa sound-propagation-scenario, has scenario_id $sid;
 $ray isa ray-input, has num_rays $nray; 
-$src isa source, has depth $ds; 
-$bs1 isa bottom-segment-1, has depth $dstart, has length $l;
+$src isa source, has depth $dsrc; 
+$seg isa bottom-segment, has depth $dseg, has length $l, has slope $s;
+$conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;
+$srcp(defined_by_src: $scn, define_src: $src) isa src-position;
+$bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;
 $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
-
-$conv($scn, $ray) isa convergence;
-$srcp($scn, $src, $bs1) isa src-position;
-$bathy($scn, $x) isa bathymetry, has bottom_type $bt;
-$x has attribute $a;
-$speed($scn, $ssp) isa sound-speed;
-$duct($ssp, $y) isa SSP-channel;
-$y has attribute $b;
-
+$dct isa duct, has depth $ddct, has grad $gd; 
+$speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
+$duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
 $sspval has depth $dssp;
-{$dssp == $ds;} or {$dssp == $dstart;} or {$dssp == $a;} or {$dssp == $b;} or {$dssp == $dsspmax;} ;
-
-$sid == 440; #1,440,442,9020
-
-get 
-$scn, $sid, $ray, $nray, $conv,
-$src, $ds, $srcp, $bs1, $dstart, $l,
-$bathy, $x, $bt, $a,
-$ssp, $speed, $loc, $ses, $sspval, $dsspmax, $dssp,
-$duct, $y, $b;
-
-offset 0; limit 150;
+{$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;};
+$sid == {};
+get; offset 0; limit 300;
 
 #### Query flattened
-match $scn isa sound-propagation-scenario, has scenario_id $sid; $ray isa ray-input, has num_rays $nray; $src isa source, has depth $ds; $bs1 isa bottom-segment-1, has depth $dstart, has length $l; $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax; $conv($scn, $ray) isa convergence; $srcp($scn, $src, $bs1) isa src-position; $bathy($scn, $x) isa bathymetry, has bottom_type $bt; $x has attribute $a; $speed($scn, $ssp) isa sound-speed; $duct($ssp, $y) isa SSP-channel; $y has attribute $b; $sspval has depth $dssp; {$dssp == $ds;} or {$dssp == $dstart;} or {$dssp == $a;} or {$dssp == $b;} or {$dssp == $dsspmax;}; $sid == 440; get $scn, $sid, $ray, $nray, $conv,$src, $ds, $srcp, $bs1, $dstart, $l, $bathy, $x, $bt, $a, $ssp, $speed, $loc, $ses, $sspval, $dsspmax, $dssp,$duct, $y, $b; offset 0; limit 150;
+match $scn isa sound-propagation-scenario, has scenario_id 440; $ray isa ray-input, has num_rays $nray; $src isa source, has depth $dsrc; $seg isa bottom-segment, has depth $dseg, has length $l, has slope $s; $conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;$srcp(defined_by_src: $scn, define_src: $src) isa src-position;$bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;$ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;$dct isa duct, has depth $ddct, has grad $gd; $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;$duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; $sspval has depth $dssp;{$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;};get; offset 0; limit 300;

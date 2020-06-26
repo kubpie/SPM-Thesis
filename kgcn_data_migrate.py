@@ -449,6 +449,7 @@ data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num
 #data = UndersampleData(data_sparse2, max_sample = 80)
 data = data_sparse2
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
+
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
 for ssp,dmax,idx in zip(data['profile'],data['water_depth_max'], data.index):
