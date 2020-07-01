@@ -39,6 +39,10 @@ def pipeline(graphs,
              num_processing_steps_tr=10,
              num_processing_steps_ge=10,
              num_training_iterations=10000,
+             learning_rate=1e-3,
+             latent_size=16,
+             num_layers=2,
+             log_every_epochs=20,
              continuous_attributes=None,
              categorical_attributes=None,
              type_embedding_dim=5,
@@ -47,6 +51,7 @@ def pipeline(graphs,
              node_output_size=3,
              output_dir=None,
              do_test=False,
+             weighted = False,
              save_fle="test_model.ckpt",
              reload_fle=""):
 
@@ -56,13 +61,14 @@ def pipeline(graphs,
 
     # Encode attribute values
     graphs = [encode_values(graph, categorical_attributes, continuous_attributes) for graph in graphs]
-
+    graphs_enc = graphs #my add
     indexed_graphs = [nx.convert_node_labels_to_integers(graph, label_attribute='concept') for graph in graphs]
     graphs = [duplicate_edges_in_reverse(graph) for graph in indexed_graphs]
 
     graphs = [encode_types(graph, multidigraph_node_data_iterator, node_types) for graph in graphs]
     graphs = [encode_types(graph, multidigraph_edge_data_iterator, edge_types) for graph in graphs]
-
+    
+    
     input_graphs = [create_input_graph(graph) for graph in graphs]
     target_graphs = [create_target_graph(graph) for graph in graphs]
 
@@ -70,7 +76,7 @@ def pipeline(graphs,
     tr_target_graphs = target_graphs[:tr_ge_split]
     ge_input_graphs = input_graphs[tr_ge_split:]
     ge_target_graphs = target_graphs[tr_ge_split:]
-
+    
     ############################################################
     # Build and run the KGCN
     ############################################################
@@ -83,7 +89,14 @@ def pipeline(graphs,
     kgcn = KGCN(thing_embedder,
                 role_embedder,
                 edge_output_size=edge_output_size,
-                node_output_size=node_output_size)
+                node_output_size=node_output_size,
+                latent_size=latent_size, #MLP parameters
+                num_layers=num_layers)
+    """
+    MLP papaparams
+                latent_size=16,
+                 num_layers=2
+    """
 
     learner = KGCNLearner(kgcn,
                           num_processing_steps_tr=num_processing_steps_tr, # These processing steps indicate how many message-passing iterations to do for every training / testing step
@@ -105,7 +118,10 @@ def pipeline(graphs,
                                                  tr_target_graphs,
                                                  ge_input_graphs,
                                                  ge_target_graphs,
-                                                 num_training_iterations=num_training_iterations)
+                                                 num_training_iterations=num_training_iterations,
+                                                 learning_rate=learning_rate, #learning rate
+                                                 log_every_epochs=log_every_epochs,  #logging
+                                                 weighted = weighted)
                                                     #,log_dir=output_dir)
 
 
@@ -125,4 +141,4 @@ def pipeline(graphs,
             data['prediction'] = int(np.argmax(data['probabilities']))
 
     _, _, _, _, _, solveds_tr, solveds_ge = tr_info
-    return ge_graphs, solveds_tr, solveds_ge
+    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs

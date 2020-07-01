@@ -70,7 +70,9 @@ def loss_ops_preexisting_no_penalty(target_op, output_ops, weighted=False):
 
         if weighted:
             label_prevalence = tf.reduce_sum(target_nodes, axis=0)
+            print(label_prevalence)
             class_weights = tf.expand_dims(1 / (label_prevalence + 1), axis=0)
+            print(class_weights)
             # specify the weights for each sample in the batch (without having to compute the onehot label matrix)
             # weights = tf.gather(class_weights, target_nodes)
             weights = tf.reduce_sum(class_weights * target_nodes, axis=1)

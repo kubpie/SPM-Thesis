@@ -54,7 +54,8 @@ class KGCNLearner:
                  ge_target_graphs,
                  num_training_iterations=1000,
                  learning_rate=1e-3,
-                 log_every_epochs=20):
+                 log_every_epochs=20,
+                 weighted = False):
         """
         Args:
             tr_graphs: In-memory graphs of Grakn concepts for training
@@ -79,14 +80,14 @@ class KGCNLearner:
         output_ops_tr = self._model(input_ph, self._num_processing_steps_tr)
         output_ops_ge = self._model(input_ph, self._num_processing_steps_ge)
 
-        # Training loss.
-        loss_ops_tr = loss_ops_preexisting_no_penalty(target_ph, output_ops_tr, weighted = False) #LOSS FUNCTION
+        # Training loss
+        loss_ops_tr = loss_ops_preexisting_no_penalty(target_ph, output_ops_tr, weighted = weighted) #LOSS FUNCTION
         # Loss across processing steps.
         loss_op_tr = sum(loss_ops_tr) / self._num_processing_steps_tr
 
         tf.summary.scalar('loss_op_tr', loss_op_tr)
         # Test/generalization loss.
-        loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge, weighted = False) #LOSS FUNCTION
+        loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge, weighted = weighted) #LOSS FUNCTION
         loss_op_ge = loss_ops_ge[-1]  # Loss from final processing step.
         tf.summary.scalar('loss_op_ge', loss_op_ge)
 
@@ -102,12 +103,15 @@ class KGCNLearner:
                 tf.summary.histogram('gradients/' + var.name, grad)
             except:
                 pass
-
+        """   
+        
+        >>>> CHECK THIS TOO!!!
+        
+        """ 
         gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
         step_op = optimizer.apply_gradients(zip(gradients, variables))
 
         input_ph, target_ph = make_all_runnable_in_session(input_ph, target_ph)
-
         sess = tf.Session()
         merged_summaries = tf.summary.merge_all()
 
@@ -137,7 +141,6 @@ class KGCNLearner:
         start_time = time.time()
         for iteration in range(num_training_iterations):
             feed_dict = create_feed_dict(input_ph, target_ph, tr_input_graphs, tr_target_graphs)
-
             if iteration % log_every_epochs == 0:
 
                 train_values = sess.run(
