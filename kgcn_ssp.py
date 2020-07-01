@@ -28,12 +28,12 @@ from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-#config = tf.compat.v1.ConfigProto()
-#config.gpu_options.allow_growth=True
-#sess = tf.compat.v1.Session(config=config)
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth=True
+sess = tf.compat.v1.Session(config=config)
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
-# print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 tf.reset_default_graph() #fix bugs with tensor of uknonw size
 
 import warnings
@@ -526,14 +526,14 @@ from data_prep import CreateSplits
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
 # === 2 classes of 794 sample 500/1000 ==== 
-#keyspace = "ssp_2class_full"
-#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
-#data = UndersampleData(data_sparse2, max_sample = 794)
+keyspace = "ssp_2class_full"
+data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
+data = UndersampleData(data_sparse2, max_sample = 794)
 
 # === 3 classes of 80 samples: 500/6000/15000 ===== 
-keyspace = "ssp_2class"
-data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 15000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 6000) |
-data = UndersampleData(data_sparse3, max_sample = 80)
+#keyspace = "ssp_2class"
+#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 15000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 6000) |
+#data = UndersampleData(data_sparse3, max_sample = 80)
 #data = data[:10]
 class_population = ClassImbalance(data, plot = False)
 print(class_population)
@@ -555,14 +555,14 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 5,
-          'num_processing_steps_ge': 5,
-          'num_training_iterations': 100,
+          'num_processing_steps_tr': 10,
+          'num_processing_steps_ge': 10,
+          'num_training_iterations': 300,
           'learning_rate': 1e-2, #added to tube
           'latent_size': 16, #MLP param
           'num_layers': 3, #MLP param
           'weighted': False, #loss function modification
-          'log_every_epochs': 20, #logging of the results
+          'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,

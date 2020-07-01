@@ -124,9 +124,9 @@ def pipeline(graphs,
                                                  weighted = weighted)
                                                     #,log_dir=output_dir)
 
-
-    plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
-    plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
+    #Turned off plotting to speed up the runs
+    #plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
+    #plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
 
     logit_graphs = graphs_tuple_to_networkxs(test_values["outputs"][-1])
 

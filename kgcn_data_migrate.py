@@ -437,17 +437,17 @@ def rel_SSPvecToDepth(SSP_Input):
             
 
 #### DATA SELECTION FOR GRAKN TESTING
-#data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
+data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
 #ssp_select = ["Mediterranean Sea Winter","Mediterranean Sea Spring","South Pacific Ocean Spring"]
 #SSP_Stat[ssp_select][:]
 #SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
 #SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
 
-data_pop = ClassImbalance(ALLDATA)
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
+#data_pop = ClassImbalance(ALLDATA)
+#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
 #data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 6000) | (ALLDATA.loc[:, 'num_rays'] == 15000)] #3classes
 #data = UndersampleData(data_sparse2, max_sample = 80)
-data = data_sparse2
+#data = data_sparse2
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 
 ducts = np.zeros([np.size(data,0),3],int)
@@ -546,6 +546,6 @@ Relations = [
 """
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 
+    #build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 
     print("Importing data to GRAKN finished OK!")
     
