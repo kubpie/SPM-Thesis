@@ -85,7 +85,7 @@ def diagnosis_example(num_graphs=10, #100
 
     tr_ge_split = int(num_graphs*0.5)
 
-    generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri)
+    #generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri)
 
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)

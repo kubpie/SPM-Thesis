@@ -14,4 +14,5 @@ confirm
 # load data
 python3 path-to-folder\my_migrate.py
 
-
+./grakn console --keyspace diagnosis --file /home/kuba/Documents/KGCN/SSP/diag_schema.gql
+sudo update-alternatives --config java
