@@ -558,7 +558,7 @@ kgcn_vars = {
           'num_processing_steps_tr': 10,
           'num_processing_steps_ge': 10,
           'num_training_iterations': 300,
-          'learning_rate': 1e-2, #added to tube
+          'learning_rate': 1e-3, #1e-3
           'latent_size': 16, #MLP param
           'num_layers': 3, #MLP param
           'weighted': False, #loss function modification

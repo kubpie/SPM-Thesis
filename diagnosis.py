@@ -32,6 +32,7 @@ from kglib.utils.graph.query.query_graph import QueryGraph
 from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
 
 import tensorflow as tf
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 tf.reset_default_graph()
 
 KEYSPACE = "diagnosis"
