@@ -7,7 +7,7 @@ Created on Fri Mar 27 13:42:50 2020
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from os import listdir
+import os
 
 import matplotlib.pyplot as plt
 
@@ -19,12 +19,13 @@ from sklearn.model_selection import train_test_split
 from data_analysis_lib import ClassImbalance, PlotCorrelation
 from ssp_features import SSPStat
 from pathlib import Path
+
 def LoadData(path): 
     
     def CheckCol(lst):
         return lst[1:] == lst[:-1] 
     
-    flist = [f for f in listdir(path) if "Dataset" in f]
+    flist = [f for f in os.listdir(path) if "Dataset" in f]
     col = []
     frames = []
     

@@ -445,9 +445,8 @@ def rel_SSPvecToDepth(SSP_Input):
 
 data_pop = ClassImbalance(ALLDATA)
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
-#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 6000) | (ALLDATA.loc[:, 'num_rays'] == 15000)] #3classes
-data = UndersampleData(data_sparse2, max_sample = 1000)
-#data = data_sparse2
+#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000) | (ALLDATA.loc[:, 'num_rays'] == 1500)] #3classes
+data = UndersampleData(data_sparse2, max_sample = 2000)
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
@@ -544,7 +543,7 @@ Relations = [
 ]
 """
 
-KEYSPACE = "ssp_2class_full"
+KEYSPACE = "ssp_2class"
 
 if __name__ == "__main__":
     build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 

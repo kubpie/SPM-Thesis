@@ -28,9 +28,9 @@ from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-config = tf.compat.v1.ConfigProto()
+config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
-sess = tf.compat.v1.Session(config=config)
+sess = tf.Session(config=config)
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
@@ -574,14 +574,15 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10,
-          'num_processing_steps_ge': 10,
-          'num_training_iterations': 300,
+          'num_processing_steps_tr': 10, #10
+          'num_processing_steps_ge': 10, #10
+          'num_training_iterations': 1000, #100
           'learning_rate': 1e-3, #1e-3
-          'latent_size': 16, #MLP param
-          'num_layers': 3, #MLP param
+          'latent_size': 16, #MLP param 16
+          'num_layers': 3, #MLP param 3
+          'clip': 50, #gradient clipping 5.0
           'weighted': False, #loss function modification
-          'log_every_epochs': 50, #logging of the results
+          'log_every_epochs': 20, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,

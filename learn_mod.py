@@ -55,6 +55,7 @@ class KGCNLearner:
                  num_training_iterations=1000,
                  learning_rate=1e-3,
                  log_every_epochs=20,
+                 clip = 5.0,
                  weighted = False):
         """
         Args:
@@ -108,7 +109,8 @@ class KGCNLearner:
         >>>> CHECK THIS TOO!!!
         
         """ 
-        gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+
+        gradients, _ = tf.clip_by_global_norm(gradients, clip) #clip = 5.0
         step_op = optimizer.apply_gradients(zip(gradients, variables))
 
         input_ph, target_ph = make_all_runnable_in_session(input_ph, target_ph)
