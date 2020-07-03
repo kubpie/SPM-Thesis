@@ -470,7 +470,6 @@ def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True
     example_idx_tr = X_train.index.tolist() + X_test.index.tolist() #training and test sets indices merged for training
 
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
-    ubuntu_fix = True
     if ubuntu_fix:
         example_idx_tr = ubuntu_rand_fix()
     #example_idx_val = X_val.index.tolist()
@@ -544,16 +543,16 @@ from data_prep import CreateSplits
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
-# === 2 classes of 794 sample 500/1000 ==== 
-keyspace = "ssp_2class_full"
+# === 2 classes of 2000 sample 500/1000 ==== 
+keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
-data = UndersampleData(data_sparse2, max_sample = 794)
+data = UndersampleData(data_sparse2, max_sample = 2000)
 
-# === 3 classes of 80 samples: 500/6000/15000 ===== 
-#keyspace = "ssp_2class"
-#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 15000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 6000) |
-#data = UndersampleData(data_sparse3, max_sample = 80)
-#data = data[:10]
+# === 3 classes of 1020 samples: 500/6000/15000 ===== 
+#keyspace = "ssp_3class"
+#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 1500) |
+#data = UndersampleData(data_sparse3, max_sample = 1020)
+
 class_population = ClassImbalance(data, plot = False)
 print(class_population)
 
@@ -570,19 +569,19 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
-train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= True)
+train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= False)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10, #10
-          'num_processing_steps_ge': 10, #10
-          'num_training_iterations': 1000, #100
-          'learning_rate': 1e-3, #1e-3
+          'num_processing_steps_tr': 20, #10
+          'num_processing_steps_ge': 20, #10
+          'num_training_iterations': 5000, #100
+          'learning_rate': 1e-4, #1e-3
           'latent_size': 16, #MLP param 16
           'num_layers': 3, #MLP param 3
           'clip': 50, #gradient clipping 5.0
           'weighted': False, #loss function modification
-          'log_every_epochs': 20, #logging of the results
+          'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,

@@ -66,7 +66,7 @@ def load_data_into_grakn(Input, session):
             #one query per transaction
             with session.transaction().write() as transaction:
                 if query: #if query is not empty
-                    print("Executing Graql Query #" + str(it) + ": " + query + "\n")
+                    print("Executing Graql Query #" + str(it) + ": " + query)
                     transaction.query(query)  
                     transaction.commit() 
         print(f"\n #### Inserted {it} instances for the node [{Node['NodeName']}] into Grakn.#### \n")
@@ -445,8 +445,9 @@ def rel_SSPvecToDepth(SSP_Input):
 
 data_pop = ClassImbalance(ALLDATA)
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
-#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000) | (ALLDATA.loc[:, 'num_rays'] == 1500)] #3classes
-data = UndersampleData(data_sparse2, max_sample = 2000)
+data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000) | (ALLDATA.loc[:, 'num_rays'] == 1500)] #3classes
+#data = UndersampleData(data_sparse2, max_sample = 2000)
+data = UndersampleData(data_sparse3, max_sample = 1020)
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
@@ -543,7 +544,7 @@ Relations = [
 ]
 """
 
-KEYSPACE = "ssp_2class"
+KEYSPACE = "ssp_3class"
 
 if __name__ == "__main__":
     build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 
