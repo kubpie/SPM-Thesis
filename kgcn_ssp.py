@@ -53,11 +53,13 @@ CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
 
+from pathlib import Path
 from data_prep import LoadData, FeatDuct, UndersampleData
-datapath = os.getcwd()+'\data\\'
+datapath = os.getcwd() #+'\data\\'
+datapath = Path(datapath+"/data/")
 ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(datapath+"data_complete.csv")
+PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
 
 
 # Categorical Attribute types and the values of their categories
@@ -191,7 +193,8 @@ def create_concept_graphs(example_indices, grakn_session):
     
     graphs = []
     infer = True
-    savepath = f"./networkx/"
+    #savepath = f"./networkx/"
+    savepath = Path(os.getcwd() + "/networkx/" )
     total = len(example_indices)
     
     not_duct_idx = []
@@ -201,7 +204,7 @@ def create_concept_graphs(example_indices, grakn_session):
         
     for it, scenario_idx in enumerate(example_indices):
         graph_filename = f'graph_{scenario_idx}.gpickle'
-        if not os.path.exists(savepath+graph_filename):
+        if not os.path.exists(str(savepath)+"/"+graph_filename):
             print(f'[{it+1}|{total}] Creating graph for example {scenario_idx}')
             graph_query_handles = get_query_handles(scenario_idx, not_duct_idx)
             #print(graph_query_handles)

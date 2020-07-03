@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 
 from data_analysis_lib import ClassImbalance, PlotCorrelation
 from ssp_features import SSPStat
-
+from pathlib import Path
 def LoadData(path): 
     
     def CheckCol(lst):
@@ -29,7 +29,7 @@ def LoadData(path):
     frames = []
     
     for file in flist: #to check fix it latest
-        raw_data = pd.read_csv(path+file, index_col=None, header=0)
+        raw_data = pd.read_csv( str(path)+"/"+file, index_col=None, header=0)
         col.append(raw_data.columns.tolist())
         frames.append(raw_data)
         test_col = CheckCol(col)

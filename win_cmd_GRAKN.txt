@@ -14,5 +14,10 @@ confirm
 # load data
 python3 path-to-folder\my_migrate.py
 
+UBUNTU\LINUX
+
 ./grakn console --keyspace diagnosis --file /home/kuba/Documents/KGCN/SSP/diag_schema.gql
 sudo update-alternatives --config java
+./grakn console --keyspace ssp_2class_full --file /home/kuba/Documents/KGCN/SSP/ssp_schema_kgcn.gql
+nvidia-smi --loop=1
+

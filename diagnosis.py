@@ -66,7 +66,7 @@ TYPES_AND_ROLES_TO_OBFUSCATE = {'candidate-diagnosis': 'diagnosis',
 def diagnosis_example(num_graphs=10, #100
                       num_processing_steps_tr=10,
                       num_processing_steps_ge=10,
-                      num_training_iterations=300, #1000
+                      num_training_iterations=400, #1000
                       keyspace=KEYSPACE, uri=URI):
     """
     Run the diagnosis example from start to finish, including traceably ingesting predictions back into Grakn
