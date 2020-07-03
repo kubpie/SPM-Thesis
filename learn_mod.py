@@ -104,10 +104,8 @@ class KGCNLearner:
                 tf.summary.histogram('gradients/' + var.name, grad)
             except:
                 pass
-        """   
-        
+        """  
         >>>> CHECK THIS TOO!!!
-        
         """ 
 
         gradients, _ = tf.clip_by_global_norm(gradients, clip) #clip = 5.0

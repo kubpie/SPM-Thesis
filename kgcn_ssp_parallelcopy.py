@@ -588,10 +588,10 @@ kgcn_vars = {
           }           
 
 
-#tr_ge_graphs, tr_score, graphs_enc, input_graphs, target_graphs = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
+tr_ge_graphs, tr_score, graphs_enc, input_graphs, target_graphs = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
-#with session.transaction().write() as tx:
-#        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
+with session.transaction().write() as tx:
+        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
     
 session.close()
 client.close()

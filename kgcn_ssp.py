@@ -194,7 +194,7 @@ def create_concept_graphs(example_indices, grakn_session):
     graphs = []
     infer = True
     #savepath = f"./networkx/"
-    savepath = PATH + "/networkx/"
+    savepath = PATH + "/nx_2class/"
     total = len(example_indices)
     
     not_duct_idx = []
