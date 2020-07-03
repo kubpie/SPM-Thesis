@@ -55,8 +55,8 @@ TO_INFER = 2
 
 from pathlib import Path
 from data_prep import LoadData, FeatDuct, UndersampleData
-datapath = os.getcwd() #+'\data\\'
-datapath = Path(datapath+"/data/")
+PATH = os.getcwd() #+'\data\\'
+datapath = Path(PATH+"/data/")
 ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
@@ -194,7 +194,7 @@ def create_concept_graphs(example_indices, grakn_session):
     graphs = []
     infer = True
     #savepath = f"./networkx/"
-    savepath = Path(os.getcwd() + "/networkx/" )
+    savepath = PATH + "/networkx/"
     total = len(example_indices)
     
     not_duct_idx = []
@@ -421,8 +421,19 @@ def write_predictions_to_grakn(graphs, tx, commit = True):
                     tx.query(query)
     if commit:
         tx.commit()
-    
-def prepare_data(session, data, train_split, validation_split):
+
+import re
+def ubuntu_rand_fix():
+
+    savepath = PATH + '/networkx/'
+    graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
+    example_idx = []
+    for gfile in graphfiles:
+        idx = re.findall(r'\d+', gfile)[0]    
+        example_idx.append(idx)
+    return example_idx
+
+def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True):
     """
     Args:
         data: full dataset with sorted scenario_id's that will be used for querying grakn
@@ -457,6 +468,11 @@ def prepare_data(session, data, train_split, validation_split):
     num_tr_graphs = len(X_test) + len(X_train)   
     #num_val_graphs = len(X_val)
     example_idx_tr = X_train.index.tolist() + X_test.index.tolist() #training and test sets indices merged for training
+
+    # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
+    ubuntu_fix = True
+    if ubuntu_fix:
+        example_idx_tr = ubuntu_rand_fix()
     #example_idx_val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
@@ -554,7 +570,7 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
-train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2)
+train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= True)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
