@@ -51,6 +51,7 @@ def pipeline(graphs,
              node_output_size=3,
              output_dir=None,
              do_test=False,
+             clip = 5.0,
              weighted = False,
              save_fle="test_model.ckpt",
              reload_fle=""):
@@ -121,12 +122,13 @@ def pipeline(graphs,
                                                  num_training_iterations=num_training_iterations,
                                                  learning_rate=learning_rate, #learning rate
                                                  log_every_epochs=log_every_epochs,  #logging
+                                                 clip = clip, #gradient clipping
                                                  weighted = weighted)
                                                     #,log_dir=output_dir)
 
     #Turned off plotting to speed up the runs
-    #plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
-    #plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
+    plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
+    plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
 
     logit_graphs = graphs_tuple_to_networkxs(test_values["outputs"][-1])
 

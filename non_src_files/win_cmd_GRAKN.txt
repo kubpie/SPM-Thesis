@@ -1,0 +1,25 @@
+### WINDOWS cmd to run GRAKN ###
+
+CD path-to-grakn-folder
+.\grakn server start
+.\grakn console --keyspace ssp_test --file path-to-folder\ssp_schema.gql
+# open intercative console
+.\grakn console --keyspace ssp_test
+# test if loaded properly
+match $x sub thing; get;
+# clean keyspace
+.\grakn console --keyspace ssp_test
+clean
+confirm
+# load data
+python3 path-to-folder\my_migrate.py
+
+UBUNTU\LINUX
+sudo update-alternatives --config java
+nvidia-smi --loop=1
+
+./grakn console --keyspace diagnosis --file /home/kuba/Documents/KGCN/SSP/diag_schema.gql
+
+./grakn console --keyspace ssp_2class_full --file /home/kuba/Documents/KGCN/SSP/ssp_schema_kgcn.gql
+
+

@@ -28,9 +28,9 @@ from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-config = tf.compat.v1.ConfigProto()
+config = tf.ConfigProto()
 config.gpu_options.allow_growth=True
-sess = tf.compat.v1.Session(config=config)
+sess = tf.Session(config=config)
 ### Test tf for GPU acceleration
 # TODO: Issues with GPU acceleration
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
@@ -53,11 +53,13 @@ CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
 
+from pathlib import Path
 from data_prep import LoadData, FeatDuct, UndersampleData
-datapath = os.getcwd()+'\data\\'
+PATH = os.getcwd() #+'\data\\'
+datapath = Path(PATH+"/data/")
 ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(datapath+"data_complete.csv")
+PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
 
 
 # Categorical Attribute types and the values of their categories
@@ -191,7 +193,8 @@ def create_concept_graphs(example_indices, grakn_session):
     
     graphs = []
     infer = True
-    savepath = f"./networkx/"
+    #savepath = f"./networkx/"
+    savepath = PATH + "/nx_2class/"
     total = len(example_indices)
     
     not_duct_idx = []
@@ -201,7 +204,7 @@ def create_concept_graphs(example_indices, grakn_session):
         
     for it, scenario_idx in enumerate(example_indices):
         graph_filename = f'graph_{scenario_idx}.gpickle'
-        if not os.path.exists(savepath+graph_filename):
+        if not os.path.exists(str(savepath)+"/"+graph_filename):
             print(f'[{it+1}|{total}] Creating graph for example {scenario_idx}')
             graph_query_handles = get_query_handles(scenario_idx, not_duct_idx)
             #print(graph_query_handles)
@@ -418,8 +421,19 @@ def write_predictions_to_grakn(graphs, tx, commit = True):
                     tx.query(query)
     if commit:
         tx.commit()
-    
-def prepare_data(session, data, train_split, validation_split):
+
+import re
+def ubuntu_rand_fix():
+
+    savepath = PATH + '/networkx/'
+    graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
+    example_idx = []
+    for gfile in graphfiles:
+        idx = re.findall(r'\d+', gfile)[0]    
+        example_idx.append(idx)
+    return example_idx
+
+def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True):
     """
     Args:
         data: full dataset with sorted scenario_id's that will be used for querying grakn
@@ -454,6 +468,10 @@ def prepare_data(session, data, train_split, validation_split):
     num_tr_graphs = len(X_test) + len(X_train)   
     #num_val_graphs = len(X_val)
     example_idx_tr = X_train.index.tolist() + X_test.index.tolist() #training and test sets indices merged for training
+
+    # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
+    if ubuntu_fix:
+        example_idx_tr = ubuntu_rand_fix()
     #example_idx_val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
@@ -525,16 +543,16 @@ from data_prep import CreateSplits
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
-# === 2 classes of 794 sample 500/1000 ==== 
-keyspace = "ssp_2class_full"
+# === 2 classes of 2000 sample 500/1000 ==== 
+keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
-data = UndersampleData(data_sparse2, max_sample = 794)
+data = UndersampleData(data_sparse2, max_sample = 2000)
 
-# === 3 classes of 80 samples: 500/6000/15000 ===== 
-#keyspace = "ssp_2class"
-#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 15000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 6000) |
-#data = UndersampleData(data_sparse3, max_sample = 80)
-#data = data[:10]
+# === 3 classes of 1020 samples: 500/6000/15000 ===== 
+#keyspace = "ssp_3class"
+#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 1500) |
+#data = UndersampleData(data_sparse3, max_sample = 1020)
+
 class_population = ClassImbalance(data, plot = False)
 print(class_population)
 
@@ -551,16 +569,17 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
-train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2)
+train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= False)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10,
-          'num_processing_steps_ge': 10,
-          'num_training_iterations': 300,
-          'learning_rate': 1e-3, #1e-3
-          'latent_size': 16, #MLP param
-          'num_layers': 3, #MLP param
+          'num_processing_steps_tr': 20, #10
+          'num_processing_steps_ge': 20, #10
+          'num_training_iterations': 5000, #100
+          'learning_rate': 1e-4, #1e-3
+          'latent_size': 16, #MLP param 16
+          'num_layers': 3, #MLP param 3
+          'clip': 50, #gradient clipping 5.0
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
