@@ -115,7 +115,7 @@ def pipeline(graphs,
     # train
     else:
         print("\n\nTRAINING\n\n")
-        train_values, test_values, tr_info = learner.train(tr_input_graphs, #input_graphs
+        train_values, test_values, tr_info, input_ph, target_ph, feed_dict = learner.train(tr_input_graphs, # train_values, test_values, training_info, input_ph, target_ph, feed_dict
                                                  tr_target_graphs,
                                                  ge_input_graphs,
                                                  ge_target_graphs,
@@ -143,4 +143,4 @@ def pipeline(graphs,
             data['prediction'] = int(np.argmax(data['probabilities']))
 
     _, _, _, _, _, solveds_tr, solveds_ge = tr_info
-    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs
+    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, input_ph, target_ph, feed_dict

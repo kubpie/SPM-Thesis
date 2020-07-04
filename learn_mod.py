@@ -104,13 +104,12 @@ class KGCNLearner:
                 tf.summary.histogram('gradients/' + var.name, grad)
             except:
                 pass
-        """  
-        >>>> CHECK THIS TOO!!!
-        """ 
 
         gradients, _ = tf.clip_by_global_norm(gradients, clip) #clip = 5.0
         step_op = optimizer.apply_gradients(zip(gradients, variables))
 
+        ## ==== Create placeholders and define tf training ==== 
+        # TODO: Split into batches to avoid memory overflow
         input_ph, target_ph = make_all_runnable_in_session(input_ph, target_ph)
         sess = tf.Session()
         merged_summaries = tf.summary.merge_all()
@@ -201,7 +200,7 @@ class KGCNLearner:
             tf.train.write_graph(sess.graph.as_graph_def(), logdir=self._log_dir, name='graph_model.pbtxt', as_text=True) 
             #print(f'Saved model to {log_dir+save_fle}')
         training_info = logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge
-        return train_values, test_values, training_info
+        return train_values, test_values, training_info, input_ph, target_ph, feed_dict
     
     # New function to infer / apply without training
     # Inspired from: https://medium.com/@prasadpal107/saving-freezing-optimizing-for-inference-restoring-of-tensorflow-models-b4146deb21b5
