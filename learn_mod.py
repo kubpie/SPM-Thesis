@@ -58,7 +58,7 @@ class KGCNLearner:
                  learning_rate=1e-3,
                  log_every_epochs=20,
                  clip = 5.0,
-                 weighted = False   ):
+                 weighted = False):
         """
         Args:
             tr_graphs: In-memory graphs of Grakn concepts for training
@@ -80,7 +80,8 @@ class KGCNLearner:
         #### TODO: SPLIT INPUT GRAPHS INTO MANAGEABLE BATCHES
 
         # Split input graphs into mini-batches
-        batch_size = 32 # TOTAL number of graphs per batch
+        batch_size = 2 # TOTAL number of graphs per batch
+        
         training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
         #for tr_input_graphs in training_batches:
         
@@ -216,7 +217,7 @@ class KGCNLearner:
             tf.train.write_graph(sess.graph.as_graph_def(), logdir=self._log_dir, name='graph_model.pbtxt', as_text=True) 
             #print(f'Saved model to {log_dir+save_fle}')
         training_info = logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge
-        return train_values, test_values, training_info, input_ph, target_ph, feed_dict
+        return train_values, test_values, training_info, feed_dict
     
     ###############################
     # VALIDATION WITHOUT TRAINING #

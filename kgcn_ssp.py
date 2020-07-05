@@ -547,7 +547,7 @@ from data_prep import CreateSplits
 keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
 data = UndersampleData(data_sparse2, max_sample = 2000)
-data = data[:15]
+data = data[:10]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
 #keyspace = "ssp_3class"
@@ -580,7 +580,7 @@ kgcn_vars = {
           'learning_rate': 1e-3, #1e-3
           'latent_size': 16, #MLP param 16
           'num_layers': 3, #MLP param 3
-          'clip': 50, #gradient clipping 5.0
+          'clip': 20, #gradient clipping 5.0
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
@@ -591,7 +591,7 @@ kgcn_vars = {
           }           
 
 
-tr_ge_graphs, tr_score, graphs_enc, input_graphs, target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
+tr_ge_graphs, training_evals, graphs_enc, input_graphs, target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
 with session.transaction().write() as tx:
         write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
