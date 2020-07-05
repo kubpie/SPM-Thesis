@@ -574,13 +574,13 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10, #10
-          'num_processing_steps_ge': 11, #10
-          'num_training_iterations': 100, #10000?
-          'learning_rate': 1e-3, #1e-3
+          'num_processing_steps_tr': 10, #13
+          'num_processing_steps_ge': 10, #13
+          'num_training_iterations': 10000, #10000?
+          'learning_rate': 1e-4, #1e-4
           'latent_size': 16, #MLP param 16
-          'num_layers': 3, #MLP param 3
-          'clip': 20, #gradient clipping 5.0
+          'num_layers': 2, #MLP param 2 (try deeper configs)
+          'clip': 1e2, #gradient clipping 5
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,

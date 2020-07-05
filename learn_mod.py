@@ -80,9 +80,8 @@ class KGCNLearner:
         #### TODO: SPLIT INPUT GRAPHS INTO MANAGEABLE BATCHES
 
         # Split input graphs into mini-batches
-        batch_size = 2 # TOTAL number of graphs per batch
-        
-        training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
+        #batch_size = 2 # TOTAL number of graphs per batch
+        #training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
         #for tr_input_graphs in training_batches:
         
         # Create placeholders and define tf training

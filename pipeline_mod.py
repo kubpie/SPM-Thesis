@@ -21,8 +21,8 @@ import networkx as nx
 import numpy as np
 from pathlib import Path
 from graph_nets.utils_np import graphs_tuple_to_networkxs
-from learn_mod_try import KGCNLearner
-#from learn_mod import KGCNLearner
+#from learn_mod_try import KGCNLearner
+from learn_mod import KGCNLearner
 from kglib.kgcn.models.core import softmax, KGCN
 from kglib.kgcn.models.embedding import ThingEmbedder, RoleEmbedder
 from kglib.kgcn.pipeline.encode import encode_types, create_input_graph, create_target_graph, encode_values
@@ -122,8 +122,8 @@ def pipeline(graphs,
                                                     #,log_dir=output_dir)
 
     #Turned off plotting to speed up the runs
-    #plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
-    #plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
+    plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
+    plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
 
     logit_graphs = graphs_tuple_to_networkxs(test_values["outputs"][-1])
 

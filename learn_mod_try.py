@@ -80,7 +80,7 @@ class KGCNLearner:
         #### TODO: SPLIT INPUT GRAPHS INTO MANAGEABLE BATCHES
 
         # Split input graphs into mini-batches
-        batch_size = 2 # TOTAL number of graphs per batch
+        batch_size = 3000 # Number of training graphs per batch
                 
         logged_iterations = []
         losses_tr = []
@@ -89,13 +89,6 @@ class KGCNLearner:
         losses_ge = []
         corrects_ge = []
         solveds_ge = []
-
-        print("# (epoch number), T (elapsed seconds), "
-                "Ltr (training loss), Lge (test/generalization loss), "
-                "Ctr (training fraction nodes/edges labeled correctly), "
-                "Str (training fraction examples solved correctly), "
-                "Cge (test/generalization fraction nodes/edges labeled correctly), "
-                "Sge (test/generalization fraction examples solved correctly)")
 
         start_time = time.time()
 
@@ -145,22 +138,27 @@ class KGCNLearner:
                 input_ph, target_ph = make_all_runnable_in_session(input_ph, target_ph)
                 
                 # This cell resets the Tensorflow session, but keeps the same computational graph.
-                try:
-                    sess.close()
-                except NameError:
-                    pass
+                #try:
+                #    sess.close()
+                #except NameError:
+                #    pass
+
                 sess = tf.Session()
-                sess.run(tf.global_variables_initializer())
                 merged_summaries = tf.summary.merge_all()
 
                 train_writer = None
 
                 if self._log_dir is not None:
-                    #train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
                     train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
-                
                 sess.run(tf.global_variables_initializer()) #my add: remove if unnecessary?
                 model_saver = tf.train.Saver()
+                
+                print("# (iteration number), T (elapsed seconds), "
+                "Ltr (training loss), Lge (test/generalization loss), "
+                "Ctr (training fraction nodes/edges labeled correctly), "
+                "Str (training fraction examples solved correctly), "
+                "Cge (test/generalization fraction nodes/edges labeled correctly), "
+                "Sge (test/generalization fraction examples solved correctly)")
 
                 # Create feed dict FOR A BATCH
                 feed_dict_tr = create_feed_dict(input_ph, target_ph, tr_input_graphs, tr_target_graphs)
@@ -188,24 +186,25 @@ class KGCNLearner:
                             "outputs": output_ops_ge
                         },
                         feed_dict=feed_dict_ge)
-
+                    """
                     correct_tr, solved_tr = existence_accuracy(
                         train_values["target"], train_values["outputs"][-1], use_edges=False)
                     correct_ge, solved_ge = existence_accuracy(
                         test_values["target"], test_values["outputs"][-1], use_edges=False)
+                    """
 
                     elapsed = time.time() - start_time
                     losses_tr.append(train_values["loss"])
-                    corrects_tr.append(correct_tr)
-                    solveds_tr.append(solved_tr)
+                    corrects_tr.append(0)
+                    solveds_tr.append(0)
                     losses_ge.append(test_values["loss"])
-                    corrects_ge.append(correct_ge)
-                    solveds_ge.append(solved_ge)
+                    corrects_ge.append(0)
+                    solveds_ge.append(0)
                     logged_iterations.append(epoch)
                     print("# {:05d}, T {:.1f}, Ltr {:.4f}, Lge {:.4f}, Ctr {:.4f}, Str"
                         " {:.4f}, Cge {:.4f}, Sge {:.4f}".format(
                             epoch, elapsed, train_values["loss"], test_values["loss"],
-                            correct_tr, solved_tr, correct_ge, solved_ge))
+                            0, 0, 0, 0))
                 else:
                     train_values = sess.run(
                         {
