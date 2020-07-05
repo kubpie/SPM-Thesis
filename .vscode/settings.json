@@ -1,1 +1,3 @@
-"python.pythonPath": "C:\\Users\\kubap\\Anaconda3\\envs\\grakn\\python.exe"
+{
+"python.pythonPath": "/home/kuba/anaconda3/envs/grakn-gpu/bin/python"
+}

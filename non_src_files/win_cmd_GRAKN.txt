@@ -20,6 +20,5 @@ nvidia-smi --loop=1
 
 ./grakn console --keyspace diagnosis --file /home/kuba/Documents/KGCN/SSP/diag_schema.gql
 
-./grakn console --keyspace ssp_2class_full --file /home/kuba/Documents/KGCN/SSP/ssp_schema_kgcn.gql
-
-
+./grakn console --keyspace ssp_2class --file /home/kuba/Documents/KGCN/SSP/ssp_schema_kgcn.gql
+./grakn console --keyspace ssp_3class --file /home/kuba/Documents/KGCN/SSP/ssp_schema_kgcn.gql
