@@ -21,8 +21,8 @@ import networkx as nx
 import numpy as np
 from pathlib import Path
 from graph_nets.utils_np import graphs_tuple_to_networkxs
-
-from learn_mod import KGCNLearner
+from learn_mod_try import KGCNLearner
+#from learn_mod import KGCNLearner
 from kglib.kgcn.models.core import softmax, KGCN
 from kglib.kgcn.models.embedding import ThingEmbedder, RoleEmbedder
 from kglib.kgcn.pipeline.encode import encode_types, create_input_graph, create_target_graph, encode_values
@@ -137,4 +137,4 @@ def pipeline(graphs,
             data['prediction'] = int(np.argmax(data['probabilities']))
 
     _, _, _, _, _, solveds_tr, solveds_ge = tr_info
-    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict
+    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, tr_input_graphs, tr_target_graphs, feed_dict

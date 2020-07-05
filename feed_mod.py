@@ -49,8 +49,10 @@ def create_feed_dict(input_ph, target_ph, inputs, targets):
     feed_dict = {input_ph: input_graphs, target_ph: target_graphs}
     return feed_dict
 
+import random
 def create_batches_from_input(tr_input_graphs, batch_size):
     
+    random.shuffle(tr_input_graphs)
     tr_input_batches = [tr_input_graphs[i:i + batch_size] for i in range(0, len(tr_input_graphs), batch_size)]
     
     return tr_input_batches
