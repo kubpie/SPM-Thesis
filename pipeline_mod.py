@@ -93,11 +93,6 @@ def pipeline(graphs,
                 node_output_size=node_output_size,
                 latent_size=latent_size, #MLP parameters
                 num_layers=num_layers)
-    """
-    MLP papaparams
-                latent_size=16,
-                 num_layers=2
-    """
 
     learner = KGCNLearner(kgcn,
                           num_processing_steps_tr=num_processing_steps_tr, # These processing steps indicate how many message-passing iterations to do for every training / testing step
@@ -115,7 +110,7 @@ def pipeline(graphs,
     # train
     else:
         print("\n\nTRAINING\n\n")
-        train_values, test_values, tr_info, input_ph, target_ph, feed_dict = learner.train(tr_input_graphs, # train_values, test_values, training_info, input_ph, target_ph, feed_dict
+        train_values, test_values, tr_info, feed_dict = learner.train(tr_input_graphs, # train_values, test_values, training_info, input_ph, target_ph, feed_dict
                                                  tr_target_graphs,
                                                  ge_input_graphs,
                                                  ge_target_graphs,
@@ -127,8 +122,8 @@ def pipeline(graphs,
                                                     #,log_dir=output_dir)
 
     #Turned off plotting to speed up the runs
-    plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
-    plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
+    #plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
+    #plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
 
     logit_graphs = graphs_tuple_to_networkxs(test_values["outputs"][-1])
 
@@ -139,8 +134,7 @@ def pipeline(graphs,
     for ge_graph in ge_graphs:
         for data in multidigraph_data_iterator(ge_graph):
             data['probabilities'] = softmax(data['logits'])
-            # assing 0,1,2 based argmax of logits -> TODO: threshold
             data['prediction'] = int(np.argmax(data['probabilities']))
 
     _, _, _, _, _, solveds_tr, solveds_ge = tr_info
-    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, input_ph, target_ph, feed_dict
+    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict

@@ -500,7 +500,7 @@ def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
 
     """
     # Run the pipeline with prepared networkx graph
-    ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs = pipeline(graphs = train_graphs,             
+    ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict = pipeline(graphs = train_graphs,             
                                                 tr_ge_split = tr_ge_split,                         
                                                 do_test = False,
                                                 save_fle = save_fle,
@@ -508,8 +508,8 @@ def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
                                                 **kwargs)
     
     training_evals= [solveds_tr, solveds_ge]   
-    return ge_graphs, training_evals, graphs_enc, input_graphs, target_graphs
- 
+    return ge_graphs, training_evals, graphs_enc, input_graphs, target_graphs, feed_dict
+"""
 def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     
     # opens session once again, if closed after training  
@@ -532,7 +532,7 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     
     validation_evals = [solveds_tr, solveds_ge] 
     return ge_graphs, validation_evals
-
+"""
 ##### RUN THE PIPELINE  #####  
 
 # DATA SELECTION FOR GRAKN TESTING
@@ -547,7 +547,7 @@ from data_prep import CreateSplits
 keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
 data = UndersampleData(data_sparse2, max_sample = 2000)
-data = data[:20]
+data = data[:15]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
 #keyspace = "ssp_3class"
@@ -574,10 +574,10 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 20, #10
-          'num_processing_steps_ge': 20, #10
-          'num_training_iterations': 5000, #100
-          'learning_rate': 1e-4, #1e-3
+          'num_processing_steps_tr': 10, #10
+          'num_processing_steps_ge': 10, #10
+          'num_training_iterations': 100, #10000?
+          'learning_rate': 1e-3, #1e-3
           'latent_size': 16, #MLP param 16
           'num_layers': 3, #MLP param 3
           'clip': 50, #gradient clipping 5.0
@@ -591,7 +591,7 @@ kgcn_vars = {
           }           
 
 
-tr_ge_graphs, tr_score, graphs_enc, input_graphs, target_graphs, input_ph, target_ph, feed_dict = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
+tr_ge_graphs, tr_score, graphs_enc, input_graphs, target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
 with session.transaction().write() as tx:
         write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities

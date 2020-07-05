@@ -23,8 +23,9 @@ import tensorflow as tf
 
 from pathlib import Path
 
-from kglib.kgcn.learn.feed import create_placeholders, create_feed_dict, make_all_runnable_in_session
-#from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty #TODO: You may want to modify the loss function!
+#from kglib.kgcn.learn.feed import create_placeholders, create_feed_dict, make_all_runnable_in_session
+#from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty
+from feed_mod import create_placeholders, create_feed_dict, create_batches_from_input, make_all_runnable_in_session
 from loss_mod import loss_ops_preexisting_no_penalty, loss_ops_from_difference
 from kglib.kgcn.learn.metrics import existence_accuracy
 
@@ -47,6 +48,7 @@ class KGCNLearner:
         self._model = model
         self._num_processing_steps_tr = num_processing_steps_tr
         self._num_processing_steps_ge = num_processing_steps_ge
+
     def train(self,
                  tr_input_graphs,
                  tr_target_graphs,
@@ -56,7 +58,7 @@ class KGCNLearner:
                  learning_rate=1e-3,
                  log_every_epochs=20,
                  clip = 5.0,
-                 weighted = False):
+                 weighted = False   ):
         """
         Args:
             tr_graphs: In-memory graphs of Grakn concepts for training
@@ -73,8 +75,16 @@ class KGCNLearner:
         save_fle = Path(self._save_fle)
         print(f'Saving output to directory:{save_fle}\n')
 
-        tf.set_random_seed(1)
+        tf.set_random_seed(42)
 
+        #### TODO: SPLIT INPUT GRAPHS INTO MANAGEABLE BATCHES
+
+        # Split input graphs into mini-batches
+        batch_size = 32 # TOTAL number of graphs per batch
+        training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
+        #for tr_input_graphs in training_batches:
+        
+        # Create placeholders and define tf training
         input_ph, target_ph = create_placeholders(tr_input_graphs, tr_target_graphs)
 
         # A list of outputs, one per processing step.
@@ -108,9 +118,15 @@ class KGCNLearner:
         gradients, _ = tf.clip_by_global_norm(gradients, clip) #clip = 5.0
         step_op = optimizer.apply_gradients(zip(gradients, variables))
 
-        ## ==== Create placeholders and define tf training ==== 
-        # TODO: Split into batches to avoid memory overflow
         input_ph, target_ph = make_all_runnable_in_session(input_ph, target_ph)
+        
+        # This cell resets the Tensorflow session, but keeps the same computational
+        # graph.
+        #try:
+        #    sess.close()
+        #except NameError:
+        #    pass
+
         sess = tf.Session()
         merged_summaries = tf.summary.merge_all()
 
@@ -201,6 +217,10 @@ class KGCNLearner:
             #print(f'Saved model to {log_dir+save_fle}')
         training_info = logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge
         return train_values, test_values, training_info, input_ph, target_ph, feed_dict
+    
+    ###############################
+    # VALIDATION WITHOUT TRAINING #
+    ###############################
     
     # New function to infer / apply without training
     # Inspired from: https://medium.com/@prasadpal107/saving-freezing-optimizing-for-inference-restoring-of-tensorflow-models-b4146deb21b5
