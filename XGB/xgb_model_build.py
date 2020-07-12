@@ -11,14 +11,14 @@ from os import listdir
 
 import xgboost as xgb
 from xgb_mylib import ModelFit
-from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, \
+from mylib.data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, \
 FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 
 
 # XGBOOST DATABASE PROCESSING (incl. feature selection)
 # load data
-import os
-path = os.getcwd()+'\data\\'
+PATH = os.getcwd() #+'\data\\'
+path = Path("../"+PATH+"/data/")
 rawdata = LoadData(path)
 data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
 target = 'num_rays'

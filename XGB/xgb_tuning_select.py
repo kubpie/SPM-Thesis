@@ -27,11 +27,14 @@ from xgb_mylib import f1_rounding_score
 
 
 # load data
-filepath = r'C:\Users\kubap\Documents\THESIS\XGBoost\data\\'
-resultpath = r'C:\Users\kubap\Documents\THESIS\XGBoost\results\tuning\\'
+PATH = os.getcwd() #+'\data\\'
+datapath = Path("../"+PATH+"/data/")
+xgb_datapath = Path(datapath+"/xgbsets/")
+#filepath = r'C:\Users\kubap\Documents\THESIS\XGBoost\data\xgbsets\\'
+resultpath = Path(PATH+"/data/results/")
 
-dtrain = pd.read_csv(filepath +'dtrain_new2.csv')
-dtest = pd.read_csv(filepath +'dtest_new2.csv')
+dtrain = pd.read_csv(xgb_datapath +'dtrain_new2.csv')
+dtest = pd.read_csv(xgb_datapath +'dtest_new2.csv')
 target = 'num_rays'
 features = [x for x in dtrain.columns if x not in [target, 'criterion', 'residual','runID']]
 

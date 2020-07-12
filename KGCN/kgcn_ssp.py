@@ -42,6 +42,13 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filt
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
 import os
+from pathlib import Path
+from data_prep import LoadData, FeatDuct, UndersampleData
+PATH = os.getcwd() #+'\data\\'
+datapath = Path("../"+PATH+"/data/")
+ALLDATA = LoadData(datapath)
+ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
+PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
 
 KEYSPACE =  "ssp_2class" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
@@ -52,14 +59,6 @@ PREEXISTS = 0
 CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
-
-from pathlib import Path
-from data_prep import LoadData, FeatDuct, UndersampleData
-PATH = os.getcwd() #+'\data\\'
-datapath = Path(PATH+"/data/")
-ALLDATA = LoadData(datapath)
-ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
 
 
 # Categorical Attribute types and the values of their categories
@@ -547,7 +546,7 @@ from data_prep import CreateSplits
 keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
 data = UndersampleData(data_sparse2, max_sample = 2000)
-#data = data[:20]
+data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
 #keyspace = "ssp_3class"
@@ -576,8 +575,8 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
 kgcn_vars = {
           'num_processing_steps_tr': 10, #13
           'num_processing_steps_ge': 10, #13
-          'num_training_iterations': 10000, #10000?
-          'learning_rate': 1e-4, #1e-4
+          'num_training_iterations': 100, #10000?
+          'learning_rate': 1e-5, #1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
           'clip': 1e2, #gradient clipping 5

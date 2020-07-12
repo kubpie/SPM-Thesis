@@ -7,7 +7,7 @@ Created on Tue Jun  2 20:36:24 2020
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+import pandas as pd
 from pycebox.ice import ice, ice_plot
 
 def ClassImbalance(data, plot = False):
@@ -32,6 +32,7 @@ def ClassImbalance(data, plot = False):
         ax.set_xticks(x)
         ax.set_xticklabels(yclass)
         ax.grid()
+        autolabel(bars)
         #ax.legend()
         
         for b, bar in enumerate(bars):
@@ -51,14 +52,51 @@ def ClassImbalance(data, plot = False):
         ax2.set_xticklabels(yclass)
         ax2.set_title('Cumulative sum plot of class distributions')
         ax2.grid()
-    
+        
+        plt.rcParams.update({'font.size': 20})
+
+        fig3,ax3 = plt.subplots()
+        width = 0.5
+        x = np.arange(len(yclass))
+        bars3 = ax3.bar(x, ycount, width, label = 'Number of samples')
+        ax3.set_ylabel('Number of Samples')
+        ax3.set_xlabel('Class: Number of Rays')
+        ax3.set_title('Class Distribution')
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(yclass)
+        ax3.grid()
+        #ax3.legend()
+        autolabel(bars3)
+
+        ax4 = ax3.twinx() 
+        ax4.plot(x, np.cumsum(yper), '-ok', label = 'Cumulative sum')
+        ax4.set_ylabel('Cumulative sum [%]')
+        #ax4.legend()
         for i, txt in enumerate(np.cumsum(yper)):
             ax2.annotate('{:.2f}%'.format(txt),
             xy=(x[i], np.cumsum(yper)[i]), 
             xytext=(x[i]-0.65, np.cumsum(yper)[i]+0.2), 
             arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
+            
+            ax4.annotate('{:.2f}%'.format(txt),
+            xy=(x[i], np.cumsum(yper)[i]), 
+            xytext=(x[i]-1, np.cumsum(yper)[i]+0.35), 
+            arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
+            
     return y_population
 
+def autolabel(rects):
+    """Attach a text label above each bar in *rects*, displaying its height."""
+    fig, ax = plt.subplots()
+    plt.close()
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate('{}'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')        
+ 
 
 def PlotCorrelation(dat, features, annotate = True):
 
@@ -120,8 +158,6 @@ def ICEPlot(data, model, features):
     fig.subplots_adjust(top=0.89)
     
     return train_ice_dfs
-
-
     
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -145,4 +181,47 @@ def dataframe_difference(df1, df2, which=None):
         diff_df = comparison_df[comparison_df['_merge'] == which]
     #diff_df.to_csv('data/diff.csv')
     return diff_df
+
+import os
+from matplotlib.lines import Line2D
+def bathy_plot():
+    path = os.getcwd()+'\data\\'
+    bathy =  pd.read_excel(path+ "env.xlsx", sheet_name = "BATHY")
+    bathy = bathy.loc[bathy['bottom_type']==1]
+    bathy1 = bathy.iloc[0:9,:]
+    bathy2 = bathy.iloc[10:19,:]
+    bathy3 = bathy.iloc[20:,:]
+    bathy4 = bathy.iloc[[6,16],:]
+    xt = [0] + np.unique(bathy['len_flat']).tolist() + np.unique(bathy['len_slope']+bathy['len_flat']).tolist()
+    yt = [0] + bathy['d_start'][:11].tolist()
+    fig,ax = plt.subplots()
+    custom_lines = [Line2D([0], [0], color='lightcoral'),
+                Line2D([0], [0], color='skyblue'),
+                Line2D([0], [0], color='chartreuse')]
+    #ax.legend(custom_lines, ["slope -2","slope 2", "slope 0"])
+    for bat, clr in zip([bathy1,bathy2,bathy3], ['lightcoral','skyblue','chartreuse']):
+        for dstart, dend, lenflat, lenslope in zip(bat['d_start'],bat['d_end'],bat['len_flat'],bat['len_slope']):
+            ax.plot([0,lenflat,lenflat+lenslope,44000],[dstart,dstart,dend,dend],clr,lw=0.5)
+            #plt.ylim(0,1550)
+            #plt.gca().invert_yaxis()
+    
+    bathy4 = bathy.iloc[[6,16],:]
+    for dstart, dend, lenflat, lenslope,clr in zip(bathy4['d_start'],bathy4['d_end'],bathy4['len_flat'],bathy4['len_slope'],['r','#0055ffff']):
+        ax.plot([0,lenflat,lenflat+lenslope,44000],[dstart,dstart,dend,dend],color=clr,lw=2)
+        ax.set_ylim(0,1560)
+        ax.invert_yaxis()
+    ax.set_xticks(xt)
+    ax.set_yticks(yt)
+    ax.set_title('Bathymetry Configurations')
+    ax.set_xlabel('Range [m]')
+    ax.set_ylabel('Depth [m]')
+    # Shrink current axis's height by 10% on the bottom
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1,
+                 box.width, box.height * 0.9])
+
+    # Put a legend below current axis
+    ax.legend(custom_lines, ["slope -2","slope 2", "slope 0"], loc='upper center', bbox_to_anchor=(0.5, -0.115),
+          fancybox=True, shadow=True, ncol=3)
+    fig.set_size_inches(10,5)
     

@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 #import sys
 #sys.path.append(r'C:\Users\kubap\Documents\THESIS\DATA_PREP')
-from ssp_features import SSPGrad, SSPStat, SSPId
-from data_prep import LoadData, FeatDuct, FeatBathy, FeatSSPId, FeatSSPOnDepth, UndersampleData
-from data_analysis_lib import ClassImbalance
+from mylib.ssp_features import SSPGrad, SSPStat, SSPId
+from mylib.data_prep import LoadData, FeatDuct, FeatBathy, FeatSSPId, FeatSSPOnDepth, UndersampleData
+from mylib.data_analysis import ClassImbalance
 
 from decimal import Decimal
 
@@ -29,7 +29,8 @@ from decimal import Decimal
 
 import os
 from pathlib import Path
-path = os.getcwd()+'/data/'
+PATH = os.getcwd() #+'\data\\'
+path = Path("../"+PATH+"/data/")
 
 Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")

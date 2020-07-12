@@ -42,6 +42,13 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filt
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
 import os
+from pathlib import Path
+from data_prep import LoadData, FeatDuct, UndersampleData
+PATH = os.getcwd() #+'\data\\'
+datapath = Path("../"+PATH+"/data/")
+ALLDATA = LoadData(datapath)
+ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
+PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
 
 KEYSPACE =  "ssp_2class" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
@@ -52,15 +59,6 @@ PREEXISTS = 0
 CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
-
-from pathlib import Path
-from data_prep import LoadData, FeatDuct, UndersampleData
-PATH = os.getcwd() #+'\data\\'
-datapath = Path(PATH+"/data/")
-ALLDATA = LoadData(datapath)
-ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
-
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
