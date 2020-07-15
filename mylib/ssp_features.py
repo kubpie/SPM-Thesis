@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
-
 """
 Created on Fri Apr 10 18:26:12 2020
-
 @author: kubap
 """
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+"""
+### Core script for SSP Identification 
+# 1. SSPStat calculates statistical properties: mean and standard deviation for each SSP
+# 2. SSPId runs analysis of minima/maxima of a SSP function, to identify Deep Sound Channel Axis depth and Sonic Layer Depth
+# 3. PolyFit experimental alternative for SSP function description with polynomial approximation -> TODO: Needs further work!
+
+IMPORTANT: Functions are by default saving to env.xslx file that is used in the later process!
+"""
 
 def append_df_to_excel(filename, df, sheet_name='Sheet1', startrow=None,
                        truncate_sheet=False, 
@@ -402,51 +409,4 @@ def PolyfitSSP(SSP_Input):
         best.append([best_it, best_r, best_c])
     
     return best, allres
-"""
-import os
-path = os.getcwd()+'\data\\'
-SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-#SSP_Grad = SSPGrad(SSP_Input, path, save = False)
-#SSP_Stat = SSPStat(SSP_Input, path, plot = True, save = False)
-SSP_Prop = SSPId(SSP_Input, path, plot = True, save = True)
-"""
-"""
-best, allres = PolyfitSSP(SSP_Input)
-deg = range(1,11)
 
-
-z = np.array(SSP_Input.iloc[:,0]).astype(float)
-znew = np.linspace(z[0], z[-1], num=len(z)*5)
-
-#plt.plot(xnew,ffit,x,y)
-
-
-fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
-axes = axes.flat
-axes[0].invert_yaxis()
-for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
-    coeff = best[i][2]
-    ffit = poly.polyval(znew, coeff) 
-    
-    axes[i].plot(ffit, znew)
-    axes[i].plot(SSP_Input.iloc[:,i], z)
-    axes[i].set_title("{}. {}".format(i, ssp))
- 
-# Plot to see the effect of subsampling SSP for Grakn input
-plot_sampling = False
-if plot_sampling == True:
-    fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
-    axes = axes.flat
-    axes[0].invert_yaxis()
-    
-    # This downsampling is used now in GRAKN. 0 is skipped in favor of first point at 10m
-    # because grad at 0 is 0, which breaks the SSP-vec 'triplet'
-    
-    max_depth = [0, 50, 150, 250, 350, 450, 600, 750, 900, 1050, 1200, 1500]
-    depth = SSP_Input.iloc[:,0]
-
-    for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
-        axes[i].plot(SSP_Input.iloc[:,1:][ssp], depth, linewidth = 2, label = 'Sound Speed Profile' )
-        axes[i].plot(SSP_Input.iloc[:,1:][ssp][depth.isin(max_depth)], depth[depth.isin(max_depth)], linewidth = 1, label = 'Subsampled Sound Speed Profile')
-        axes[i].set_title("{}. {}".format(i, ssp))
-"""

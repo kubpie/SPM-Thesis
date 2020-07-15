@@ -14,14 +14,32 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
-#from imblearn.over_sampling import SMOTENC
 
-from data_analysis_lib import ClassImbalance, PlotCorrelation
 from ssp_features import SSPStat
-from pathlib import Path
 
-def LoadData(path): 
-    
+""" 
+### DATA PREPARATION & FEATURE VECTOR CREATION LIBRARY ###
+Contents:
+1. LoadData: load data from csv and select convergent scenarios
+2. UndersampleData: creates a stratified subset less or equal (=<) n samples in each ray-class
+3. XGB data prep:
+    - EncodeData: One Hot encoder for categorical feautes and optionally the target feature
+    - TrainTestSplit: Splits for XGB
+    - CreateModelSplits: split data on slope value to create 3 sub-models
+4. SSP Features:
+    - FeatDuct: add or remove features connected to ducted propagation, used mostly with InputOnly = True to leave only 'raw' BELLHOP input data
+    - FeatBathy: add missing bathymetry featues slope/flat bottom seg. lengths
+    - FeatSSPId: creates feature vector from SSPId function of Deep Sound Channels Axis and Sonic Layer depths & gradients
+    - FeatSSPStat: creates feature vector of statistical properties of SSP function - mean and std #TODO: Make it read from csv too instead of function
+    - FeatSSPVec: creates feature vector representation of all SSP values until dmax (XGB Application)
+    - FeatSSPOnDepth: retrieves SSP values only for critical depths appearing in the input (XGB Application, alternative to SSPVec, closest repr. to KGCN model)
+
+IMPORTANT: Most of the functions depend on previously created env.xlsx to save time with relatively slow SSPId script!
+Make sure to have env.xlsx created from ssp_features.py or downlaoded before running.
+"""
+
+
+def LoadData(path):   
     def CheckCol(lst):
         return lst[1:] == lst[:-1] 
     
@@ -50,7 +68,9 @@ def LoadData(path):
     convData = convData.drop(columns = ['runID','residual','runtime','criterion'])
     # reset index values (loses info from the initial set)
     convData.reset_index(drop=True, inplace=True)
-
+    print(f'Total size of the database: {len(raw_data)}')
+    print(f'Number of converged scenarios: {len(convData)}')
+    print(f'Number of nonconverged scenarios: {len(nonconverged)'}
     return convData
     
 # FORMATTING
@@ -79,40 +99,32 @@ def FeatDuct(data, Input_Only = True):
         data = data.drop(columns = duct_cols)
     return data
 
-def FeatBathy(data,path):
-    
+def FeatBathy(data,path):    
     Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
     wedge = np.zeros([len(data),2]) #wedge parameters, bathymetry info
     
-    for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ):
-        
+    for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ): 
         ### Wedge Loop
         if slope == 0 or slope == -2:
             dstart = dmin
             dend = dmax
         else:
             dstart = dmax
-            dend = dmin 
-            
+            dend = dmin     
         find_lenflat = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_flat']
         lenflat = find_lenflat.values[0]        
-        
         find_lenslope = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_slope']
-        lenslope = find_lenslope.values[0]        
-
+        lenslope = find_lenslope.values[0]
         wedge[row, 0] = lenflat
-        wedge[row, 1] = lenslope
-        
-     
-        
+        wedge[row, 1] = lenslope        
+            
     df_wedge = pd.DataFrame(wedge)
     df_wedge.columns = ['len_flat','len_slope']
     # Choose only slope length, len_flat is redundant
     data = pd.concat([data, df_wedge.iloc[:,1]], axis=1, sort=False)    
-    
     return data
     
-def FeatSSPvec(data, path):
+def FeatSSPVec(data, path):
     ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
     depth = ssp['DEPTH'].values.tolist()
     
@@ -122,13 +134,12 @@ def FeatSSPvec(data, path):
     
     for dmin, dmax, profile, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['profile'], data['wedge_slope'], range(len(data)) ):
 
-        ### SSP-vec Loop
-        
-        # d is a depth approximation in case that ssp sampling doesn't match the grid in Bellhop
+        ### SSP-vec Loop        
         d = min(depth, key=lambda x:abs(x-dmin))
+        # d is a depth approximation in case that ssp sampling doesn't match the grid in Bellhop
+        idx = depth.index(d)+1
         # idx matches the index of ssp-vec entry with max_depth in each scenarion
         # so in flat-bottom scn only a part of ssp is used
-        idx = depth.index(d)+1
         
         if slope == 0:
             weight[row,0:idx] = 1.0
@@ -176,10 +187,8 @@ def FeatSSPId(data, path, src_cond):
         if not match.empty:
             df_sid.loc[row,:] = match.values[0]
             
-    
     df_sid = df_sid.drop(columns = ['SSP', 'dmax'])
     data = pd.concat([data, df_sid], axis=1, sort=False)
-    
     # With this condition the src position will be checked to indicate whether sound propagates 
     # in specific duct type SD/BD/DC and not only if those ducts exists on a given SSP
     # This includes EXPERT KNWOLEDGE in creation of feature vector beyond SSP identification
@@ -202,8 +211,8 @@ def FeatSSPId(data, path, src_cond):
 def FeatSSPStat(data, path):
     
     SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-    SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
     ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
     depth = ssp['DEPTH'].values.tolist()
     
     stats = ['mean_SSP','stdev_SSP','mean_grad','stdev_grad']
@@ -217,7 +226,7 @@ def FeatSSPStat(data, path):
     return data      
 
 def FeatSSPOnDepth(data_sspid, path, save = False):
-    
+    # Retrieve SSP values only for critical depths appearing in the input
     SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
     crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bott', 'DC_top', 'SLD_depth']
     crit_ssp = ['SSP_wmin', 'SSP_wmax', 'SSP_src', 'SSP_dcax', 'SSP_dcb', 'SSP_dct', 'SSP_sld']
@@ -279,7 +288,7 @@ def EncodeData(data):
     return data_enc 
 
 
-def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False, plot_distributions = False, plot_correlations = False):
+def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False, plot_distributions = False, plot_correlations = False):
     """
     1. Create 3 separate data splits based on the 'wedge_slope' value
     --- OUTLIERS ---
@@ -434,6 +443,9 @@ def UndersampleData(data, max_sample):
 
 
 """
+#from imblearn.over_sampling import SMOTENC
+# TODO: Make a function out of this too
+
 # Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
 #categorical_var = np.hstack([2, np.arange(5,33)])
 categorical_var = np.hstack([2,np.arange(5,33)])
@@ -445,29 +457,4 @@ smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=popul
 X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
 dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
 dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
-"""
-"""
-# TESTING NEW FEATURES AND THEIR CORRELATIONS
-
-import os
-path = os.getcwd()+'\data\\'
-
-#ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-#ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
-
-rawdata = LoadData(path)
-data1 = FeatDuct(rawdata, Input_Only = True)
-#data2 = FeatBathy(data1, path)
-#data3 = FeatSSPId(data2, path, src_cond = True)
-#data4 = FeatSSPStat(data3,path)
-#data5 = FeatSSPOnDepth(data4, path, save = True)
-data = UndersampleData(data1, 100)
-ClassImbalance(data, plot = True)
-
-
-#target = 'num_rays'
-#features = data5.columns.tolist()
-#features.remove(target)
-
-#PlotCorrelation(data5,features, annotate = False)
 """
