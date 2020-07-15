@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pandas as  pd
 import matplotlib.pyplot as plt
 from data_analysis import ClassImbalance, PlotCorrelation
@@ -6,7 +7,7 @@ from data_prep import FeatDuct, FeatBathy, FeatSSPId, FeatSSPStat, FeatSSPOnDept
 from data_prep import LoadData, UndersampleData
 from data_prep import CreateModelSplits, TrainTestSplit, EncodeData
 PATH = os.getcwd() #+'\data\\'
-path = Path("../"+PATH+"/data/")
+path = Path(PATH+"/data/")
 
 #####################################################
 ### Messy script for testing & plotting data prep ###

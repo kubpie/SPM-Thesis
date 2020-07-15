@@ -40,6 +40,7 @@ Make sure to have env.xlsx created from ssp_features.py or downlaoded before run
 
 
 def LoadData(path):   
+    
     def CheckCol(lst):
         return lst[1:] == lst[:-1] 
     
@@ -68,9 +69,9 @@ def LoadData(path):
     convData = convData.drop(columns = ['runID','residual','runtime','criterion'])
     # reset index values (loses info from the initial set)
     convData.reset_index(drop=True, inplace=True)
-    print(f'Total size of the database: {len(raw_data)}')
+    print(f'Total size of the database: {len(mergedData)}')
     print(f'Number of converged scenarios: {len(convData)}')
-    print(f'Number of nonconverged scenarios: {len(nonconverged)'}
+    print(f'Number of nonconverged scenarios: {len(nonconverged)}')
     return convData
     
 # FORMATTING
