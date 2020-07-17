@@ -69,9 +69,9 @@ def LoadData(path):
     convData = convData.drop(columns = ['runID','residual','runtime','criterion'])
     # reset index values (loses info from the initial set)
     convData.reset_index(drop=True, inplace=True)
-    print(f'Total size of the database: {len(mergedData)}')
-    print(f'Number of converged scenarios: {len(convData)}')
-    print(f'Number of nonconverged scenarios: {len(nonconverged)}')
+    #print(f'Total size of the database: {len(mergedData)}')
+    #print(f'Number of converged scenarios: {len(convData)}')
+    #print(f'Number of nonconverged scenarios: {len(nonconverged)}')
     return convData
     
 # FORMATTING
@@ -100,8 +100,8 @@ def FeatDuct(data, Input_Only = True):
         data = data.drop(columns = duct_cols)
     return data
 
-def FeatBathy(data,path):    
-    Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
+def FeatBathy(data, path):    
+    Bathy = pd.read_excel(str(path)+"\env.xlsx", sheet_name = "BATHY")
     wedge = np.zeros([len(data),2]) #wedge parameters, bathymetry info
     
     for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ): 
@@ -126,7 +126,7 @@ def FeatBathy(data,path):
     return data
     
 def FeatSSPVec(data, path):
-    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_true") #changed for original sampling!!
     depth = ssp['DEPTH'].values.tolist()
     
     cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector   

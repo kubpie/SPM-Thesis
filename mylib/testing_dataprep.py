@@ -8,6 +8,7 @@ from data_prep import LoadData, UndersampleData
 from data_prep import CreateModelSplits, TrainTestSplit, EncodeData
 PATH = os.getcwd() #+'\data\\'
 path = Path(PATH+"/data/")
+ALLDATA = LoadData(path)
 
 #####################################################
 ### Messy script for testing & plotting data prep ###
@@ -15,14 +16,21 @@ path = Path(PATH+"/data/")
 #####################################################
 # TODO: may need an update!
 
-data = LoadData(path)
-ClassImbalance(data, plot = True)
 
-#target = 'num_rays'
-#features = data5.columns.tolist()
-#features.remove(target)
-#PlotCorrelation(data,features, annotate = False)
+data = FeatDuct(ALLDATA, Input_Only = True)
+data = FeatBathy(data, path)
+data = EncodeData(data)
+#data3 = FeatSSPId(data2, path, src_cond = True)
+#data4 = FeatSSPStat(data3,path)
+#data5 = FeatSSPOnDepth(data4, path, save = True)
 
+target = 'num_rays'
+features = data.columns.tolist()
+features.remove(target)
+PlotCorrelation(data,features, annotate = False)
+
+
+#ClassImbalance(data, plot = True)
 
 """
 # SSP Identification

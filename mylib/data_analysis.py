@@ -102,12 +102,13 @@ def PlotCorrelation(dat, features, annotate = True):
 
         correlation_matrix = dat[features].corr(method = 'spearman').abs()
         # Set font scale
-        sns.set(font_scale = 1)
+        sns.set(font_scale = 2)
         # Set the figure size
-        f, ax = plt.subplots(figsize=(12, 12))
+        f, ax = plt.subplots(figsize=(10, 10))
         # Plot heatmap
-        sns.heatmap(correlation_matrix, cmap= 'YlGnBu', square=True, annot=annotate)
+        sns.heatmap(correlation_matrix, cmap= 'YlGnBu', square=True, annot=annotate, annot_kws = {"size": 12}, xticklabels = [])
         # Tight layout
+        plt.title("Correlation Matrix")
         f.tight_layout()
         plt.show() 
 
