@@ -94,7 +94,7 @@ models_and_scorers = {
         num_class = 17,
         n_jobs = -1),
 
-        'f1_macro'),
+        'scoring_i''f1_macro'),
     
     # Regressesor model
     'xgb_reg':(
@@ -118,6 +118,7 @@ models_and_scorers = {
 }
 
 param_test = {
+    'max_depth': np.arange(5,20,5),
     'min_child_weight' : np.arange(0.0, 1.0, 0.5),
     'min_split_loss': np.arange(0.0, 1.0, 0.5)
 }
@@ -128,9 +129,9 @@ data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
 data = FeatBathy(data, datapath) #also add slope length everywhere
 datasspid = FeatSSPId(data, datapath, src_cond = True)
 datasets = {
-    #'data-sspcat': (data,[]),                        # 1. categorical ssp
-    #'data-sspvec': (FeatSSPVec(data, datapath),[]),   # 2. ssp vector + categorical
-    'data-sspid':  (FeatSSPOnDepth(datasspid, datapath, save = False),[]) #ssp_id + categorical + selected_depths
+    'data-sspcat': (data,[]),                        # 1. categorical ssp
+    'data-sspvec': (FeatSSPVec(data, datapath),[])   # 2. ssp vector + categorical
+    #'data-sspid':  (FeatSSPOnDepth(datasspid, datapath, save = False),[]) #ssp_id + categorical + selected_depths
 }
 
 # ALWAYS leave out 20% of the whole dataset as test set that won't be used for tuning
@@ -158,15 +159,15 @@ estimators_and_average_scores_across_outer_folds = {
     'xgb_reg': {'names':[],'scores':[], 'parameters':[]}
 }
 
+print('Evaluating feature-selection dependent generalisation error in nested CV setup')
 for modeltype, (model, scorer) in models_and_scorers.items():
 
     hyperparam_optimizer = GridSearchCV(estimator = model,
                             param_grid = param_test, n_jobs=-1, 
                             cv=inner_cv, scoring=scorer, verbose = 1)
                             #return_train_score=True)
-
+    
     for setname, (setsamples,xgbsets) in datasets.items():
-
         name = modeltype + '_' + setname
         X_train = xgbsets[0][0]
         y_train = xgbsets[0][2]
@@ -186,63 +187,61 @@ for modeltype, (model, scorer) in models_and_scorers.items():
         scores_across_outer_folds = outer_cv_scores['test_score']
         estimators_and_average_scores_across_outer_folds[modeltype]['scores'].append(np.mean(scores_across_outer_folds))
         if modeltype == 'xgb_class':
-            error_summary = 'Model: {name}\nMean F1-macro score in the outer folds: {scores}.\nAverage score: {avg}'
+            error_summary = 'Model: {name}\nMean F1-macro score in the outer folds: {scores}.\nAverage score: {avg} (+/-{std})'
             print(error_summary.format(
                 name=name, scores=scores_across_outer_folds,
-                avg=np.mean(scores_across_outer_folds)))
+                avg=np.mean(scores_across_outer_folds),
+                std=np.std(scores_across_outer_folds)))
         else:
-            error_summary = 'Model: {name}\nMean RMSE score in the outer folds: {scores}.\nAverage error: {avg}'
+            error_summary = 'Model: {name}\nMean RMSE score in the outer folds: {scores}.\nAverage error: {avg} (+/-{std})'
             print(error_summary.format(
                 name=name, scores=scores_across_outer_folds,
-                avg=np.mean(scores_across_outer_folds)))
+                avg=np.mean(scores_across_outer_folds),
+                std=np.std(scores_across_outer_folds)))
 
-        # get the estimator with parameters tuned in the nested CV procedure        
-        nested_cv_estimator = outer_cv_scores['estimator']
-        estimators_and_average_scores_across_outer_folds[modeltype]['parameters'].append(nested_cv_estimator.get_params())
-        
-print('\nAverage score across the outer folds: ',
-      (estimators_and_average_scores_across_outer_folds[modeltype]['names'], 
-      estimators_and_average_scores_across_outer_folds[modeltype]['scores']))
+        # get a guess for an estimator with parameters tuned in the nested CV procedure
+        best_iter = np.argmax(scores_across_outer_folds)        
+        nested_cv_estimator = outer_cv_scores['estimator'][best_iter]
+        estimators_and_average_scores_across_outer_folds[modeltype]['parameters'].append(nested_cv_estimator.best_params_)
 
 best_models_nested_CV = []
 best_scores_nested_CV = []
+best_params_guess_nested_CV = []
 # Due to different metrics best regression and classification models need to be chosen separately beased on min\max
-best_class_model_name, best_class_model_avg_score = max(
-    estimators_and_average_scores_across_outer_folds['xgb_class'].items(),
-    key=(lambda name_averagescore: name_averagescore[1]))
-best_models_nested_CV.append(best_class_model_name)
-best_scores_nested_CV.append(best_class_model_avg_score)
+for modeltype in ['xgb_class','xgb_reg']:
+    print('\nAverage score across the outer folds: ',
+    (estimators_and_average_scores_across_outer_folds[modeltype]['names'], 
+    estimators_and_average_scores_across_outer_folds[modeltype]['scores']),
+    )
+    #estimators_and_average_scores_across_outer_folds[modeltype]['parameters']))
+    best_idx = np.argmax(estimators_and_average_scores_across_outer_folds[modeltype]['scores'])
+    best_models_nested_CV.append(estimators_and_average_scores_across_outer_folds[modeltype]['names'][best_idx])
+    best_scores_nested_CV.append(estimators_and_average_scores_across_outer_folds[modeltype]['scores'][best_idx])
+    best_params_guess_nested_CV.append(estimators_and_average_scores_across_outer_folds[modeltype]['parameters'][best_idx])
 
-best_reg_model_name, best_reg_model_avg_score = min(
-    estimators_and_average_scores_across_outer_folds['xgb_reg'].items(),
-    key=(lambda name_averagescore: name_averagescore[1]))
-best_models_nested_CV.append(best_reg_model_name)
-best_scores_nested_CV.append(best_reg_model_avg_score)
-
-#TODO: Save & Load models after nested CV!
+#TODO: Plot stability? Save results?
 
 for (best_model_name, best_model_avg_score) in zip(best_models_nested_CV, best_scores_nested_CV):
     print(f'Best model: {best_model_name}')
-    print('Estimation of its generalization error:\n\t{}'.format(
-        best_model_avg_score), end='\n\n')
+    print(f'Estimation of its generalization error: {best_model_avg_score:.3}')
 
     best_model_dataset_name = best_model_name.split('_')[-1]
-    best_model_data = datasets[best_model_dataset_name]
-    X_train_best, y_train_best = best_model_data[1][0], best_model_data[1][2]
-    X_test_best, y_test_best = best_model_data[1][1], best_model_data[1][3]
+    best_model_data = datasets[best_model_dataset_name][1]
+    X_train_best, y_train_best = best_model_data[0][0], best_model_data[0][2]
+    X_test_best, y_test_best = best_model_data[0][1], best_model_data[0][3]
 
     # now we refit this best model on the whole train dataset so that we can start
     # making predictions on other data, and now we have a reliable estimate of
     # this model's generalization error and we are confident this is the best model
     # among the ones we have tried
 
-    ### NORMAL CROSS VALIDATION WITH REFINED PARAMETER GRID & CUSTOM METRICS
+    ### NORMAL CROSS VALIDATION WITH FULL PARAMETER GRID & CUSTOM METRICS
     # at this step rounded F1 will be implemented for a regression model to help 
     # with comparison against classifier
     
     #TODO: 
-    # 1. Implement custom metrics here
-    # 2. Params refined around nested-CV results
+    # 1. Implement custom scorers here
+    # 2. Params guess from nested-CV??
     # 3. Increase nr of estimators and implement early stopping
 
     final_model = GridSearchCV(best_model, param_test, cv = inner_cv, n_jobs=-1)
