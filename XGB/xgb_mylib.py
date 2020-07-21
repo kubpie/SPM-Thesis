@@ -34,21 +34,22 @@ from sklearn.metrics.classification import _weighted_sum
 
 
 
-def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, 
-            verbose = 1, 
+def ModelFit(bst_model, X_train, y_train, X_test, y_test, early_stop, 
             learningcurve = True, 
             importance = True, 
             plottree = True, 
-            savemodel = True):
+            savemodel = True,
+            verbose = 1
+            ):
 
     #dtrainDM = xgb.DMatrix(dtrain[features], dtrain[target])
-    eval_set = [(dtrain[features], dtrain[target]),(dtest[features], dtest[target])]
+    eval_set = [(X_train, y_train),(X_test, y_test)]
     modeltype = str(type(bst_model))
     class_labels = np.unique(dtest[target])
 
     if "Classifier" in modeltype:
         modeltype = "class"
-        eval_metric = ["f1_err", "merror"] #the last item in eval_metric will be used for early stopping
+        eval_metric = ["merror","f1_err"] #the last item in eval_metric will be used for early stopping
         feval = f1_eval_class
     
     elif "Regressor" in modeltype:
@@ -57,7 +58,7 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop,
         feval = f1_eval_reg
 
     #Fit the algorithm with tuned hyperparameters on the full training data
-    bst_model = bst_model.fit(dtrain[features], dtrain[target], eval_set=eval_set, eval_metric = feval,
+    bst_model = bst_model.fit(X_train, y_train, eval_set=eval_set, eval_metric = feval,
                verbose=verbose, early_stopping_rounds = early_stop)
     results = bst_model.evals_result()
 

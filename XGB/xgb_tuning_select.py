@@ -14,7 +14,7 @@ from pathlib import Path
 from joblib import dump
 from joblib import load
 
-from sklearn.model_selection import StratifiedKFold, train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate, cross_val_score, GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import precision_score
@@ -82,7 +82,7 @@ models_and_scorers = {
         xgb.XGBClassifier(
         silent = 0,
         learning_rate = 0.1, #0.1
-        n_estimators=100, #1000
+        n_estimators=50, #1000
         max_depth=10, #10
         min_child_weight=1.0, 
         min_split_loss=0.0,
@@ -101,25 +101,25 @@ models_and_scorers = {
         xgb.XGBRegressor(
         silent = 0,
         learning_rate = 0.1,
-        n_estimators=100,
+        n_estimators=50,
         max_depth = 10, 
         min_child_weight= 1.,
         min_split_loss= 0.0,
         subsample = 1.0,
         colsample_bytree=1.0,
         objective= 'reg:squarederror',
-        reg_alpha = 0.,
-        reg_lambda= 1.,
+        reg_alpha = 0.0,
+        reg_lambda= 1.0,
         n_jobs = -1), 
 
-        'mean_squared_error')
+        'neg_root_mean_squared_error')
         #{#'Accuracy': make_scorer(accuracy_rounding_score),
         #'F1-macro': make_scorer(f1_rounding_score, greater_is_better = True, average='macro')})
 }
 
 param_test = {
-    'min_child_weight' : np.arange(0.0, 1.5, 0.5),
-    'min_split_loss': np.arange(0.0, 1.5, 0.5)
+    'min_child_weight' : np.arange(0.0, 1.0, 0.5),
+    'min_split_loss': np.arange(0.0, 1.0, 0.5)
 }
 ###############################
 ### FEATURES REPRESENTATION ###
@@ -128,9 +128,9 @@ data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
 data = FeatBathy(data, datapath) #also add slope length everywhere
 datasspid = FeatSSPId(data, datapath, src_cond = True)
 datasets = {
-    'data_sspcat': (data,[]),                        # 1. categorical ssp
-    'data_sspvec': (FeatSSPVec(data, datapath),[]),   # 2. ssp vector + categorical
-    'data_sspid':  (FeatSSPOnDepth(datasspid, datapath, save = False),[]) #ssp_id + categorical + selected_depths
+    #'data-sspcat': (data,[]),                        # 1. categorical ssp
+    #'data-sspvec': (FeatSSPVec(data, datapath),[]),   # 2. ssp vector + categorical
+    'data-sspid':  (FeatSSPOnDepth(datasspid, datapath, save = False),[]) #ssp_id + categorical + selected_depths
 }
 
 # ALWAYS leave out 20% of the whole dataset as test set that won't be used for tuning
@@ -142,44 +142,117 @@ for setname, (setsamples,xgbsets) in datasets.items():
         features.remove(target)
         X, y = dataset[features], dataset[target]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = size_test, random_state = 123, shuffle = True, stratify = y)
-        xgbsets.append(X_train, X_test, y_train, y_test)
+        datasets[setname][1].append([X_train, X_test, y_train, y_test])
    
-
 ##################
 ###  PIPELINE  ###
 ##################
 
 # `outer_cv` creates K folds for estimating generalization model error
-outer_cv = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 42)
+outer_cv = StratifiedKFold(n_splits = 3, shuffle = True, random_state = 42)
 # when we train on a certain fold, use a second cross-validation split in order to choose best hyperparameters
-inner_cv = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 24)
+inner_cv = StratifiedKFold(n_splits = 3, shuffle = True, random_state = 24)
 
-average_scores_across_outer_folds_for_each_model = dict()
+estimators_and_average_scores_across_outer_folds = {
+    'xgb_class': {'names':[],'scores':[], 'parameters':[]},
+    'xgb_reg': {'names':[],'scores':[], 'parameters':[]}
+}
 
-for name, (model, scorer) in models_and_scorers.items():
+for modeltype, (model, scorer) in models_and_scorers.items():
 
-    hyperparam_optimizer = GridSearchCV(estimator = model, #verbose = 2,
+    hyperparam_optimizer = GridSearchCV(estimator = model,
                             param_grid = param_test, n_jobs=-1, 
-                            cv=inner_cv, scoring=scorer)
+                            cv=inner_cv, scoring=scorer, verbose = 1)
                             #return_train_score=True)
+
     for setname, (setsamples,xgbsets) in datasets.items():
 
-        name = name + setname
-        X_train = xgbsets[0,:]
-        y_train = xgbsets[2,:]
+        name = modeltype + '_' + setname
+        X_train = xgbsets[0][0]
+        y_train = xgbsets[0][2]
 
-        scores_across_outer_folds = cross_val_score(
-                                hyperparam_optimizer,
-                                X_train, y_train, cv=outer_cv, scoring=scorer)
+        #scores_across_outer_folds = cross_val_score(
+        #                        hyperparam_optimizer,
+        #                        X_train, y_train, cv=outer_cv, scoring=scorer,
+        #                        verbose = 1)
+        outer_cv_scores = cross_validate(
+                                hyperparam_optimizer, 
+                                X_train, y_train, cv=outer_cv, scoring=scorer,
+                                verbose = 1, return_estimator=True)
 
+        # gather labelled results in the dictionary of scores & estimators
+        estimators_and_average_scores_across_outer_folds[modeltype]['names'].append(name)
         # get the mean MSE across each of outer_cv's 3 folds
-        average_scores_across_outer_folds_for_each_model[name] = np.mean(scores_across_outer_folds)
-        error_summary = 'Model: {name}\nMean F1-macro score in the outer folds: {scores}.\nAverage error: {avg}'
-        print(error_summary.format(
-            name=name, scores=scores_across_outer_folds,
-            avg=np.mean(scores_across_outer_folds)))
-        print()
+        scores_across_outer_folds = outer_cv_scores['test_score']
+        estimators_and_average_scores_across_outer_folds[modeltype]['scores'].append(np.mean(scores_across_outer_folds))
+        if modeltype == 'xgb_class':
+            error_summary = 'Model: {name}\nMean F1-macro score in the outer folds: {scores}.\nAverage score: {avg}'
+            print(error_summary.format(
+                name=name, scores=scores_across_outer_folds,
+                avg=np.mean(scores_across_outer_folds)))
+        else:
+            error_summary = 'Model: {name}\nMean RMSE score in the outer folds: {scores}.\nAverage error: {avg}'
+            print(error_summary.format(
+                name=name, scores=scores_across_outer_folds,
+                avg=np.mean(scores_across_outer_folds)))
+
+        # get the estimator with parameters tuned in the nested CV procedure        
+        nested_cv_estimator = outer_cv_scores['estimator']
+        estimators_and_average_scores_across_outer_folds[modeltype]['parameters'].append(nested_cv_estimator.get_params())
+        
+print('\nAverage score across the outer folds: ',
+      (estimators_and_average_scores_across_outer_folds[modeltype]['names'], 
+      estimators_and_average_scores_across_outer_folds[modeltype]['scores']))
+
+best_models_nested_CV = []
+best_scores_nested_CV = []
+# Due to different metrics best regression and classification models need to be chosen separately beased on min\max
+best_class_model_name, best_class_model_avg_score = max(
+    estimators_and_average_scores_across_outer_folds['xgb_class'].items(),
+    key=(lambda name_averagescore: name_averagescore[1]))
+best_models_nested_CV.append(best_class_model_name)
+best_scores_nested_CV.append(best_class_model_avg_score)
+
+best_reg_model_name, best_reg_model_avg_score = min(
+    estimators_and_average_scores_across_outer_folds['xgb_reg'].items(),
+    key=(lambda name_averagescore: name_averagescore[1]))
+best_models_nested_CV.append(best_reg_model_name)
+best_scores_nested_CV.append(best_reg_model_avg_score)
+
+#TODO: Save & Load models after nested CV!
+
+for (best_model_name, best_model_avg_score) in zip(best_models_nested_CV, best_scores_nested_CV):
+    print(f'Best model: {best_model_name}')
+    print('Estimation of its generalization error:\n\t{}'.format(
+        best_model_avg_score), end='\n\n')
+
+    best_model_dataset_name = best_model_name.split('_')[-1]
+    best_model_data = datasets[best_model_dataset_name]
+    X_train_best, y_train_best = best_model_data[1][0], best_model_data[1][2]
+    X_test_best, y_test_best = best_model_data[1][1], best_model_data[1][3]
+
+    # now we refit this best model on the whole train dataset so that we can start
+    # making predictions on other data, and now we have a reliable estimate of
+    # this model's generalization error and we are confident this is the best model
+    # among the ones we have tried
+
+    ### NORMAL CROSS VALIDATION WITH REFINED PARAMETER GRID & CUSTOM METRICS
+    # at this step rounded F1 will be implemented for a regression model to help 
+    # with comparison against classifier
+    
+    #TODO: 
+    # 1. Implement custom metrics here
+    # 2. Params refined around nested-CV results
+    # 3. Increase nr of estimators and implement early stopping
+
+    final_model = GridSearchCV(best_model, param_test, cv = inner_cv, n_jobs=-1)
+    final_model.fit(X_train_best, y_train_best)
+
+    print('Best parameter choice for this model: \n\t{params}'
+        '\n(according to cross-validation `{cv}` on the whole dataset).'.format(
+        params=final_model.best_params_, cv=inner_cv))
 
 
-print('Average score across the outer folds: ',
-      average_scores_across_outer_folds_for_each_model)
+#final_model.predict(X_test_best)
+print("The model is trained on the full development set.")
+print("The scores are computed on the full evaluation set.")
