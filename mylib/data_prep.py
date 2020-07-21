@@ -127,7 +127,7 @@ def FeatBathy(data, path):
     return data
     
 def FeatSSPVec(data, path):
-    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_true") #changed for original sampling!!
+    ssp = pd.read_excel(str(path)+"\env.xlsx", sheet_name = "SSP_LEVITUS") #changed for original sampling!!
     depth = ssp['DEPTH'].values.tolist()
     
     cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector   
@@ -178,7 +178,7 @@ def FeatSSPVec(data, path):
 
 def FeatSSPId(data, path, src_cond):
     
-    ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
+    ssp_prop = pd.read_excel(str(path)+"\env.xlsx",  sheet_name = "SSP_PROP")
     # beacause 0 is a meaningful value, to allocate space, use an array of NaNs
     dat = np.empty([len(data), len(ssp_prop.columns)])
     dat[:,:] = np.nan
@@ -200,7 +200,7 @@ def FeatSSPId(data, path, src_cond):
         dccols = [col for col in data.columns if 'DC' in col ]
         sldcols = [col for col in data.columns if 'SLD' in col ]
   
-        for src, sld, dctop, dcbot, row in zip(data['source_depth'], data['SLD_depth'], data['DC_top'], data['DC_bott'], range(len(data))):
+        for src, sld, dctop, dcbot, row in zip(data['source_depth'], data['SLD_depth'], data['DC_top'], data['DC_bot'], range(len(data))):
             # no SD/BD propagation
             if sld < 30 or src >= sld: 
                 data.loc[row,sldcols] = np.nan   
@@ -229,8 +229,8 @@ def FeatSSPStat(data, path):
 
 def FeatSSPOnDepth(data_sspid, path, save = False):
     # Retrieve SSP values only for critical depths appearing in the input
-    SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bott', 'DC_top', 'SLD_depth']
+    SSP_Input = pd.read_excel(str(path)+"\env.xlsx", sheet_name = "SSP")
+    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bot', 'DC_top', 'SLD_depth']
     crit_ssp = ['SSP_wmin', 'SSP_wmax', 'SSP_src', 'SSP_dcax', 'SSP_dcb', 'SSP_dct', 'SSP_sld']
     dat = np.empty([len(data_sspid),len(crit_ssp)])
     dat[:,:] = np.nan
@@ -289,6 +289,23 @@ def EncodeData(data):
     #y_enc = y
     return data_enc 
 
+def UndersampleData(data, max_sample):
+    
+    target = np.unique(data['num_rays'])
+    random_state = 27
+    y_population = ClassImbalance(data,plot = False)
+    
+    data_sampled = pd.DataFrame(columns = data.columns)
+    
+    for raynr in target:
+        if y_population[raynr][0] > max_sample:
+            data_slice = data.loc[data['num_rays'] == raynr]
+            data_sample = data_slice.sample(n = max_sample, random_state = random_state)
+            data_sampled = data_sampled.append(data_sample, ignore_index = False)
+        else:
+            data_sampled = data_sampled.append(data.loc[data['num_rays'] == raynr], ignore_index= False)
+            
+    return data_sampled
 
 def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False, plot_distributions = False, plot_correlations = False):
     """
@@ -405,58 +422,53 @@ def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outli
     
     return SplitSets, distributions
 
-def TrainTestSplit(data, save = False, seed = 27, test_size = 0.25):
-    # divide dataset into test & training subsets
-    target = 'num_rays'
-    predictors = [x for x in data.columns if x not in target]
-    X_train, X_test, y_train, y_test = train_test_split(data[predictors], data[target], test_size=test_size, random_state=seed, stratify =  data[target])
-    # stratified split ensures that the class distribution in training\test sets is as similar as possible
-    dtrain = pd.concat((X_train, y_train), axis = 1)
-    dtest = pd.concat((X_test, y_test), axis = 1)
+def XGBSets(data, datapath, test_size = 0.20):
     
-    if save:
-        # save into separate .csv files
-        filepath = os.getcwd()+'\data\\'
-        dtest.to_csv(filepath + 'dtest_25.csv', index = None, header = True)
-        dtrain.to_csv(filepath + 'dtrain_75.csv', index = None, header = True)
-        #dtrainup.to_csv(filepath + 'dtrainup.csv', index = None, header = True)
-        #dtrain_smot.to_csv(filepath + 'dtrain_smot.csv', index = None, header = True)
-        print("New datafiles have been created!")
-    
-    return dtrain, dtest
+    target  = 'num_rays'
+    data = FeatDuct(data, Input_Only = True) #just to leave only input data
+    data = FeatBathy(data, datapath) #also add slope length everywhere
 
-def UndersampleData(data, max_sample):
-    
-    target = np.unique(data['num_rays'])
-    random_state = 27
-    y_population = ClassImbalance(data,plot = False)
-    
-    data_sampled = pd.DataFrame(columns = data.columns)
-    
-    for raynr in target:
-        if y_population[raynr][0] > max_sample:
-            data_slice = data.loc[data['num_rays'] == raynr]
-            data_sample = data_slice.sample(n = max_sample, random_state = random_state)
-            data_sampled = data_sampled.append(data_sample, ignore_index = False)
-        else:
-            data_sampled = data_sampled.append(data.loc[data['num_rays'] == raynr], ignore_index= False)
-            
-    return data_sampled
+    datasets = {
+        'data_sspcat': data,                        # 1. categorical ssp
+        'data_sspvec': FeatSSPvec(data, datapath),   # 2. ssp vector + categorical
+        'data_sspid': FeatSSPId(data, path, src_cond = True)
+    }
 
 
-"""
-#from imblearn.over_sampling import SMOTENC
-# TODO: Make a function out of this too
+    for dataset in datasets:
+        features = dataset.columns.tolist()
+        features = features.remove(target)
+        data = EncodeData(dataset)
+        X, y = dataset[features], dataset[target]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = size_test, random_state = 123, shuffle = True, stratify = y)
 
-# Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
-#categorical_var = np.hstack([2, np.arange(5,33)])
-categorical_var = np.hstack([2,np.arange(5,33)])
-minority = np.arange(4,17)
-samplenr = 250
-population_target = dict(zip(minority, (np.ones(len(minority))*samplenr).astype(int)))
-smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
-#smote_nc_max = SMOTENC(categorical_features=categorical_var, sampling_strategy='auto', random_state=42)
-X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
-dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
-dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
-"""
+        ### 1. XGB plain
+        data = data
+
+        ### 2. XGB with SSP-vec directly in feature vector (implicit SSP features)
+        data_ssp = FeatSSPvec(data, datapath)
+
+        ### XGB with SSP-id and without SSP-vec
+
+        # 3B. With src condition => full acoustic duct identification for each scenario
+        data_sspid_con = FeatSSPId(data, path, src_cond = False)
+        sspid_enc = EncodeData(data_sspid_con)
+        features = sspid_enc.columns.tolist()
+        features.remove(target)
+        #[dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
+        #_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+        #verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+
+        ### 5. XGB on the whole dataset
+        # Final Feature Vec Representation
+        data_sspid = FeatSSPId(data_sspstat, path, src_cond = True)
+        data_final = FeatSSPOnDepth(data_sspid, path, save = False)
+        #data with ssp at crit depths
+        data_enc = EncodeData(data_final)
+
+        features = data_enc.columns.tolist()
+        features.remove(target)
+        [dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
+    
+    return
+

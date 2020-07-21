@@ -92,18 +92,18 @@ data_enc = EncodeData(data)
 features = data_enc.columns.tolist()
 features.remove(target)
 [dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
-_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
-verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+#_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+#verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 ### 2. XGB with SSP-vec directly in feature vector (implicit SSP features) & missin bathy info 
 data_ssp = FeatSSPvec(data, path)
 data_enc = EncodeData(data_ssp)
 features = data_enc.columns.tolist()
 features.remove(target)
-[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
+#[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
 
-_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
-verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+#_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+#verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 ### XGB with SSP-id and without SSP-vec
 # 3A. Without checking src depth condition
@@ -111,28 +111,28 @@ data_sspid_noc = FeatSSPId(data, path, src_cond = False)
 sspid_enc = EncodeData(data_sspid_noc)
 features = sspid_enc.columns.tolist()
 features.remove(target)
-[dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
-_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
-verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+#[dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
+#_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+#verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 # 3B. With src condition => full acoustic duct identification for each scenario
-data_sspid_con = FeatSSPId(data, path, src_cond = True)
+data_sspid_con = FeatSSPId(data, path, src_cond = False)
 sspid_enc = EncodeData(data_sspid_con)
 features = sspid_enc.columns.tolist()
 features.remove(target)
-[dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
-_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
-verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+#[dtrain, dtest] = TrainTestSplit(sspid_enc, test_size = 0.25)
+#_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+#verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 # 4. sspvec + sspid with duct check
 data_sspid_con = FeatSSPId(data, path, src_cond = True)
 data_ssp = FeatSSPvec(data_sspid_con, path)
 features = data_ssp.columns.tolist()
 features.remove(target)
-[dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
+#[dtrain, dtest] = TrainTestSplit(data_ssp, test_size = 0.25)
 
-_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
-verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+#_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+#verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
 
 ### 5. XGB on the whole dataset
 # Final Feature Vec Representation
