@@ -23,6 +23,7 @@ path = Path("../"+PATH+"/data/")
 rawdata = LoadData(path)
 target = 'num_rays'
 data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
+data = FeatBathy(data,path)
 
 xgb_class = xgb.XGBClassifier(
         silent = 0,

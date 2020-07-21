@@ -1,4 +1,4 @@
-ta# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Tue Jan 14 12:18:29 2020
 
@@ -9,11 +9,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import xgboost as xgb
+import os, sys
+from pathlib import Path
 from joblib import dump
 from joblib import load
 
 from sklearn.model_selection import StratifiedKFold
-
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import precision_score
@@ -22,19 +23,21 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import make_scorer
 #from sklearn.multiclass import OneVsRestClassifier
 
-from xgb_mylib import ModelFit
-from xgb_mylib import HyperParamGS
-from xgb_mylib import PlotGS
+#from xgb_mylib import ModelFit
+#from xgb_mylib import HyperParamGS
+#from xgb_mylib import PlotGS
 from xgb_mylib import accuracy_rounding_score
 from xgb_mylib import f1_rounding_score
 
-
-# load data
-TARGET = 'num_rays'
+# Load data and define paths
 PATH = os.getcwd()
-datapath = Path("../"+PATH+"/data/")
-resultpath = Path(PATH+"/data/results/")
+datapath = Path(PATH+"/data/")
+resultpath = Path(PATH+"/XGB/results/")
+sys.path.insert(1, PATH + '/mylib/')
+from data_prep import LoadData, FeatDuct, EncodeData, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 DATA = LoadData(datapath)
+TARGET = 'num_rays' # target variable label
+
 """
 ##### HYPERPARAMETER TUNING #####
 
@@ -87,7 +90,7 @@ scoring_class = {
     'Accuracy': make_scorer(accuracy_score),
     'F1-macro': make_scorer(f1_score, average='macro')
     }
-
+"""
 # Regression model
 xgb_reg = xgb.XGBRegressor(
     silent = 0,
@@ -108,7 +111,7 @@ scoring_reg = {
     'Accuracy': make_scorer(accuracy_rounding_score),
     'F1-macro': make_scorer(f1_rounding_score, average='macro')
     }
-
+"""
 param_test = {
     'min_child_weight' : np.arange(0.0, 1.5, 0.5),
     'min_split_loss': np.arange(0.0, 1.5, 0.5)
@@ -116,12 +119,13 @@ param_test = {
 
 ### 1. XGB wihout splits
 data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
+data = FeatBathy(data,datapath)
 data = EncodeData(data)
-features = data_enc.columns.tolist()
+features = data.columns.tolist()
 features.remove(TARGET)
-
-
-# PIPELINE
+##################
+###  PIPELINE  ###
+##################
 # `outer_cv` creates K folds for estimating generalization model error
 outer_cv = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 42)
 # when we train on a certain fold, use a second cross-validation split in order to choose best hyperparameters
