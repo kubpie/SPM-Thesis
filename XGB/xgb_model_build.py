@@ -21,8 +21,8 @@ FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 PATH = os.getcwd() #+'\data\\'
 path = Path("../"+PATH+"/data/")
 rawdata = LoadData(path)
-data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
 target = 'num_rays'
+data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
 
 xgb_class = xgb.XGBClassifier(
         silent = 0,

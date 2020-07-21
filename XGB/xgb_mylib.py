@@ -7,9 +7,14 @@ Created on Tue Feb  4 16:47:55 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
+
 import xgboost as xgb
 from joblib import dump
 from joblib import load
+import os
+from pathlib import Path
+
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import fbeta_score
@@ -27,31 +32,36 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics.classification import _check_targets
 from sklearn.metrics.classification import _weighted_sum
 
-from matplotlib.ticker import FormatStrFormatter
 
 
-def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, learningcurve, importance, plottree, savename):
+def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, 
+            verbose = 1, 
+            learningcurve = True, 
+            importance = True, 
+            plottree = True, 
+            savemodel = True):
+
     #dtrainDM = xgb.DMatrix(dtrain[features], dtrain[target])
     eval_set = [(dtrain[features], dtrain[target]),(dtest[features], dtest[target])]
     modeltype = str(type(bst_model))
-    class_names = np.unique(dtest[target])
+    class_labels = np.unique(dtest[target])
 
     if "Classifier" in modeltype:
         modeltype = "class"
-        eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for early stopping
+        eval_metric = ["f1_err", "merror"] #the last item in eval_metric will be used for early stopping
         feval = f1_eval_class
     
     elif "Regressor" in modeltype:
         modeltype = "reg"
-        eval_metric = ["f1_err","rmse"] 
+        eval_metric = ["f1_err", "rmse"] 
         feval = f1_eval_reg
 
     #Fit the algorithm with tuned hyperparameters on the full training data
     bst_model = bst_model.fit(dtrain[features], dtrain[target], eval_set=eval_set, eval_metric = feval,
                verbose=verbose, early_stopping_rounds = early_stop)
     results = bst_model.evals_result()
+
     print(bst_model.best_iteration, bst_model.best_score)
-    
     print("\nModel Summary")
     print(bst_model)
     
@@ -59,18 +69,17 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
     y_pred = bst_model.predict(dtest[features])
     #print(y_pred)
     #dtrain_predprob = bst_model.predict_proba(dtest[features])
-    output = []
     
+    output = []
     if modeltype == "reg":
         prediction = np.zeros(y_pred.size)
         for p in range(0,y_pred.size):
-            #prediction[p] = min(np.arange(0,17, dtype=np.float32), key=lambda x:abs(x-y_pred[p]))          
-            prediction[p] = min(class_names, key=lambda x:abs(x-y_pred[p]))
+            prediction[p] = min(class_labels, key=lambda x:abs(x-y_pred[p]))
 
         rounding_error = abs(prediction-y_pred)
         print("Mean rounding error: %.2f" % (np.mean(rounding_error)))
         rmse = np.sqrt(mean_squared_error(dtest[target].values, prediction))
-        print("RMSE: %.2f" % (rmse))
+        print("Approx. RMSE: %.2f" % (rmse))
         output = [y_pred, prediction]
         y_pred = prediction
         # TODO: make a plot of prediction vs rounded showing the residual
@@ -84,7 +93,7 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
     print(cmatrix)
     """
     disp = plot_confusion_matrix(bst_model, dtest[features], y_pred,
-                             display_labels=class_names,
+                             display_labels=class_labels,
                              cmap=plt.cm.Blues,
                              normalize=None)
     disp.ax_.set_title("Confustion Matrix")
@@ -92,12 +101,13 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
     plt.show()
     """
     #Path for plots
-    resultpath = r'C:\Users\kubap\Documents\THESIS\XGBoost\results\\'
+    path = os.getcwd()
+    resultpath = Path(path+"/results/" + modeltype)
 
-    if savename:
+    if savemodel:
          #save model to file
-         dump(bst_model, resultpath + savename + ".dat")
-         print("Saved model to:" + resultpath + savename + ".dat")
+         dump(bst_model, resultpath + "model.dat")
+         print("Saved model to:" + resultpath + "model.dat")
             #TODO: FOR LATER USE
             #load model from file
             #loaded_model = load("pima.joblib.dat")
@@ -106,24 +116,20 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
     if importance:
         #Available importance_types = ["weight", "gain", "cover", "total_gain", "total_cover"]
         # default for 'True' is 'weight'
-        """
-        xgb.plot_importance(bst_model, importance_type=importance)
-        plt.rcParams['figure.figsize'] = 10, 5
-        """
         types = ["weight","total_gain","total_cover"]
         fig, axes = plt.subplots(nrows=1, 
                          ncols=3, 
-                         figsize=(30,8)
+                         figsize=(10,4)
                          )
         for t, ax in zip(types, axes):
             xgb.plot_importance(bst_model, importance_type=t, title = t, 
                             show_values = False,  ylabel=None, ax = ax)
-        
+            plt.savefig(resultpath + "feature_imp_" + t + ".png")
+    
     if learningcurve:
         #retrieve performance metrics
         epochs = len(results['validation_0'][eval_metric[0]])
         x_axis = range(0, epochs)
-        
         # plot F1_err
         fig, ax = plt.subplots()
         ax.plot(x_axis, results['validation_0'][eval_metric[0]], label='Train')
@@ -133,7 +139,7 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
         plt.ylabel(eval_metric[0])
         plt.xlabel('Epoch')
         plt.title("Learning curve with: " + eval_metric[0])
-        plt.savefig(resultpath + modeltype + eval_metric[0] + '.png')
+        plt.savefig(resultpath + eval_metric[0] + '.png')
         plt.show()
         
         # plot classification error
@@ -147,45 +153,45 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
         plt.ylabel(eval_metric[1])
         plt.xlabel('Epoch')
         plt.title("Learning curve with: " + eval_metric[1])
-        plt.savefig(resultpath + modeltype + eval_metric[1] + '.png')
+        plt.savefig(resultpath + eval_metric[1] + '.png')
         plt.show()    
                         
         
     if plottree:
         xgb.plot_tree(bst_model,num_trees=0)
         #tree is saved to pdf because it's too large to display details in python
-        plt.savefig(resultpath + modeltype + '_tree.pdf', format='pdf', dpi=2000)
+        plt.savefig(resultpath + 'tree.pdf', format='pdf', dpi=300)
              
     output.append(report), output.append(cmatrix)
     return(bst_model, results, output)
 
     
-def HyperParamGS(model, param, dtrain, features, kfold, target, scoring, refit):
+def HyperParamGS(model, param, dtrain, features, inner_cv, target, scoring, refit = 'F1-macro'):
     # The function evaluates different model paramaters in a grid search setup 
     # and creates a scorer that registers metrics in 'scoring' dict 
 
     gs_model = GridSearchCV(estimator = model, verbose = 2,
                             param_grid = param, n_jobs=-1, 
-                            cv=kfold, scoring=scoring, refit=refit, 
+                            cv=inner_cv, scoring=scoring, refit=refit, 
                             return_train_score=True)
     
     gs_model.fit(dtrain[features],dtrain[target])
-    
+    non_nested_scores[i] = clf.best_score_
+
+
     print(gs_model.best_index_,gs_model.best_params_, gs_model.best_score_)
     GSresults = gs_model.cv_results_
     return(GSresults, gs_model.best_params_)
 
-def PlotGS(results, param, scoring, modeltype):
+def PlotGS(results, param, scoring, resultpath):
 # TODO: Make a save option for offline tuning, then plt.show(False) and save(True)    
+    
     plt.figure(figsize=(13, 13))
     plt.title("GridSearchCV Scorer Evaluation",
               fontsize=16)
-
     ax = plt.gca()
     ax.set_ylim(0, 1.2)
     plt.ylabel("Score")
-
-
     ax.set_xlim(0, len(results['params'])-1)       
     plt.xlabel([key for key in param.keys()])
     X_axis  = np.arange(0,np.size(results['params']))
@@ -224,18 +230,15 @@ def PlotGS(results, param, scoring, modeltype):
         # Annotate the best score for that scorer
         ax.annotate("%0.2f" % best_score,
                     (X_axis[best_index], best_score + 0.005))
-    
     plt.legend(loc="best")
     plt.grid(False)
-    resultpath = r'C:\Users\kubap\Documents\THESIS\XGBoost\results\tuning\\'
-    plt.savefig(resultpath + list(param.keys())[0]+modeltype+'.png')
+    plt.savefig(resultpath + "/GS/" + list(param.keys())[0]+'.png')
     #plt.show(False)
 
 def accuracy_rounding_score(y_true, y_pred, normalize=True, sample_weight=None):
     for p in range(0,y_pred.size):
-        labels = [  500.,  1000.,  1500.,  2000.,  2500.,  3000.,  3500.,  4000.,
-        4500.,  5000.,  6000.,  7000.,  8000.,  9000., 10000., 12500., 15000.]
-        y_pred[p] = min(labels, key=lambda x:abs(x-y_pred[p]))    
+        class_labels = np.unique(y_true)
+        y_pred[p] = min(class_labels, key=lambda x:abs(x-y_pred[p]))    
     # Compute accuracy for each possible representation
     y_type, y_true, y_pred = _check_targets(y_true, y_pred)
     check_consistent_length(y_true, y_pred, sample_weight)
@@ -247,18 +250,11 @@ def accuracy_rounding_score(y_true, y_pred, normalize=True, sample_weight=None):
 
     return _weighted_sum(score, sample_weight, normalize)
 
-def f1_rounding_score(y_true, y_pred, labels=None, pos_label=1, average='binary',
-    sample_weight=None, zero_division="warn"):
-    labels = [  500.,  1000.,  1500.,  2000.,  2500.,  3000.,  3500.,  4000.,
-        4500.,  5000.,  6000.,  7000.,  8000.,  9000., 10000., 12500., 15000.]
+def f1_rounding_score(y_true, y_pred, average='macro'):
+    class_labels = np.unique(y_true)
     for p in range(0,y_pred.size):
-        y_pred[p] = min(labels, key=lambda x:abs(x-y_pred[p]))    
-
-
-    return fbeta_score(y_true, y_pred, 1, labels=labels,
-                           pos_label=pos_label, average=average,
-                           sample_weight=sample_weight,
-                           zero_division=zero_division)
+        y_pred[p] = min(class_labels, key=lambda x:abs(x-y_pred[p]))    
+    return fbeta_score(y_true, y_pred, 1, labels=labels, pos_label=pos_label, average=average)
     
 def f1_eval_class(y_pred, dtrainDM):
         y_true = dtrainDM.get_label()

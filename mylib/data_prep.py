@@ -40,13 +40,13 @@ Make sure to have env.xlsx created from ssp_features.py or downlaoded before run
 
 
 def LoadData(path):   
-    
-    def CheckCol(lst):
-        return lst[1:] == lst[:-1] 
-    
+        
     flist = [f for f in os.listdir(path) if "Dataset" in f]
     col = []
     frames = []
+
+    def CheckCol(lst):
+        return lst[1:] == lst[:-1] 
     
     for file in flist: #to check fix it latest
         raw_data = pd.read_csv( str(path)+"/"+file, index_col=None, header=0)
@@ -69,12 +69,13 @@ def LoadData(path):
     convData = convData.drop(columns = ['runID','residual','runtime','criterion'])
     # reset index values (loses info from the initial set)
     convData.reset_index(drop=True, inplace=True)
+    
     #print(f'Total size of the database: {len(mergedData)}')
     #print(f'Number of converged scenarios: {len(convData)}')
     #print(f'Number of nonconverged scenarios: {len(nonconverged)}')
+    
     return convData
     
-# FORMATTING
 def FeatDuct(data, Input_Only = True):   
     # merge SD/BD features into one to emphasize duct propagation mode
     duct_cols = ['duct_prop_type','duct_width_if_sourceinduct', 'duct_SSP_if_sourceinduct']

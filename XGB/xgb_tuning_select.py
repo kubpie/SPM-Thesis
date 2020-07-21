@@ -11,13 +11,16 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 from joblib import dump
 from joblib import load
+
+from sklearn.model_selection import StratifiedKFold
+
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import make_scorer
-from sklearn.multiclass import OneVsRestClassifier
+#from sklearn.multiclass import OneVsRestClassifier
 
 from xgb_mylib import ModelFit
 from xgb_mylib import HyperParamGS
@@ -27,17 +30,42 @@ from xgb_mylib import f1_rounding_score
 
 
 # load data
-PATH = os.getcwd() #+'\data\\'
+TARGET = 'num_rays'
+PATH = os.getcwd()
 datapath = Path("../"+PATH+"/data/")
-xgb_datapath = Path(datapath+"/xgbsets/")
-#filepath = r'C:\Users\kubap\Documents\THESIS\XGBoost\data\xgbsets\\'
 resultpath = Path(PATH+"/data/results/")
+DATA = LoadData(datapath)
+"""
+##### HYPERPARAMETER TUNING #####
 
-dtrain = pd.read_csv(xgb_datapath +'dtrain_new2.csv')
-dtest = pd.read_csv(xgb_datapath +'dtest_new2.csv')
-target = 'num_rays'
-features = [x for x in dtrain.columns if x not in [target, 'criterion', 'residual','runID']]
+### model complexity ###
+# max_depth: maximum depth of a tree. 
+# min_child_weight: minimum sum of instance weight (hessian) needed in a child. If the tree partition step results in a leaf node with the sum of instance weight less than min_child_weight, then the building process will give up further partitioning. 
+# In linear regression task, this simply corresponds to minimum number of instances needed to be in each node. The larger min_child_weight is, the more conservative the algorithm will be.
+# minimum_split_loss: reduction required to make a further partition on a leaf node of the tree. The larger gamma is, the more conservative the algorithm will be.
+param1 = {
+ 'max_depth': np.arange(10,22,2),
+ 'min_child_weight' : np.arange(0.0, 2.2, 0.4), # range: [0,∞] [default=1]
+ 'min_split_loss': np.arange(0.0, 2.2, 0.4) #range: [0,∞] [default=0]
+}
 
+### overfitting ###
+# subsample ratio of the training instances. Setting it to 0.5 means that XGBoost would randomly sample half of the training data prior to growing trees. and this will prevent overfitting.
+# colsample_bytree is the subsample ratio of columns when constructing each tree. Subsampling occurs once for every tree constructed.
+param2 = {
+ 'subsample': np.arange(1.0, 0.2, -0.2), #range: (0,1]  [default=1]
+ 'colsample_bytree': np.arange(1.0, 0.4, -0.1) # range: (0, 1] [default=1]
+}
+
+### regularization ###
+# lambda: L2 regularization term on weights. Increasing this value will make model more conservative.
+# alpha: L1 regularizationterm on weights. Increasing this value will make model more conservative.
+# L2 reg - generally better than L1 unless solution is sparse
+param4 = {
+    'reg_lambda':np.arange(0.1,4.0,0.3), #[default=1]
+    'reg_alpha': np.arange(0.0, 1.1, 0.1) #[default=0]
+}
+"""
 # Classifier model   
 xgb_class = xgb.XGBClassifier(
     silent = 0,
@@ -60,7 +88,7 @@ scoring_class = {
     'F1-macro': make_scorer(f1_score, average='macro')
     }
 
-# Tree regression model
+# Regression model
 xgb_reg = xgb.XGBRegressor(
     silent = 0,
     learning_rate = 0.05, #0.1
@@ -76,75 +104,33 @@ xgb_reg = xgb.XGBRegressor(
     seed=27,
     n_jobs = -1
 ) 
-
 scoring_reg = {
     'Accuracy': make_scorer(accuracy_rounding_score),
     'F1-macro': make_scorer(f1_rounding_score, average='macro')
     }
-       
-
-##### HYPERPARAMETER TUNING #####
-param1 = {
- 'min_child_weight' : np.arange(0.0, 2.2, 0.2), # range: [0,∞] [default=1]
- 'min_split_loss': np.arange(0.0, 2.2, 0.2) #range: [0,∞] [default=0]
- #alias: gamma 20 is extremly high
-}
-param2 = {
- 'subsample': np.arange(1.0, 0.2, -0.2), #range: (0,1]  [default=1]
- 'colsample_bytree': np.arange(1.0, 0.4, -0.1) # range: (0, 1] [default=1]
-}
-param3 = {
- 'max_depth': np.arange(10,22,2),
- 'reg_lambda':np.arange(0.1,4.0,0.3) #[default=1]
- #L2 reg - generally better than L1 unless solution is sparse
-}
-param4 = {
-    'reg_alpha': np.arange(0.0, 1.1, 0.1)
-}
-
-param0 = {'subsample': np.arange(1.0, 0.7, -0.1),
-            'colsample_bytree': np.arange(1.0, 0.8, -0.2)}
-
-"""
-it = 0
-for param in [param4]:
-    it = it + 1
-    r_res, r_param = HyperParamGS(xgb_reg, param, dtrain, features, target, scoring_reg, refit = 'F1-macro')
-    dump(r_res, resultpath + "reg_param_L1" + str(it) + ".dat")
-    xgb_reg = xgb_reg.set_params(**r_param)
-    PlotGS(r_res, param, scoring_reg, modeltype='reg_L1')
-
-dump(xgb_reg, "L1_reg.dat")
-
-it = 0
-for param in [param4]:
-    it = it + 1
-    c_res, c_param = HyperParamGS(xgb_class, param, dtrain, features, target, scoring_class, refit = 'F1-macro')
-    dump(c_res, resultpath + "class_param_L1" + str(it) + ".dat")
-    xgb_class = xgb_class.set_params(**c_param)
-    PlotGS(c_res, param, scoring_class, modeltype='class_L1')
-
-dump(xgb_class, "L1_fine.dat")
-
-
-#param = param3
-#class_res, class_param = HyperParamGS(xgb_class, param, dtrain, features, target, scoring_class, refit = 'F1-macro')
-#dump(class_res, resultpath + "param4_class.dat")
-#xgb_class = xgb_class.set_params(**class_param)
-#PlotGS(class_res, param, scoring_class)
-"""
-
 
 param_test = {
-    'learning_rate': 0.05,
-    'n_estimators': 2000
+    'min_child_weight' : np.arange(0.0, 1.5, 0.5),
+    'min_split_loss': np.arange(0.0, 1.5, 0.5)
 }
-#xgb_reg = load(resultpath+"coarse_reg.dat")
-#xgb_class = load(resultpath+"coarse_class.dat")
 
-#xgb_class = xgb_class.set_params(**param_test)
-#xgb_reg = xgb_reg.set_params(**param_test)
+### 1. XGB wihout splits
+data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
+data = EncodeData(data)
+features = data_enc.columns.tolist()
+features.remove(TARGET)
 
-##### TRAIN THE BEST MODEL ON THE FULL DATASET AND FIT ON THE TEST SET #####
-bst_model_class, fullresult_class, output_class = ModelFit(xgb_class, dtrain, dtest, features, target, early_stop = 100, verbose=True, learningcurve = True, importance = True, plottree = False, savename = "class_feat")
-#bst_model_reg, fullresults_reg, output_reg  = ModelFit(xgb_reg, dtrain, dtest, features, target, early_stop = 200, verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+
+# PIPELINE
+# `outer_cv` creates K folds for estimating generalization model error
+outer_cv = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 42)
+# when we train on a certain fold, use a second cross-validation split in order to choose best hyperparameters
+inner_cv = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 24)
+
+X, y = data[features], data[TARGET]
+
+
+#[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
+#_, _, _, = ModelFit(model, dtrain, dtest, features, target, early_stop = 100,
+#verbose=True, learningcurve = True, importance = True, plottree = False, savename = False)
+
