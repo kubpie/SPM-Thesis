@@ -15,7 +15,8 @@ from joblib import load
 import os
 from pathlib import Path
 
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import make_scorer
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import fbeta_score
 from sklearn.metrics import f1_score
@@ -34,66 +35,66 @@ from sklearn.metrics.classification import _weighted_sum
 
 
 
-def ModelFit(bst_model, X_train, y_train, X_test, y_test, early_stop, 
-            learningcurve = True, 
-            importance = True, 
-            plottree = True, 
-            savemodel = True,
+def ModelFit(best_model, model_type, 
+            X_train, y_train, X_test, y_test,
+            early_stop, 
+            learningcurve = False, 
+            importance = False, 
+            plottree = False, 
+            savemodel = False,
             verbose = 1
             ):
 
-    #dtrainDM = xgb.DMatrix(dtrain[features], dtrain[target])
-    eval_set = [(X_train, y_train),(X_test, y_test)]
-    modeltype = str(type(bst_model))
-    class_labels = np.unique(dtest[target])
 
-    if "Classifier" in modeltype:
-        modeltype = "class"
-        eval_metric = ["merror","f1_err"] #the last item in eval_metric will be used for early stopping
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.2, random_state = 321, shuffle = True, stratify = y_train)
+    dtrainDM = xgb.DMatrix(X_train, label=y_train)
+    eval_set = [(X_train, y_train),(X_val, y_val)]
+    class_labels = np.unique(y_test)
+
+    if model_type == "xgb_class":
+        eval_metrics = ['merror','f1_err'] 
+        eval_label = ['Mean Class. Error', 'F1-macro Error']
         feval = f1_eval_class
-    
-    elif "Regressor" in modeltype:
-        modeltype = "reg"
-        eval_metric = ["f1_err", "rmse"] 
+    elif model_type == "xgb_reg":
+        eval_metrics = ['rmse', 'f1_err']
+        eval_label = ['RMSE', 'F1-macro Error']
         feval = f1_eval_reg
+        #best_model.set_params()
+    best_model.fit(X_train, y_train, 
+                early_stopping_rounds = early_stop, 
+                eval_set=eval_set,
+                eval_metric=feval, 
+                verbose=verbose)
+    results = best_model.evals_result()
+    print(f'Training stopped at iteration: {best_model.best_iteration} \n Score: {best_model.best_score}')    
 
-    #Fit the algorithm with tuned hyperparameters on the full training data
-    bst_model = bst_model.fit(X_train, y_train, eval_set=eval_set, eval_metric = feval,
-               verbose=verbose, early_stopping_rounds = early_stop)
-    results = bst_model.evals_result()
-
-    print(bst_model.best_iteration, bst_model.best_score)
-    print("\nModel Summary")
-    print(bst_model)
-    
-    #Predict test set:
-    y_pred = bst_model.predict(dtest[features])
+    #Call predict on the estimator with the best found parameters.
+    y_pred = best_model.predict(X_test)
     #print(y_pred)
-    #dtrain_predprob = bst_model.predict_proba(dtest[features])
-    
+        
     output = []
-    if modeltype == "reg":
+    if model_type == "xgb_reg":
         prediction = np.zeros(y_pred.size)
         for p in range(0,y_pred.size):
             prediction[p] = min(class_labels, key=lambda x:abs(x-y_pred[p]))
 
         rounding_error = abs(prediction-y_pred)
-        print("Mean rounding error: %.2f" % (np.mean(rounding_error)))
-        rmse = np.sqrt(mean_squared_error(dtest[target].values, prediction))
-        print("Approx. RMSE: %.2f" % (rmse))
+        print("Mean classification rounding error: %.2f" % (np.mean(rounding_error)))
+        rmse = np.sqrt(mean_squared_error(y_test, prediction))
+        print("RMSE after rounding: %.2f" % (rmse))
         output = [y_pred, prediction]
         y_pred = prediction
         # TODO: make a plot of prediction vs rounded showing the residual
         
     #Print model report:
-    print("\nModel Report")
-    report = classification_report(dtest[target].values, y_pred, digits=2)
+    print('\nPrediction on the test set')
+    report = classification_report(y_test, y_pred, digits=2)
     print(report)
     #Plot confustion matrix
-    cmatrix = confusion_matrix(dtest[target].values, y_pred)      
+    cmatrix = confusion_matrix(y_test, y_pred)      
     print(cmatrix)
     """
-    disp = plot_confusion_matrix(bst_model, dtest[features], y_pred,
+    disp = plot_confusion_matrix(best_model, y_test, y_pred,
                              display_labels=class_labels,
                              cmap=plt.cm.Blues,
                              normalize=None)
@@ -103,12 +104,13 @@ def ModelFit(bst_model, X_train, y_train, X_test, y_test, early_stop,
     """
     #Path for plots
     path = os.getcwd()
-    resultpath = Path(path+"/results/" + modeltype)
+    resultpath = Path(path+"/XGB/results/" + model_type)
+    resultpath = str(resultpath) + '\\'
 
     if savemodel:
          #save model to file
-         dump(bst_model, resultpath + "model.dat")
-         print("Saved model to:" + resultpath + "model.dat")
+         dump(best_model, resultpath + model_type + "_final_model.dat")
+         print("Saved model to:" + resultpath + model_type + "_final_model.dat")
             #TODO: FOR LATER USE
             #load model from file
             #loaded_model = load("pima.joblib.dat")
@@ -120,69 +122,79 @@ def ModelFit(bst_model, X_train, y_train, X_test, y_test, early_stop,
         types = ["weight","total_gain","total_cover"]
         fig, axes = plt.subplots(nrows=1, 
                          ncols=3, 
-                         figsize=(10,4)
+                         figsize=(20,5)
                          )
+        plt.subplots_adjust(wspace = 0.4, bottom = 0.15, left = 0.125,)
         for t, ax in zip(types, axes):
-            xgb.plot_importance(bst_model, importance_type=t, title = t, 
-                            show_values = False,  ylabel=None, ax = ax)
-            plt.savefig(resultpath + "feature_imp_" + t + ".png")
-    
+            xgb.plot_importance(best_model, importance_type=t, title = t, show_values = False,  ylabel=None, ax = ax)
+        plt.savefig(resultpath + model_type +"_feature_importance.png")
+        
     if learningcurve:
         #retrieve performance metrics
-        epochs = len(results['validation_0'][eval_metric[0]])
+        epochs = len(results['validation_0'][eval_metrics[0]])
         x_axis = range(0, epochs)
         # plot F1_err
         fig, ax = plt.subplots()
-        ax.plot(x_axis, results['validation_0'][eval_metric[0]], label='Train')
-        ax.plot(x_axis, results['validation_1'][eval_metric[0]], label='Test')
-        plt.axvline(x=bst_model.best_iteration, color = 'k', linewidth = 0.5, label = 'Best run')
+        ax.plot(x_axis, results['validation_0'][eval_metrics[0]], label='Train', color = 'dodgerblue')
+        ax.plot(x_axis, results['validation_1'][eval_metrics[0]], label='Validation', color = 'orangered')
+        plt.axvline(x=best_model.best_iteration, color = 'k', linestyle='--', linewidth = 0.5, label = 'Best iteration')
+        ax.set_xlim(0,epochs-1)
         ax.legend()
-        plt.ylabel(eval_metric[0])
+        plt.ylabel(eval_label[0])
         plt.xlabel('Epoch')
-        plt.title("Learning curve with: " + eval_metric[0])
-        plt.savefig(resultpath + eval_metric[0] + '.png')
-        plt.show()
+        plt.title("Learning curve with: " + eval_label[0])
+        plt.savefig(resultpath + model_type +'_'+ eval_metrics[0] + '.png')
         
         # plot classification error
         fig, ax = plt.subplots()   
-        ax.plot(x_axis, results['validation_0'][eval_metric[1]], label='Train')
-        ax.plot(x_axis, results['validation_1'][eval_metric[1]], label='Test')
-        #plot stopline
-        #TODO: plot range only until x=bst_model.best_iteration ?? 
-        plt.axvline(x=bst_model.best_iteration, color = 'k', linewidth = 0.5, label = 'Best run')
+        ax.plot(x_axis, results['validation_0'][eval_metrics[1]], label='Train', color = 'dodgerblue')
+        ax.plot(x_axis, results['validation_1'][eval_metrics[1]], label='Validation', color = 'orangered')
+        plt.axvline(x=best_model.best_iteration, color = 'k', linestyle='--', linewidth = 0.5, label = 'Best iteration')
+        ax.set_xlim(0,epochs)
         ax.legend()
-        plt.ylabel(eval_metric[1])
+        plt.ylabel(eval_label[1])
         plt.xlabel('Epoch')
-        plt.title("Learning curve with: " + eval_metric[1])
-        plt.savefig(resultpath + eval_metric[1] + '.png')
-        plt.show()    
+        plt.title("Learning curve with: " + eval_label[1])
+        plt.savefig(resultpath +  model_type + '_' + eval_metrics[1] + '.png')
                         
         
     if plottree:
-        xgb.plot_tree(bst_model,num_trees=0)
+        plt.figure(figsize=(20,5))
+        xgb.plot_tree(best_model, rankdir='LR')
         #tree is saved to pdf because it's too large to display details in python
-        plt.savefig(resultpath + 'tree.pdf', format='pdf', dpi=300)
+        plt.savefig(resultpath + model_type +'_tree.png', format='png', dpi=800)
              
     output.append(report), output.append(cmatrix)
-    return(bst_model, results, output)
+    return(best_model, results, output)
 
     
-def HyperParamGS(model, param, dtrain, features, inner_cv, target, scoring, refit = 'F1-macro'):
-    # The function evaluates different model paramaters in a grid search setup 
-    # and creates a scorer that registers metrics in 'scoring' dict 
-
-    gs_model = GridSearchCV(estimator = model, verbose = 2,
-                            param_grid = param, n_jobs=-1, 
-                            cv=inner_cv, scoring=scoring, refit=refit, 
-                            return_train_score=True)
+def HyperParamGS(model, X_train, y_train, model_type, param_tuning, cv):
     
-    gs_model.fit(dtrain[features],dtrain[target])
-    non_nested_scores[i] = clf.best_score_
+    if model_type == "xgb_class":
+        scoring = 'f1_macro'
+       
+    elif model_type == "xgb_reg":
+        scoring = 'neg_root_mean_squared_error'
+           
+    model = GridSearchCV(model, 
+                        param_grid = param_tuning, 
+                        cv=cv, scoring=scoring,
+                        verbose = 1, n_jobs=-1,
+                        return_train_score=False)
+    model.fit(X_train,y_train)
 
+    #Train the model on the whole dataset in GridSearchCV setup to find best hyperparameters #
+    results = model.cv_results_
+    means = results['mean_test_score']
+    stds = results['std_test_score']
+    print('\nHyperparameter Tuning Results')
+    for mean, std, params in zip(means,stds,results['params']):
+        print("%0.3f (+/-%0.03f)  for %r"
+              % (abs(mean), std * 2, params))
 
-    print(gs_model.best_index_,gs_model.best_params_, gs_model.best_score_)
-    GSresults = gs_model.cv_results_
-    return(GSresults, gs_model.best_params_)
+    print(f'Best hyperparameters found in CV Grid Search on the whole training dataset: \n{model.best_params_}')
+    
+    return(results, model.best_params_)
 
 def PlotGS(results, param, scoring, resultpath):
 # TODO: Make a save option for offline tuning, then plt.show(False) and save(True)    
@@ -234,7 +246,7 @@ def PlotGS(results, param, scoring, resultpath):
     plt.legend(loc="best")
     plt.grid(False)
     plt.savefig(resultpath + "/GS/" + list(param.keys())[0]+'.png')
-    #plt.show(False)
+    return
 
 def accuracy_rounding_score(y_true, y_pred, normalize=True, sample_weight=None):
     for p in range(0,y_pred.size):
@@ -251,11 +263,11 @@ def accuracy_rounding_score(y_true, y_pred, normalize=True, sample_weight=None):
 
     return _weighted_sum(score, sample_weight, normalize)
 
-def f1_rounding_score(y_true, y_pred, average='macro'):
+def f1_rounding_score(y_true, y_pred):
     class_labels = np.unique(y_true)
     for p in range(0,y_pred.size):
         y_pred[p] = min(class_labels, key=lambda x:abs(x-y_pred[p]))    
-    return fbeta_score(y_true, y_pred, 1, labels=labels, pos_label=pos_label, average=average)
+    return fbeta_score(y_true, y_pred, beta=1, labels=class_labels, average='macro')
     
 def f1_eval_class(y_pred, dtrainDM):
         y_true = dtrainDM.get_label()
@@ -265,5 +277,5 @@ def f1_eval_class(y_pred, dtrainDM):
     
 def f1_eval_reg(y_pred, dtrainDM):
         y_true = dtrainDM.get_label()
-        err = 1 - f1_rounding_score(y_true, y_pred, average = 'macro')
+        err = 1 - f1_rounding_score(y_true, y_pred)
         return 'f1_err', err

@@ -185,6 +185,7 @@ def dataframe_difference(df1, df2, which=None):
 
 import os
 from matplotlib.lines import Line2D
+
 def bathy_plot():
     path = os.getcwd()+'\data\\'
     bathy =  pd.read_excel(path+ "env.xlsx", sheet_name = "BATHY")
