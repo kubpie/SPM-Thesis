@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import SMOTENC
 
 from ssp_features import SSPStat
-
 """ 
 ### DATA PREPARATION & FEATURE VECTOR CREATION LIBRARY ###
 Contents:
@@ -256,7 +256,6 @@ def FeatSSPOnDepth(data_sspid, path, save = False):
 def EncodeData(data):
     SeasonList = []
     LocationList = []
-    
     # Split 'profile' into features 'location' and 'season' and remove 'profile' permamently
     for ssp in data['profile']:
         seasons = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -421,3 +420,33 @@ def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outli
 
     
     return SplitSets, distributions
+
+
+def SMOTSampling(X_train, y_train, min_class_size = 100):
+    # UPSAMPLING 
+    #check the label population - important for the value of max folds possible
+    yclass, ycount = np.unique(y_train, return_counts=True)
+    yper = ycount/sum(ycount)*100
+    y_population = dict(zip(yclass, zip(ycount, yper)))
+
+    # Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
+    #categorical_var = np.hstack([2, np.arange(5,33)])
+    seasons = ['Winter', 'Spring', 'Summer', 'Autumn']
+    locations = ['Labrador-Sea','Mediterranean-Sea','North-Pacific-Ocean','Norwegian-Sea','South-Atlantic-Ocean','South-Pacific-Ocean']
+    bottom = ['bottom_type']
+    categorical_var =[]
+    for cat in locations+seasons+bottom:
+        cat_idx = X_train.columns.get_loc(cat)
+        categorical_var.append(cat_idx)
+    min_class_size = min_class_size
+    print(categorical_var)
+    population_target = dict.fromkeys(y_population.keys())
+    for ray, nrsamples in y_population.items():
+        if nrsamples[0] < min_class_size:
+            population_target[ray] = min_class_size
+        else:
+            population_target[ray] = y_population[ray][0]
+    smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
+    X_train = X_train.fillna(0) #smotenc doesn't work for NaNs, which is not good and changes sspid logics
+    X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
+    return X_smot, y_smot

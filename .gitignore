@@ -11,11 +11,14 @@ kgcnmodels/
 # Saved NetworkX graphs
 networkx/
 
+# XGB results
+XGB/results/
+
 # Old code etc
 old_versions/
 
 # Non-essential files
-non_src_files/
+reports/
 
 # VS-compiled folders
 .vs/

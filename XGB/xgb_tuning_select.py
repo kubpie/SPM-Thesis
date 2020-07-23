@@ -35,7 +35,7 @@ PATH = os.getcwd()
 datapath = Path(PATH+"/data/")
 resultpath = Path(PATH+"/XGB/results/")
 sys.path.insert(1, PATH + '/mylib/')
-from data_prep import LoadData, XGBSets, FeatDuct, EncodeData, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPOnDepth
+from data_prep import LoadData, FeatDuct, EncodeData, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPOnDepth, SMOTSampling
 DATA = LoadData(datapath)
 
 """
@@ -71,7 +71,7 @@ param4 = {
 ### for tuning all at once ### 
 param_all = {
     'learning_rate': [0.1, 0.01],
-    'max_depth': [6, 8, 10],
+    'max_depth': [6, 8, 10, 12],
     'min_child_weight' : [1, 5, 10], # range: [0,∞] [default=1]
     'min_split_loss': [0, 1, 5], #range: [0,∞] [default=0]
     'subsample': [1, 0.8],  #range: (0,1]  [default=1]
@@ -119,23 +119,26 @@ models_and_scorers = {
 }
 
 param_test = {
-    'max_depth': np.arange(5,15,5),
-    'min_child_weight' : np.arange(0.0, 1.0, 0.5),
-    'min_split_loss': np.arange(0.0, 1.0, 0.5)
+    'max_depth': [4, 8, 12],
+    'min_child_weight' : [1, 5, 10],
+    'min_split_loss': [0, 1, 5]
 }
 
 ###############################
 ### FEATURES REPRESENTATION ###
 ###############################
+
 data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
 data = FeatBathy(data, datapath) #also add slope length everywhere
-#datasspid = FeatSSPId(data, datapath, src_cond = True) #ssp identification algoritm, takes some time
+data_sppvec = FeatSSPVec(data, datapath)
+data_sspid = FeatSSPId(data, datapath, src_cond = True) #ssp identification algoritm, takes some time
+data_complete = FeatSSPOnDepth(data_sspid, datapath, save = False)
 datasets = {
-    'data-sspcat': (data,[]),                        # 1. categorical ssp
-    #'data-sspvec': (FeatSSPVec(data, datapath),[]),   # 2. ssp vector + categorical
-    #'data-sspid':  (FeatSSPOnDepth(datasspid, datapath, save = False),[]) #ssp_id + categorical + selected_depths
+    'data-sspcat': (data,[]),                          # 1. categorical ssp
+    'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
+    'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
+    'data-sspid-upsampled': (data_complete,[])         # 4. ssp_id + categorical + selected_depth + upsampling in minority class
 }
-
 # ALWAYS leave out 20% of the whole dataset as test set that won't be used for tuning
 size_test = 0.2
 target  = 'num_rays'
@@ -145,13 +148,13 @@ for setname, (setsamples,xgbsets) in datasets.items():
         features.remove(target)
         X, y = dataset[features], dataset[target]
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = size_test, random_state = 123, shuffle = True, stratify = y)
+        if setname == 'data-sspid-upsampled':
+            X_train, y_train = SMOTSampling(X_train, y_train, min_class_size = 100)
         datasets[setname][1].append([X_train, X_test, y_train, y_test])
 
-#TODO: Add an upsampled TRAINING set   
-
-#################
-###  PIPELINE  ###
-##################
+##########################
+###  FEATURE SELECTION ###
+##########################
 
 # start time for nested CV
 start_time=time.time()
@@ -273,12 +276,15 @@ print(f'Best dataset for {best_model} model: {best_model_dataset_name}')
 print(f'Estimation of its generalization error: {best_model_avg_score:.3}')
 print(f'Guess for model depth (model complexity): {best_model_params}')
 
+
+###############################
+### MODEL TUNING & TRAINING ###
+###############################
+
 # now we refit this best model on the whole train dataset so that we can start
 # making predictions on other data, and now we have a reliable estimate of
 # this model's generalization error and we are confident this is the best model
 # among the ones we have tried
-
-### NORMAL CROSS VALIDATION WITH FULL PARAMETER GRID & CUSTOM METRICS
 # at this step rounded F1 will be implemented for a regression model to help 
 # with comparison against classifier
 

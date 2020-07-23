@@ -1,11 +1,13 @@
 import os
+import numpy as np
 from pathlib import Path
 import pandas as  pd
 import matplotlib.pyplot as plt
 from data_analysis import ClassImbalance, PlotCorrelation
 from data_prep import FeatDuct, FeatBathy, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
-from data_prep import LoadData, UndersampleData
-from data_prep import CreateModelSplits, TrainTestSplit, EncodeData
+from data_prep import LoadData, UndersampleData, SMOTSampling
+from data_prep import CreateModelSplits, EncodeData
+
 PATH = os.getcwd() #+'\data\\'
 path = Path(PATH+"/data/")
 ALLDATA = LoadData(path)
@@ -16,10 +18,9 @@ ALLDATA = LoadData(path)
 #####################################################
 # TODO: may need an update!
 
-
 data = FeatDuct(ALLDATA, Input_Only = True)
 data = FeatBathy(data, path)
-data = EncodeData(data)
+data_enc = EncodeData(data)
 #data3 = FeatSSPId(data2, path, src_cond = True)
 #data4 = FeatSSPStat(data3,path)
 #data5 = FeatSSPOnDepth(data4, path, save = True)
@@ -27,11 +28,11 @@ data = EncodeData(data)
 target = 'num_rays'
 features = data.columns.tolist()
 features.remove(target)
-PlotCorrelation(data,features, annotate = False)
-
-
+#PlotCorrelation(data,features, annotate = False)
 #ClassImbalance(data, plot = True)
 
+X_smot, y_smot = SMOTSampling(data)
+zzz
 """
 # SSP Identification
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
