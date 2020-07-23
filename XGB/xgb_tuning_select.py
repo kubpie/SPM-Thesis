@@ -329,3 +329,6 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
 
     end_time_training= time.time() - start_time_training
     print(f'Runtime: {end_time_training}')
+    dump(results, f'{resultpath}\\{modeltype}\\training_results.dat')
+    dump(report, f'{resultpath}\\{modeltype}\\prediction_results.dat')
+
