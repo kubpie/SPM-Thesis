@@ -248,7 +248,7 @@ def FeatSSPOnDepth(data_sspid, path, save = False):
     
     data = pd.concat([data_sspid,df_sdep], axis = 1, sort = False)
     if save:
-        data.to_csv(path + 'data_complete.csv', index = None, header = True)
+        data.to_csv(str(path) + '/data_complete.csv', index = None, header = True)
         print("New datafiles have been created!")                
 
     return data
@@ -439,7 +439,6 @@ def SMOTSampling(X_train, y_train, min_class_size = 100):
         cat_idx = X_train.columns.get_loc(cat)
         categorical_var.append(cat_idx)
     min_class_size = min_class_size
-    print(categorical_var)
     population_target = dict.fromkeys(y_population.keys())
     for ray, nrsamples in y_population.items():
         if nrsamples[0] < min_class_size:

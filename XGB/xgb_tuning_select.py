@@ -14,7 +14,7 @@ from pathlib import Path
 from joblib import dump
 from joblib import load
 
-from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate, cross_val_score, GridSearchCV
+from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate, GridSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import precision_score
