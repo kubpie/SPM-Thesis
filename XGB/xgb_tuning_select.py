@@ -85,7 +85,7 @@ models_and_scorers = {
         xgb.XGBClassifier(
         silent = 0,
         learning_rate = 0.1, #0.1
-        n_estimators=10, #change to at least 100
+        n_estimators=100, #change to at least 100
         max_depth=10, #10
         min_child_weight=1.0, 
         min_split_loss=0.0,
@@ -104,8 +104,8 @@ models_and_scorers = {
         xgb.XGBRegressor(
         silent = 0,
         learning_rate = 0.1,
-        n_estimators=10, #change to at least 100
-        max_depth = 5, 
+        n_estimators=100, #change to at least 100
+        max_depth = 10, 
         min_child_weight= 1.,
         min_split_loss= 0.0,
         subsample = 1.0,
@@ -158,7 +158,6 @@ for setname, (setsamples,xgbsets) in datasets.items():
 
 # start time for nested CV
 start_time=time.time()
-
 # `outer_cv` creates K folds for estimating generalization model error
 outer_cv = StratifiedKFold(n_splits = 3, shuffle = True, random_state = 42)
 # when we train on a certain fold, use a second cross-validation split in order to choose best hyperparameters
@@ -169,7 +168,6 @@ estimators_and_average_scores_across_outer_folds = {
     'xgb_reg': {'names':[],'scores':[], 'parameters':[]}
 }
 
-"""
 print('\nEvaluating feature-selection dependent generalisation error in nested CV setup')
 for modeltype, (model, scorer) in models_and_scorers.items():
 
@@ -253,74 +251,81 @@ for modeltype, (model, scorer) in models_and_scorers.items():
         'best_params_guess_nested_CV': best_params_guess_nested_CV}
     dump(estimators_and_average_scores_across_outer_folds[modeltype], f'{resultpath}\\{modeltype}\\nested_scores_and_models.dat')
     dump(best_nested, f'{resultpath}\\{modeltype}\\best_nested_score_and_model.dat')
-"""
+
 # time nested CV procedure
 nested_time=time.time() - start_time 
 print(nested_time)
 # time HS grid search and prediction
 start_time_tuning=time.time()
-
+"""
 # BREAK: take results of nested CV and apply to normal CV & Extensive HP Tuning
-best_model_name = 'xgb_reg_data-sspcat'
+best_model_name = 'xgb_class_data-sspid-upsampled'
 best_model_avg_score =123.23523523
 best_model_params = {}
-
-#for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
-best_model_dataset_name = best_model_name.split('_')[-1]
-best_model = best_model_name.replace('_' + best_model_dataset_name, '') 
-best_model_data = datasets[best_model_dataset_name][1]
-X_train_best, y_train_best = best_model_data[0][0], best_model_data[0][2]
-X_test_best, y_test_best = best_model_data[0][1], best_model_data[0][3]
-
-print(f'Best dataset for {best_model} model: {best_model_dataset_name}')
-print(f'Estimation of its generalization error: {best_model_avg_score:.3}')
-print(f'Guess for model depth (model complexity): {best_model_params}')
-
-
-###############################
-### MODEL TUNING & TRAINING ###
-###############################
-
-# now we refit this best model on the whole train dataset so that we can start
-# making predictions on other data, and now we have a reliable estimate of
-# this model's generalization error and we are confident this is the best model
-# among the ones we have tried
-# at this step rounded F1 will be implemented for a regression model to help 
-# with comparison against classifier
-
-increase_learning = {
-    'n_estimators': 1000 #300
-}
-param_tuning = {
-    #'learning_rate': [0.1, 0.01],
-    'max_depth': [6, 8, 10, 12],
-    #'min_child_weight' : [1, 5, 10], # range: [0,∞] [default=1]
-    #'min_split_loss': [0, 1, 5], #range: [0,∞] [default=0]
-    #'subsample': [1, 0.8],  #range: (0,1]  [default=1]
-    #'colsample_bytree': [1, 0.8], # range: (0, 1] [default=1]
-    'reg_lambda':[1, 5, 10] #[default=1]
-}
-model_type = best_model
-best_model = models_and_scorers[model_type][0]
-best_model = best_model.set_params(**increase_learning)
 """
-# Hyperparameter tuning
-GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, inner_cv)
-end_time_tuning = time.time() - start_time_tuning
-print(f'Runtime: {end_time_tuning}')
-"""
-# Model training, validation and prediction on left-out test set
-start_time_training = time.time()
-#tuned_model = best_model.set_params(**best_params)
-tuned_model = best_model
-final_model, results, output = ModelFit(tuned_model, model_type, 
-            X_train_best, y_train_best, X_test_best, y_test_best, 
-            early_stop=50, 
-            learningcurve = True, 
-            importance = True, 
-            plottree = True, 
-            savemodel = True,
-            verbose = 1)
+for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
+    best_model_dataset_name = best_model_name.split('_')[-1]
+    best_model = best_model_name.replace('_' + best_model_dataset_name, '') 
+    best_model_data = datasets[best_model_dataset_name][1]
+    X_train_best, y_train_best = best_model_data[0][0], best_model_data[0][2]
+    X_test_best, y_test_best = best_model_data[0][1], best_model_data[0][3]
 
-end_time_training= time.time() - start_time_training
-print(f'Runtime: {end_time_training}')
+    print(f'Best dataset for {best_model} model: {best_model_dataset_name}')
+    print(f'Estimation of its generalization error: {best_model_avg_score:.3}')
+    print(f'Guess for model depth (model complexity): {best_model_params}')
+
+
+    ###############################
+    ### MODEL TUNING & TRAINING ###
+    ###############################
+
+    # now we refit this best model on the whole train dataset so that we can start
+    # making predictions on other data, and now we have a reliable estimate of
+    # this model's generalization error and we are confident this is the best model
+    # among the ones we have tried
+    # at this step rounded F1 will be implemented for a regression model to help 
+    # with comparison against classifier
+
+    increase_learning = {
+        'n_estimators': 250
+    }
+
+    param_tuning = {
+        'learning_rate': [0.1, 0.01],
+        'max_depth': [6, 8, 10, 12],
+        'min_child_weight' : [1, 5, 10], # range: [0,∞] [default=1]
+        'min_split_loss': [0, 1, 5], #range: [0,∞] [default=0]
+        'subsample': [1, 0.8],  #range: (0,1]  [default=1]
+        'colsample_bytree': [1, 0.8], # range: (0, 1] [default=1]
+        'reg_lambda':[1, 5, 10] #[default=1]
+    }
+    model_type = best_model
+    best_model = models_and_scorers[model_type][0]
+    best_model = best_model.set_params(**increase_learning)
+
+    # Hyperparameter tuning
+    GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, inner_cv)
+    end_time_tuning = time.time() - start_time_tuning
+    print(f'Runtime: {end_time_tuning}')
+
+    # Model training, validation and prediction on left-out test set
+    start_time_training = time.time()
+
+    increase_learning = {
+        'n_estimators': 500
+    }
+
+    tuned_model = best_model.set_params(**best_params)
+    tuned_model = tuned_model.set_params(**increase_learning)
+    tuned_model = best_model
+    final_model, results, output = ModelFit(tuned_model, model_type, 
+                X_train_best, y_train_best, X_test_best, y_test_best, 
+                early_stop=50, 
+                learningcurve = True, 
+                importance = True, 
+                plottree = True, 
+                savemodel = True,
+                verbose = 1)
+
+    end_time_training= time.time() - start_time_training
+    print(f'Runtime: {end_time_training}')
