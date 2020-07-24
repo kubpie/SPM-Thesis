@@ -8,12 +8,13 @@ Created on Tue Feb  4 16:47:55 2020
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
-
 import xgboost as xgb
 from joblib import dump
 from joblib import load
 import os
 from pathlib import Path
+import pandas as pd
+import seaborn as sns
 
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import make_scorer
@@ -51,6 +52,11 @@ def ModelFit(best_model, model_type,
     eval_set = [(X_train, y_train),(X_val, y_val)]
     class_labels = np.unique(y_test)
 
+    #Path for saves
+    path = os.getcwd()
+    resultpath = Path(path+"/XGB/results/" + model_type)
+    resultpath = str(resultpath) + '\\' 
+
     if model_type == "xgb_class":
         eval_metrics = ['merror','f1_err'] 
         eval_label = ['Mean Class. Error', 'F1-macro Error']
@@ -66,7 +72,7 @@ def ModelFit(best_model, model_type,
                 eval_metric=feval, 
                 verbose=verbose)
     results = best_model.evals_result()
-    print(f'Training stopped at iteration: {best_model.best_iteration} \n Score: {best_model.best_score}')    
+    print(f'Training stopped at iteration: {best_model.best_iteration} \nEvaluation Error: {best_model.best_score}')    
 
     #Call predict on the estimator with the best found parameters.
     y_pred = best_model.predict(X_test)
@@ -90,22 +96,16 @@ def ModelFit(best_model, model_type,
     print('\nPrediction on the test set')
     report = classification_report(y_test, y_pred, digits=2)
     print(report)
+
     #Plot confustion matrix
     cmatrix = confusion_matrix(y_test, y_pred)      
     print(cmatrix)
-    """
-    disp = plot_confusion_matrix(best_model, y_test, y_pred,
-                             display_labels=class_labels,
-                             cmap=plt.cm.Blues,
-                             normalize=None)
-    disp.ax_.set_title("Confustion Matrix")
-    #print(disp.confusion_matrix)
-    plt.show()
-    """
-    #Path for plots
-    path = os.getcwd()
-    resultpath = Path(path+"/XGB/results/" + model_type)
-    resultpath = str(resultpath) + '\\'
+    df_cm = pd.DataFrame(cmatrix, index = [c for c in class_labels], columns = [c for c in class_labels])
+    plt.figure(figsize = (12,10))
+    plt.title("Confustion Matrix")
+    hm = sns.heatmap(df_cm, annot = True, cmap="YlGnBu", fmt="d", linewidths  = 0.5)
+    hm.set_yticklabels(hm.get_yticklabels(), rotation = 0)
+    plt.savefig(resultpath + model_type +'_cmatrix.png')
 
     if savemodel:
          #save model to file
@@ -138,11 +138,11 @@ def ModelFit(best_model, model_type,
         ax.plot(x_axis, results['validation_0'][eval_metrics[0]], label='Train', color = 'dodgerblue')
         ax.plot(x_axis, results['validation_1'][eval_metrics[0]], label='Validation', color = 'orangered')
         plt.axvline(x=best_model.best_iteration, color = 'k', linestyle='--', linewidth = 0.5, label = 'Best iteration')
-        ax.set_xlim(0,epochs-1)
+        ax.set_xlim(0,epochs)
         ax.legend()
         plt.ylabel(eval_label[0])
         plt.xlabel('Epoch')
-        plt.title("Learning curve with: " + eval_label[0])
+        plt.title("Learning curve for " + model_type +' - '+ eval_label[0])
         plt.savefig(resultpath + model_type +'_'+ eval_metrics[0] + '.png')
         
         # plot classification error
@@ -154,7 +154,7 @@ def ModelFit(best_model, model_type,
         ax.legend()
         plt.ylabel(eval_label[1])
         plt.xlabel('Epoch')
-        plt.title("Learning curve with: " + eval_label[1])
+        plt.title("Learning curve for " + model_type +' - '+ eval_label[1])
         plt.savefig(resultpath +  model_type + '_' + eval_metrics[1] + '.png')
                         
         
