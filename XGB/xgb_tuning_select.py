@@ -125,6 +125,7 @@ param_test = {
     'min_child_weight' : [1, 5],
     'learning_rate': [0.1, 0.01]
 }
+#2^4 * 5 folds * 5 folds * 5 datasets * 2 models = 4000
 
 timelist = [] #all training times are going to be gathered for performance eval.
 
@@ -325,7 +326,9 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
         'reg_lambda':[0.1, 1, 10] #[default=1]
     } 
     # 3^7 = 2187 * 5 folds * 2 models = 21870
-
+    # est. time = 23.5h for a classifier model
+    # exp. quick tuning of a regression model
+    
     best_model = models_and_scorers[model_type][0]
     best_model = best_model.set_params(**increase_learning)
     GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, inner_cv)
