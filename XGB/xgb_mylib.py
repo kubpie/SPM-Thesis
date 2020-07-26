@@ -16,7 +16,7 @@ from pathlib import Path
 import pandas as pd
 import seaborn as sns
 
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split 
 from sklearn.metrics import make_scorer
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import fbeta_score
@@ -29,7 +29,7 @@ from sklearn.utils.sparsefuncs import count_nonzero
 from sklearn.metrics import plot_confusion_matrix
 
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, cross_val_predict, learning_curve
 
 from sklearn.metrics.classification import _check_targets
 from sklearn.metrics.classification import _weighted_sum
@@ -38,6 +38,7 @@ from sklearn.metrics.classification import _weighted_sum
 
 def ModelFit(best_model, model_type, 
             X_train, y_train, X_test, y_test,
+            cross_validated, cv,
             early_stop, 
             learningcurve = False, 
             importance = False, 
@@ -47,35 +48,61 @@ def ModelFit(best_model, model_type,
             ):
 
 
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.2, random_state = 321, shuffle = True, stratify = y_train)
-    dtrainDM = xgb.DMatrix(X_train, label=y_train)
-    eval_set = [(X_train, y_train),(X_val, y_val)]
-    class_labels = np.unique(y_test)
-
     #Path for saves
     path = os.getcwd()
     resultpath = Path(path+"/XGB/results/" + model_type)
     resultpath = str(resultpath) + '\\' 
+    class_labels = np.unique(y_test)
 
     if model_type == "xgb_class":
         eval_metrics = ['merror','f1_err'] 
         eval_label = ['Mean Class. Error', 'F1-macro Error']
         feval = f1_eval_class
+        #scorer = {
+        #    #'Mean Class. Error': 'merror',
+        #    'F1-macro': make_scorer(f1_score, average='macro')
+        #    }
+        scorer = 'f1_macro'      
     elif model_type == "xgb_reg":
         eval_metrics = ['rmse', 'f1_err']
         eval_label = ['RMSE', 'F1-macro Error']
         feval = f1_eval_reg
-        #best_model.set_params()
-    best_model.fit(X_train, y_train, 
+        #scorer = {
+        #    'RMSE': 'rmse',
+        #    #'F1-macro': make_scorer(f1_rounding_score, average='macro')
+        #    }
+        scorer = 'neg_root_mean_squared_error'
+    if cross_validated == True:
+        print(len(X_train))
+        train_sizes = [1.0, 1.0, 1.0, 1.0, 1.0]
+        train_sizes, train_scores, validation_scores, fit_times, score_times = learning_curve(
+                best_model, 
+                X_train, y_train, 
+                train_sizes = train_sizes,
+                cv = cv, scoring = scorer,
+                n_jobs = -1, verbose = verbose, return_times = True)
+        plt.show()
+        results = [train_sizes, train_scores, validation_scores, fit_times, score_times]
+        print('Training scores:\n\n', train_scores)
+        print('\n', '-' * 70) # separator to make the output easy to read
+        print('\nValidation scores:\n\n', validation_scores)
+        y_pred = cross_val_predict(best_model, X_test, y_test, cv=cv, n_jobs=-1, verbose=1, fit_params=None, method='predict')
+
+    else: 
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.2, random_state = 321, shuffle = True, stratify = y_train)
+        dtrainDM = xgb.DMatrix(X_train, label=y_train)
+        eval_set = [(X_train, y_train),(X_val, y_val)]
+        
+        best_model.fit(X_train, y_train, 
                 early_stopping_rounds = early_stop, 
                 eval_set=eval_set,
                 eval_metric=feval, 
                 verbose=verbose)
-    results = best_model.evals_result()
-    print(f'Training stopped at iteration: {best_model.best_iteration} \nEvaluation Error: {best_model.best_score}')    
+        results = best_model.evals_result()
+        print(f'Training stopped at iteration: {best_model.best_iteration} \nEvaluation Error: {best_model.best_score}')    
 
-    #Call predict on the estimator with the best found parameters.
-    y_pred = best_model.predict(X_test)
+        #Call predict on the estimator with the best found parameters.
+        y_pred = best_model.predict(X_test)
     #print(y_pred)
         
     output = []
@@ -111,15 +138,10 @@ def ModelFit(best_model, model_type,
          #save model to file
          dump(best_model, resultpath + model_type + "_final_model.dat")
          print("Saved model to:" + resultpath + model_type + "_final_model.dat")
-            #TODO: FOR LATER USE
-            #load model from file
-            #loaded_model = load("pima.joblib.dat")
-            #print("Loaded model from: pima.joblib.dat")  
-            
+
     if importance:
         #Available importance_types = ["weight", "gain", "cover", "total_gain", "total_cover"]
-        # default for 'True' is 'weight'
-        types = ["weight","total_gain","total_cover"]
+        types = ["weight","gain","cover"]
         fig, axes = plt.subplots(nrows=1, 
                          ncols=3, 
                          figsize=(20,5)
@@ -129,7 +151,7 @@ def ModelFit(best_model, model_type,
             xgb.plot_importance(best_model, importance_type=t, title = t, show_values = False,  ylabel=None, ax = ax)
         plt.savefig(resultpath + model_type +"_feature_importance.png")
         
-    if learningcurve:
+    if learningcurve and cross_validated == False:
         #retrieve performance metrics
         epochs = len(results['validation_0'][eval_metrics[0]])
         x_axis = range(0, epochs)
@@ -263,11 +285,11 @@ def accuracy_rounding_score(y_true, y_pred, normalize=True, sample_weight=None):
 
     return _weighted_sum(score, sample_weight, normalize)
 
-def f1_rounding_score(y_true, y_pred):
+def f1_rounding_score(y_true, y_pred, average = 'macro'):
     class_labels = np.unique(y_true)
     for p in range(0,y_pred.size):
         y_pred[p] = min(class_labels, key=lambda x:abs(x-y_pred[p]))    
-    return fbeta_score(y_true, y_pred, beta=1, labels=class_labels, average='macro')
+    return fbeta_score(y_true, y_pred, beta=1, labels=class_labels, average=average)
     
 def f1_eval_class(y_pred, dtrainDM):
         y_true = dtrainDM.get_label()
@@ -279,3 +301,117 @@ def f1_eval_reg(y_pred, dtrainDM):
         y_true = dtrainDM.get_label()
         err = 1 - f1_rounding_score(y_true, y_pred)
         return 'f1_err', err
+
+def plot_learning_curve(estimator, title, X, y, axes=None, ylim=None, cv=None,
+                        n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    """
+    Generate 3 plots: the test and training learning curve, the training
+    samples vs fit times curve, the fit times vs score curve.
+
+    Parameters
+    ----------
+    estimator : object type that implements the "fit" and "predict" methods
+        An object of that type which is cloned for each validation.
+
+    title : string
+        Title for the chart.
+
+    X : array-like, shape (n_samples, n_features)
+        Training vector, where n_samples is the number of samples and
+        n_features is the number of features.
+
+    y : array-like, shape (n_samples) or (n_samples, n_features), optional
+        Target relative to X for classification or regression;
+        None for unsupervised learning.
+
+    axes : array of 3 axes, optional (default=None)
+        Axes to use for plotting the curves.
+
+    ylim : tuple, shape (ymin, ymax), optional
+        Defines minimum and maximum yvalues plotted.
+
+    cv : int, cross-validation generator or an iterable, optional
+        Determines the cross-validation splitting strategy.
+        Possible inputs for cv are:
+
+          - None, to use the default 5-fold cross-validation,
+          - integer, to specify the number of folds.
+          - :term:`CV splitter`,
+          - An iterable yielding (train, test) splits as arrays of indices.
+
+        For integer/None inputs, if ``y`` is binary or multiclass,
+        :class:`StratifiedKFold` used. If the estimator is not a classifier
+        or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
+
+        Refer :ref:`User Guide <cross_validation>` for the various
+        cross-validators that can be used here.
+
+    n_jobs : int or None, optional (default=None)
+        Number of jobs to run in parallel.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+    train_sizes : array-like, shape (n_ticks,), dtype float or int
+        Relative or absolute numbers of training examples that will be used to
+        generate the learning curve. If the dtype is float, it is regarded as a
+        fraction of the maximum size of the training set (that is determined
+        by the selected validation method), i.e. it has to be within (0, 1].
+        Otherwise it is interpreted as absolute sizes of the training sets.
+        Note that for classification the number of samples usually have to
+        be big enough to contain at least one sample from each class.
+        (default: np.linspace(0.1, 1.0, 5))
+    """
+    if axes is None:
+        _, axes = plt.subplots(1, 3, figsize=(20, 5))
+
+    axes[0].set_title(title)
+    if ylim is not None:
+        axes[0].set_ylim(*ylim)
+    axes[0].set_xlabel("Training examples")
+    axes[0].set_ylabel("Score")
+
+    train_sizes, train_scores, test_scores, fit_times, _ = \
+        learning_curve(estimator, X, y, cv=cv, n_jobs=n_jobs,
+                       train_sizes=train_sizes,
+                       return_times=True)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+    fit_times_mean = np.mean(fit_times, axis=1)
+    fit_times_std = np.std(fit_times, axis=1)
+
+    # Plot learning curve
+    axes[0].grid()
+    axes[0].fill_between(train_sizes, train_scores_mean - train_scores_std,
+                         train_scores_mean + train_scores_std, alpha=0.1,
+                         color="r")
+    axes[0].fill_between(train_sizes, test_scores_mean - test_scores_std,
+                         test_scores_mean + test_scores_std, alpha=0.1,
+                         color="g")
+    axes[0].plot(train_sizes, train_scores_mean, 'o-', color="r",
+                 label="Training score")
+    axes[0].plot(train_sizes, test_scores_mean, 'o-', color="g",
+                 label="Cross-validation score")
+    axes[0].legend(loc="best")
+
+    # Plot n_samples vs fit_times
+    axes[1].grid()
+    axes[1].plot(train_sizes, fit_times_mean, 'o-')
+    axes[1].fill_between(train_sizes, fit_times_mean - fit_times_std,
+                         fit_times_mean + fit_times_std, alpha=0.1)
+    axes[1].set_xlabel("Training examples")
+    axes[1].set_ylabel("fit_times")
+    axes[1].set_title("Scalability of the model")
+
+    # Plot fit_time vs score
+    axes[2].grid()
+    axes[2].plot(fit_times_mean, test_scores_mean, 'o-')
+    axes[2].fill_between(fit_times_mean, test_scores_mean - test_scores_std,
+                         test_scores_mean + test_scores_std, alpha=0.1)
+    axes[2].set_xlabel("fit_times")
+    axes[2].set_ylabel("Score")
+    axes[2].set_title("Performance of the model")
+
+    return plt

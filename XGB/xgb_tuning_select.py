@@ -135,15 +135,15 @@ timelist = [] #all training times are going to be gathered for performance eval.
 print('Creating datasets for evaluating feature selection.')
 data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
 data = FeatBathy(data, datapath) #also add slope length everywhere
-data_sppvec = FeatSSPVec(data, datapath)
-data_sspid = FeatSSPId(data, datapath, src_cond = True) #ssp identification algoritm, takes some time
-data_complete = FeatSSPOnDepth(data_sspid, datapath, save = False)
+#data_sppvec = FeatSSPVec(data, datapath)
+#data_sspid = FeatSSPId(data, datapath, src_cond = True) #ssp identification algoritm, takes some time
+#data_complete = FeatSSPOnDepth(data_sspid, datapath, save = False)
 datasets = {
     'data-sspcat': (data,[]),                          # 1. categorical ssp
-    'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
-    'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
-    'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
-    'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
+    #'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
+    #'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
+    #'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
+    #'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
 }
 # ALWAYS leave out 20% of the whole dataset as test set that won't be used for tuning
 size_test = 0.2
@@ -183,7 +183,7 @@ estimators_and_average_scores_across_outer_folds = {
 best_models_nested_CV = []
 best_scores_nested_CV = []
 best_params_guess_nested_CV = []
-
+"""
 for modeltype, (model, scorer) in models_and_scorers.items():
 
     print(f'\n*** FEATURE SELECTION & GENERALISATION ERROR EVALUATION {modeltype} ***')
@@ -276,13 +276,15 @@ for modeltype, (model, scorer) in models_and_scorers.items():
     nested_time=time.time() - start_time
     print(f'-> Elapsed time for Nested CV: {nested_time}')
     timelist.append(nested_time) 
-
 """
 # BREAK: take results of nested CV and apply to normal CV & Extensive HP Tuning
-best_model_name = 'xgb_class_data-sspcat'
-best_model_avg_score =123.23523523
-best_model_params = {}
-"""
+#best_model_name = 'xgb_class_data-sspcat'
+best_scores_nested_CV =[123.23523523, 23123123.3]
+best_params_guess_nested_CV = [1,1]
+best_models_nested_CV   = ['xgb_class_data-sspcat', 'xgb_reg_data-sspcat']
+
+#['xgb_class_data-sspid-upsampled-200', 'xgb_reg_data-sspid']
+
 
 for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
     
@@ -328,13 +330,15 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     # 3^7 = 2187 * 5 folds * 2 models = 21870
     # est. time = 23.5h for a classifier model
     # exp. quick tuning of a regression model
-    
-    best_model = models_and_scorers[model_type][0]
-    best_model = best_model.set_params(**increase_learning)
-    GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, inner_cv)
 
-    dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
-    dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
+    """ TODO: don't repeat GS for HP tuning, retune model with validation in CV setup """
+    best_model = models_and_scorers[model_type][0]
+    #best_model = best_model.set_params(**increase_learning)
+    #GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, inner_cv)
+    #dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
+    #dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
+
+    best_params = load(f'{resultpath}\\{model_type}\\best_params.dat') #load from previous run
 
     end_time_tuning = time.time() - start_time_tuning
     timelist.append(end_time_tuning)
@@ -348,10 +352,21 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
         'n_estimators': 500 # 500  increase nr of estimators
     }
 
-    tuned_model = best_model#.set_params(**best_params)
+    tuned_model = best_model.set_params(**best_params)
     tuned_model = tuned_model.set_params(**increase_learning)
     tuned_model = best_model
     final_model, train_results, pred_output = ModelFit(tuned_model, model_type, 
+                X_train_best, y_train_best, X_test_best, y_test_best, 
+                early_stop=50, 
+                cross_validated = True,
+                cv = outer_cv,
+                learningcurve = False, 
+                importance = False, 
+                plottree = False, 
+                savemodel = False,
+                verbose = 1)
+    """
+     final_model, train_results, pred_output = ModelFit(tuned_model, model_type, 
                 X_train_best, y_train_best, X_test_best, y_test_best, 
                 early_stop=50, 
                 learningcurve = True, 
@@ -359,7 +374,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
                 plottree = True, 
                 savemodel = True,
                 verbose = 1)
-
+    """
     dump(train_results, f'{resultpath}\\{model_type}\\training_results.dat')
     dump(pred_output, f'{resultpath}\\{model_type}\\prediction_results.dat')
 
@@ -367,7 +382,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     print(f'-> Elapsed time for training, validation & testing: {end_time_training}')
     timelist.append(end_time_training)
 
-dump(timelist, f'{resultpath}\\total_timing.dat')
+#dump(timelist, f'{resultpath}\\total_timing.dat')
 
 
 
