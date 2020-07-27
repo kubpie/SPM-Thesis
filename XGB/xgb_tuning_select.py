@@ -84,9 +84,9 @@ models_and_scorers = {
     'xgb_class':(
         xgb.XGBClassifier(
         silent = 0,
-        learning_rate = 0.1, #0.1
-        n_estimators= 200, #change to at least 100 #TODO: FIX PARAM BEFORE RUN!!
-        max_depth= 5, #10 #TODO: FIX PARAM BEFORE RUN!!
+        learning_rate = 0.1,
+        n_estimators= 250, #250
+        max_depth= 10,
         min_child_weight=1.0, 
         min_split_loss=0.0,
         subsample= 0.8,
@@ -104,8 +104,8 @@ models_and_scorers = {
         xgb.XGBRegressor(
         silent = 0,
         learning_rate = 0.1,
-        n_estimators=200, #change to at least 100 #TODO: FIX PARAM BEFORE RUN!!
-        max_depth = 5, #TODO: FIX PARAM BEFORE RUN!!
+        n_estimators= 250, #250
+        max_depth = 10,
         min_child_weight= 1.,
         min_split_loss= 0.0,
         subsample = 0.8,
@@ -120,19 +120,18 @@ models_and_scorers = {
 # parameters for model complexity + learning rate to control overfitting
 # also by default subsample and colsample_bytree set to 0.8 to add randomness
 param_test = {
-    'max_depth': [6, 10],
+    'max_depth': [8, 12],
     'min_split_loss': [0, 5],
     'min_child_weight' : [1, 5],
     'learning_rate': [0.1, 0.01]
 }
 #2^4 * 5 folds * 5 folds * 5 datasets * 2 models = 4000
-
-timelist = [] #all training times are going to be gathered for performance eval.
+#2^4 * 3 folds * 3 folds * 5 datasets * 2 models = 1440
 
 ###############################
 ### FEATURES REPRESENTATION ###
 ###############################
-print('Creating datasets for evaluating feature selection.')
+print('*** CREATING DATASETS ***')
 data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
 data = FeatBathy(data, datapath) #also add slope length everywhere
 data_sppvec = FeatSSPVec(data, datapath)
@@ -145,6 +144,8 @@ datasets = {
     'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
     'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
 }
+setlabels = ['sspcat','sspvec','sspid','ups-100', 'ups-200'] #used for plotting
+
 # ALWAYS leave out 20% of the whole dataset as test set that won't be used for tuning
 size_test = 0.2
 target  = 'num_rays'
@@ -163,6 +164,7 @@ for setname, (setsamples,xgbsets) in datasets.items():
 ##########################
 ###  FEATURE SELECTION ###
 ##########################
+totaltime = [] #all training times are going to be gathered for performance eval.
 
 # start time for nested CV
 start_time=time.time()
@@ -185,6 +187,8 @@ best_scores_nested_CV = []
 best_params_guess_nested_CV = []
 
 for modeltype, (model, scorer) in models_and_scorers.items():
+
+    modeltime = [] #time models separately in case of a crash
 
     print(f'\n*** FEATURE SELECTION & GENERALISATION ERROR EVALUATION {modeltype} ***')
     
@@ -220,7 +224,7 @@ for modeltype, (model, scorer) in models_and_scorers.items():
                 std=np.std(scores_across_outer_folds)))
         else:
             estimators_and_average_scores_across_outer_folds[modeltype]['scores'].append(np.mean(scores_across_outer_folds))
-            error_summary = '\nModel: {name}\nMean RMSE score in the outer folds: {scores}.\nAverage score in all folds: {avg} (+/-{std})\n'
+            error_summary = '\nModel: {name}\nMean RMSE score in the outer folds: {scores}.\nAverage score: {avg} (+/-{std})\n'
             print(error_summary.format(
                 name=name, scores=[abs(score) for score in scores_across_outer_folds],
                 avg=abs(np.mean(scores_across_outer_folds)),
@@ -252,17 +256,23 @@ for modeltype, (model, scorer) in models_and_scorers.items():
 
 
     # plot stability of nested CV
-    fig, ax = plt.subplots(figsize=(10,7))
+    # matplotlib.rcParams.update({'font.size': 16}) ?? or figsize by half
+    fig, ax = plt.subplots(figsize=(6,4))
     #ax.fill_between(range(len(nested_means)), np.array(nested_means)-np.array(nested_sds), np.array(nested_means)+np.array(nested_sds), facecolor='lightblue', label = 'score std. dev.')
+    if modeltype == 'xgb_reg':
+        nested_means = [ -x for x in nested_means]
+        test_scores_per_folds = -test_scores_per_folds
+        scorer = 'RMSE'
+    else: 
+        scorer = 'F1-macro Score'
     for p in range(1, np.size(test_scores_per_folds,0)+1):
         ax.scatter(p*np.ones(np.size(test_scores_per_folds,1)), test_scores_per_folds[p-1,:], color='r', label='Outer K-fold Scores')
     ax.plot(range(1, np.size(test_scores_per_folds,0)+1), nested_means, linewidth = 1, color = 'k', label = 'Mean Score')
-    xticklabels = ['sspcat','sspevec','sspid','ups-100', 'ups-200']
     ax.set_xticks(range(1, np.size(test_scores_per_folds,0)+1))
-    ax.set_xticklabels(xticklabels, rotation = 45)
+    ax.set_xticklabels(setlabels) # rotation = 45
     #ax.set_xlabel('Dataset Index')
-    ax.set_ylabel(f'Score {scorer}')
-    ax.set_title(f'{modeltype} Feature Selection: Generalisation Error Per Dataset')
+    ax.set_ylabel(f'{scorer}')
+    ax.set_title(f'Generalisation Error {modeltype}')
     handles, labels = ax.get_legend_handles_labels()
     ax.legend([handles[0],handles[-1]], [labels[0],labels[-1]], loc = 'best')
     ax.grid()
@@ -270,12 +280,17 @@ for modeltype, (model, scorer) in models_and_scorers.items():
                 
     print('Mean scores of outer folds per each dataset:\n',
     estimators_and_average_scores_across_outer_folds[modeltype]['names'],'\n',
-    estimators_and_average_scores_across_outer_folds[modeltype]['scores'], '\n')
+    estimators_and_average_scores_across_outer_folds[modeltype]['scores'],'\n')
 
     # time nested CV procedure
     nested_time=time.time() - start_time
     print(f'-> Elapsed time for Nested CV: {nested_time}')
-    timelist.append(nested_time) 
+    totaltime.append(nested_time)
+    modeltime.append(nested_time)
+    dump(modeltime, f'{resultpath}\\{modeltype}\\nested_timing.dat')
+
+dump(totaltime, f'{resultpath}\\total_timing.dat')
+
 """
 # BREAK: take results of nested CV and apply to normal CV & Extensive HP Tuning
 #best_model_name = 'xgb_class_data-sspcat'
@@ -287,17 +302,14 @@ best_models_nested_CV   = ['xgb_class_data-sspcat', 'xgb_reg_data-sspcat']
 """
 
 for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
-    
+    modeltime = []
     # retrieve information about the best model-dataset combination chosen in nested CV procedure
     best_model_dataset_name = best_model_name.split('_')[-1]
-    model_type = best_model_name.replace('_' + best_model_dataset_name, '') 
+    #TODO: bug here? at model_type
+    model_type = best_model_name.replace('_' + best_model_dataset_name, '')
     best_model_data = datasets[best_model_dataset_name][1]
     X_train_best, y_train_best = best_model_data[0][0], best_model_data[0][2]
     X_test_best, y_test_best = best_model_data[0][1], best_model_data[0][3]
-
-    print(f'\nBest dataset for {model_type} model: {best_model_dataset_name}')
-    print(f'Estimation of its generalization error: {best_model_avg_score:.3}')
-    print(f'Guess for model depth (model complexity): {best_model_params}\n')
 
     ###############################
     ### MODEL TUNING & TRAINING ###
@@ -312,33 +324,41 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
 
     # 1. Hyperparameter tuning
     print(f'\n*** HYPERPARAMETER TUNING {model_type} ***')
+    print(f'\nBest dataset for {model_type} model: {best_model_dataset_name}')
+    print(f'Estimation of its generalization error: {best_model_avg_score:.3}')
+    print(f'Guess for model complexity: {best_model_params}')
+
     start_time_tuning=time.time() # time HS grid search and prediction
     increase_learning = {
-        'n_estimators': 200 # 200 increase nr of estimators, 200 seems like a good guess with most of model trainings stopping around 150
+        'n_estimators': 250 # 250 increase nr of estimators, 250 seems like a good guess with most of model trainings stopping around 150
     }
     param_tuning = {
-        'learning_rate': [0.1, 0.050, 0.033],
+        'learning_rate': [0.1, 0.05, 0.03],
         'max_depth': [8, 10, 12],
-        'min_child_weight' : [1, 5, 10], # range: [0,∞] [default=1]
-        'min_split_loss': [0, 1, 10], #range: [0,∞] [default=0]
+        'min_child_weight' : [1.0, 5.0, 10.0], # range: [0,∞] [default=1]
+        'min_split_loss': [0., 0.5, 5.0], #range: [0,∞] [default=0]
         'subsample': [1.0, 0.9, 0.8],  #range: (0,1]  [default=1]
         'colsample_bytree': [1.0, 0.9, 0.8], # range: (0, 1] [default=1]
-        'reg_lambda':[0, 1, 5], #[default=1]
-        'reg_alpha': [0, 0.1, 1] #[default=0]
+        'reg_lambda':[1.0, 3.0, 5.0], #[default=1]
+        'reg_alpha': [0., 0.5, 1.0] #[default=0]
     } 
-    # 3^7 = 2187 * 5 folds * 2 models = 21870
+    # 3^7 * 5 folds * 2 models = 21870
+    # 3^8 * 2 * 2 = 26244
     # est. time = 23.5h for a classifier model
     # exp. quick tuning of a regression model
     best_model = models_and_scorers[model_type][0]
     best_model = best_model.set_params(**increase_learning)
 
-    GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, cv = 3) #perform serach over param grid
+    GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, cv = 2) #perform serach over param grid
 
     dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
     dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
+    
     end_time_tuning = time.time() - start_time_tuning
-    timelist.append(end_time_tuning)
     print(f'-> Elapsed time for HP tuning: {end_time_tuning}')
+    totaltime.append(end_time_tuning)
+    modeltime.append(end_time_tuning)
+    dump(modeltime, f'{resultpath}\\{model_type}\\GS_timing.dat')
 
     # 2. Model training, validation and prediction on left-out test set
     print(f'\n*** MODEL TRAINING, VALIDATION & TESTING {model_type} ***')
@@ -356,20 +376,18 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
                 X_train_best, y_train_best, X_test_best, y_test_best, 
                 early_stop=50, 
                 cv = 0,
-                learningcurve = False, 
-                importance = False, 
-                plottree = False, 
-                savemodel = False,
+                learningcurve = True, 
+                importance = True, 
+                plottree = True, 
+                savemodel = True,
                 verbose = 1)
     dump(train_results, f'{resultpath}\\{model_type}\\training_results.dat')
     dump(pred_output, f'{resultpath}\\{model_type}\\prediction_results.dat')
 
     end_time_training= time.time() - start_time_training
     print(f'-> Elapsed time for training, validation & testing: {end_time_training}')
-    timelist.append(end_time_training)
+    totaltime.append(end_time_training)
+    modeltime.append(end_time_training)
+    dump(modeltime, f'{resultpath}\\{model_type}\\training_timing.dat')
 
-dump(timelist, f'{resultpath}\\total_timing.dat')
-
-
-
-
+dump(totaltime, f'{resultpath}\\total_timing.dat')

@@ -38,8 +38,8 @@ from sklearn.metrics.classification import _weighted_sum
 
 def ModelFit(best_model, model_type, 
             X_train, y_train, X_test, y_test,
-            cv,
             early_stop, 
+            cv,
             learningcurve = False, 
             importance = False, 
             plottree = False, 
@@ -82,7 +82,7 @@ def ModelFit(best_model, model_type,
         y_pred = cross_val_predict(best_model, X_test, y_test, cv=cv, n_jobs=-1, verbose=1, fit_params=None, method='predict')
 
     else: 
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.2, random_state = 321, shuffle = True, stratify = y_train)
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.3, random_state = 321, shuffle = True, stratify = y_train)
         dtrainDM = xgb.DMatrix(X_train, label=y_train)
         eval_set = [(X_train, y_train),(X_val, y_val)]
         
@@ -144,7 +144,7 @@ def ModelFit(best_model, model_type,
             xgb.plot_importance(best_model, importance_type=t, title = t, show_values = False,  ylabel=None, ax = ax)
         plt.savefig(resultpath + model_type +"_feature_importance.png")
         
-    if learningcurve and cross_validated == False:
+    if learningcurve and not(cv > 0):
         #retrieve performance metrics
         epochs = len(results['validation_0'][eval_metrics[0]])
         x_axis = range(0, epochs)

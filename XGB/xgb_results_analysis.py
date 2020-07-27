@@ -13,9 +13,9 @@ import matplotlib.pyplot as plt
 import os
 from pathlib import Path
 
-model_type = 'xgb_reg' #'xgb_class' 'xgb_reg'
+model_type = 'xgb_class' #'xgb_class' 'xgb_reg'
 path = os.getcwd()
-resultpath = Path(path+"/XGB/results/" + model_type)
+resultpath = Path(path+"/results/" + model_type)
 resultpath = str(resultpath) + '\\' 
 
 best_nested_score_and_model = load(resultpath + 'best_nested_score_and_model.dat')
