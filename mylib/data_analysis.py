@@ -102,7 +102,7 @@ def PlotCorrelation(dat, features, annotate = True):
 
         correlation_matrix = dat[features].corr(method = 'spearman').abs()
         # Set font scale
-        sns.set(font_scale = 2)
+        sns.set(font_scale = 2) #2 for visibility
         # Set the figure size
         f, ax = plt.subplots(figsize=(10, 10))
         # Plot heatmap

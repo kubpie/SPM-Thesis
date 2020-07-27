@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as  pd
 import matplotlib.pyplot as plt
 from data_analysis import ClassImbalance, PlotCorrelation
-from data_prep import FeatDuct, FeatBathy, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
+from data_prep import FeatDuct, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 from data_prep import LoadData, UndersampleData, SMOTSampling
 from data_prep import CreateModelSplits, EncodeData
 from sklearn.model_selection import train_test_split
@@ -17,26 +17,29 @@ ALLDATA = LoadData(path)
 ### Messy script for testing & plotting data prep ###
 ### and feature vector generating functions       ###
 #####################################################
-# TODO: may need an update!
 
 data = FeatDuct(ALLDATA, Input_Only = True)
 data = FeatBathy(data, path)
+#data = FeatSSPVec(data, path)
 data = FeatSSPId(data, path, src_cond = True)
 #data4 = FeatSSPStat(data3,path)
 data = FeatSSPOnDepth(data, path, save = False)
 data_enc = EncodeData(data)
 
 target = 'num_rays'
-features = data_enc.columns.tolist()
+features = data.columns.tolist()
 features.remove(target)
-X, y = data_enc[features], data_enc[target]
+features_enc = data_enc.columns.tolist()
+features_enc.remove(target)
+X, y = data_enc[features_enc], data_enc[target]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123, shuffle = True, stratify = y)
         
-#PlotCorrelation(data,features, annotate = False)
-#ClassImbalance(data, plot = True)
+PlotCorrelation(data_enc,features_enc, annotate = False)
+y_pop = ClassImbalance(data, plot = True)
+print(y_pop)
 
 X_smot, y_smot = SMOTSampling(X_train, y_train)
-X_smot.to_csv(str(path) + '/xgbsets/dataset_smot.csv')
+#X_smot.to_csv(str(path) + '/xgbsets/dataset_smot.csv')
 """
 # SSP Identification
 SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")

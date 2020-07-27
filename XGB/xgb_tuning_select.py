@@ -120,7 +120,7 @@ models_and_scorers = {
 # parameters for model complexity + learning rate to control overfitting
 # also by default subsample and colsample_bytree set to 0.8 to add randomness
 param_test = {
-    'max_depth': [8, 12],
+    'max_depth': [6, 10],
     'min_split_loss': [0, 5],
     'min_child_weight' : [1, 5],
     'learning_rate': [0.1, 0.01]
@@ -135,15 +135,15 @@ timelist = [] #all training times are going to be gathered for performance eval.
 print('Creating datasets for evaluating feature selection.')
 data = FeatDuct(DATA, Input_Only = True) #just to leave only input data
 data = FeatBathy(data, datapath) #also add slope length everywhere
-#data_sppvec = FeatSSPVec(data, datapath)
-#data_sspid = FeatSSPId(data, datapath, src_cond = True) #ssp identification algoritm, takes some time
-#data_complete = FeatSSPOnDepth(data_sspid, datapath, save = False)
+data_sppvec = FeatSSPVec(data, datapath)
+data_sspid = FeatSSPId(data, datapath, src_cond = True) #ssp identification algoritm, takes some time
+data_complete = FeatSSPOnDepth(data_sspid, datapath, save = False)
 datasets = {
     'data-sspcat': (data,[]),                          # 1. categorical ssp
-    #'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
-    #'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
-    #'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
-    #'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
+    'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
+    'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
+    'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
+    'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
 }
 # ALWAYS leave out 20% of the whole dataset as test set that won't be used for tuning
 size_test = 0.2
@@ -167,8 +167,8 @@ for setname, (setsamples,xgbsets) in datasets.items():
 # start time for nested CV
 start_time=time.time()
 
-Kin = 5 # number of k-folds in inner CV
-Kout = 5 # number of k-folds in outer CV
+Kin = 3 # number of k-folds in inner CV
+Kout = 3 # number of k-folds in outer CV
 
 # `outer_cv` creates K folds for estimating generalization model error
 outer_cv = StratifiedKFold(n_splits = Kout, shuffle = True, random_state = 42)
@@ -183,7 +183,7 @@ estimators_and_average_scores_across_outer_folds = {
 best_models_nested_CV = []
 best_scores_nested_CV = []
 best_params_guess_nested_CV = []
-"""
+
 for modeltype, (model, scorer) in models_and_scorers.items():
 
     print(f'\n*** FEATURE SELECTION & GENERALISATION ERROR EVALUATION {modeltype} ***')
@@ -284,7 +284,7 @@ best_params_guess_nested_CV = [1,1]
 best_models_nested_CV   = ['xgb_class_data-sspcat', 'xgb_reg_data-sspcat']
 
 #['xgb_class_data-sspid-upsampled-200', 'xgb_reg_data-sspid']
-
+"""
 
 for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
     
@@ -313,33 +313,29 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     # 1. Hyperparameter tuning
     print(f'\n*** HYPERPARAMETER TUNING {model_type} ***')
     start_time_tuning=time.time() # time HS grid search and prediction
-
     increase_learning = {
         'n_estimators': 200 # 200 increase nr of estimators, 200 seems like a good guess with most of model trainings stopping around 150
     }
-
     param_tuning = {
-        'learning_rate': [0.1, 0.05, 0.01],
+        'learning_rate': [0.1, 0.050, 0.033],
         'max_depth': [8, 10, 12],
-        'min_child_weight' : [1, 3, 5], # range: [0,∞] [default=1]
-        'min_split_loss': [0, 3, 5], #range: [0,∞] [default=0]
-        'subsample': [1, 0.8, 0.6],  #range: (0,1]  [default=1]
-        'colsample_bytree': [1, 0.8, 0.6], # range: (0, 1] [default=1]
-        'reg_lambda':[0.1, 1, 10] #[default=1]
+        'min_child_weight' : [1, 5, 10], # range: [0,∞] [default=1]
+        'min_split_loss': [0, 1, 10], #range: [0,∞] [default=0]
+        'subsample': [1.0, 0.9, 0.8],  #range: (0,1]  [default=1]
+        'colsample_bytree': [1.0, 0.9, 0.8], # range: (0, 1] [default=1]
+        'reg_lambda':[0, 1, 5], #[default=1]
+        'reg_alpha': [0, 0.1, 1] #[default=0]
     } 
     # 3^7 = 2187 * 5 folds * 2 models = 21870
     # est. time = 23.5h for a classifier model
     # exp. quick tuning of a regression model
-
-    """ TODO: don't repeat GS for HP tuning, retune model with validation in CV setup """
     best_model = models_and_scorers[model_type][0]
-    #best_model = best_model.set_params(**increase_learning)
-    #GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, inner_cv)
-    #dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
-    #dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
+    best_model = best_model.set_params(**increase_learning)
 
-    best_params = load(f'{resultpath}\\{model_type}\\best_params.dat') #load from previous run
+    GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, cv = 3) #perform serach over param grid
 
+    dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
+    dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
     end_time_tuning = time.time() - start_time_tuning
     timelist.append(end_time_tuning)
     print(f'-> Elapsed time for HP tuning: {end_time_tuning}')
@@ -347,34 +343,24 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     # 2. Model training, validation and prediction on left-out test set
     print(f'\n*** MODEL TRAINING, VALIDATION & TESTING {model_type} ***')
     start_time_training = time.time()
-
     increase_learning = {
         'n_estimators': 500 # 500  increase nr of estimators
     }
-
+    # use only for testing the loop 
+    # best_params = load(f'{resultpath}\\{model_type}\\best_params.dat') #load from previous run
+    # tuned_model = best_model
     tuned_model = best_model.set_params(**best_params)
     tuned_model = tuned_model.set_params(**increase_learning)
-    tuned_model = best_model
+
     final_model, train_results, pred_output = ModelFit(tuned_model, model_type, 
                 X_train_best, y_train_best, X_test_best, y_test_best, 
                 early_stop=50, 
-                cross_validated = True,
-                cv = outer_cv,
+                cv = 0,
                 learningcurve = False, 
                 importance = False, 
                 plottree = False, 
                 savemodel = False,
                 verbose = 1)
-    """
-     final_model, train_results, pred_output = ModelFit(tuned_model, model_type, 
-                X_train_best, y_train_best, X_test_best, y_test_best, 
-                early_stop=50, 
-                learningcurve = True, 
-                importance = True, 
-                plottree = True, 
-                savemodel = True,
-                verbose = 1)
-    """
     dump(train_results, f'{resultpath}\\{model_type}\\training_results.dat')
     dump(pred_output, f'{resultpath}\\{model_type}\\prediction_results.dat')
 
@@ -382,7 +368,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     print(f'-> Elapsed time for training, validation & testing: {end_time_training}')
     timelist.append(end_time_training)
 
-#dump(timelist, f'{resultpath}\\total_timing.dat')
+dump(timelist, f'{resultpath}\\total_timing.dat')
 
 
 

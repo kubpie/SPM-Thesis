@@ -38,7 +38,7 @@ from sklearn.metrics.classification import _weighted_sum
 
 def ModelFit(best_model, model_type, 
             X_train, y_train, X_test, y_test,
-            cross_validated, cv,
+            cv,
             early_stop, 
             learningcurve = False, 
             importance = False, 
@@ -46,7 +46,6 @@ def ModelFit(best_model, model_type,
             savemodel = False,
             verbose = 1
             ):
-
 
     #Path for saves
     path = os.getcwd()
@@ -58,21 +57,15 @@ def ModelFit(best_model, model_type,
         eval_metrics = ['merror','f1_err'] 
         eval_label = ['Mean Class. Error', 'F1-macro Error']
         feval = f1_eval_class
-        #scorer = {
-        #    #'Mean Class. Error': 'merror',
-        #    'F1-macro': make_scorer(f1_score, average='macro')
-        #    }
         scorer = 'f1_macro'      
+
     elif model_type == "xgb_reg":
         eval_metrics = ['rmse', 'f1_err']
         eval_label = ['RMSE', 'F1-macro Error']
         feval = f1_eval_reg
-        #scorer = {
-        #    'RMSE': 'rmse',
-        #    #'F1-macro': make_scorer(f1_rounding_score, average='macro')
-        #    }
         scorer = 'neg_root_mean_squared_error'
-    if cross_validated == True:
+
+    if cv > 0:
         print(len(X_train))
         train_sizes = [1.0, 1.0, 1.0, 1.0, 1.0]
         train_sizes, train_scores, validation_scores, fit_times, score_times = learning_curve(
