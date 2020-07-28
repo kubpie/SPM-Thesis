@@ -117,6 +117,7 @@ models_and_scorers = {
 
         'neg_root_mean_squared_error')
 }
+
 # parameters for model complexity + learning rate to control overfitting
 # also by default subsample and colsample_bytree set to 0.8 to add randomness
 param_test = {
@@ -141,8 +142,8 @@ datasets = {
     'data-sspcat': (data,[]),                          # 1. categorical ssp
     'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
     'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
-    'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
-    'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
+    #'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
+    #'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
 }
 setlabels = ['sspcat','sspvec','sspid','ups-100', 'ups-200'] #used for plotting
 
@@ -160,7 +161,7 @@ for setname, (setsamples,xgbsets) in datasets.items():
         elif setname == 'data-sspid-upsampled-200':
             X_train, y_train = SMOTSampling(X_train, y_train, min_class_size = 200)
         datasets[setname][1].append([X_train, X_test, y_train, y_test])
-
+"""
 ##########################
 ###  FEATURE SELECTION ###
 ##########################
@@ -290,16 +291,17 @@ for modeltype, (model, scorer) in models_and_scorers.items():
     dump(modeltime, f'{resultpath}\\{modeltype}\\nested_timing.dat')
 
 dump(totaltime, f'{resultpath}\\total_timing.dat')
-
 """
+
 # BREAK: take results of nested CV and apply to normal CV & Extensive HP Tuning
 #best_model_name = 'xgb_class_data-sspcat'
-best_scores_nested_CV =[123.23523523, 23123123.3]
-best_params_guess_nested_CV = [1,1]
-best_models_nested_CV   = ['xgb_class_data-sspcat', 'xgb_reg_data-sspcat']
+best_scores_nested_CV =[0.0, 0.0]
+best_params_guess_nested_CV = [1.0,1.0]
+best_models_nested_CV   = ['xgb_class_data-sspid-upsampled-200']#, 'xgb_reg_data-sspcat']
+best_models_nested_CV   = ['xgb_reg_data-sspid-upsampled-200']#, 'xgb_reg_data-sspcat']
 
 #['xgb_class_data-sspid-upsampled-200', 'xgb_reg_data-sspid']
-"""
+
 
 for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
     modeltime = []
@@ -310,6 +312,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     best_model_data = datasets[best_model_dataset_name][1]
     X_train_best, y_train_best = best_model_data[0][0], best_model_data[0][2]
     X_test_best, y_test_best = best_model_data[0][1], best_model_data[0][3]
+    best_model = models_and_scorers[model_type][0]
 
     ###############################
     ### MODEL TUNING & TRAINING ###
@@ -321,7 +324,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     # among the ones we have tried
     # at this step rounded F1 will be implemented for a regression model to help 
     # with comparison against classifier
-
+    
     # 1. Hyperparameter tuning
     print(f'\n*** HYPERPARAMETER TUNING {model_type} ***')
     print(f'\nBest dataset for {model_type} model: {best_model_dataset_name}')
@@ -330,7 +333,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
 
     start_time_tuning=time.time() # time HS grid search and prediction
     increase_learning = {
-        'n_estimators': 250 # 250 increase nr of estimators, 250 seems like a good guess with most of model trainings stopping around 150
+        'n_estimators': 150 # 250 increase nr of estimators, 250 seems like a good guess with most of model trainings stopping around 150
     }
     param_tuning = {
         'learning_rate': [0.1, 0.05, 0.03],
@@ -346,20 +349,19 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     # 3^8 * 2 * 2 = 26244
     # est. time = 23.5h for a classifier model
     # exp. quick tuning of a regression model
-    best_model = models_and_scorers[model_type][0]
+    
     best_model = best_model.set_params(**increase_learning)
-
-    GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, cv = 2) #perform serach over param grid
+    #GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, cv = 2) #perform serach over param grid
 
     dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
     dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
-    
+
     end_time_tuning = time.time() - start_time_tuning
     print(f'-> Elapsed time for HP tuning: {end_time_tuning}')
-    totaltime.append(end_time_tuning)
+    #totaltime.append(end_time_tuning)
     modeltime.append(end_time_tuning)
     dump(modeltime, f'{resultpath}\\{model_type}\\GS_timing.dat')
-
+    
     # 2. Model training, validation and prediction on left-out test set
     print(f'\n*** MODEL TRAINING, VALIDATION & TESTING {model_type} ***')
     start_time_training = time.time()
@@ -367,14 +369,13 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
         'n_estimators': 500 # 500  increase nr of estimators
     }
     # use only for testing the loop 
-    # best_params = load(f'{resultpath}\\{model_type}\\best_params.dat') #load from previous run
-    # tuned_model = best_model
+    best_params = load(f'{resultpath}\\{model_type}\\best_params.dat') #load from previous run
     tuned_model = best_model.set_params(**best_params)
     tuned_model = tuned_model.set_params(**increase_learning)
 
     final_model, train_results, pred_output = ModelFit(tuned_model, model_type, 
                 X_train_best, y_train_best, X_test_best, y_test_best, 
-                early_stop=50, 
+                early_stop=100, 
                 cv = 0,
                 learningcurve = True, 
                 importance = True, 

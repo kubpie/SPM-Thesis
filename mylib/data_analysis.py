@@ -22,6 +22,7 @@ def ClassImbalance(data, plot = False):
     #data.describe()
     
     if plot:
+        """
         fig, ax = plt.subplots(figsize=(8, 5))
         width = 0.5
         x = np.arange(len(yclass))
@@ -52,10 +53,10 @@ def ClassImbalance(data, plot = False):
         ax2.set_xticklabels(yclass)
         ax2.set_title('Cumulative sum plot of class distributions')
         ax2.grid()
-        
-        plt.rcParams.update({'font.size': 20})
+        """
+        plt.rcParams.update({'font.size': 15})
 
-        fig3,ax3 = plt.subplots()
+        fig3,ax3 = plt.subplots(figsize=(15,5))
         width = 0.5
         x = np.arange(len(yclass))
         bars3 = ax3.bar(x, ycount, width, label = 'Number of samples')
@@ -66,22 +67,26 @@ def ClassImbalance(data, plot = False):
         ax3.set_xticklabels(yclass)
         ax3.grid()
         #ax3.legend()
-        autolabel(bars3)
-
         ax4 = ax3.twinx() 
         ax4.plot(x, np.cumsum(yper), '-ok', label = 'Cumulative sum')
         ax4.set_ylabel('Cumulative sum [%]')
         #ax4.legend()
         for i, txt in enumerate(np.cumsum(yper)):
-            ax2.annotate('{:.2f}%'.format(txt),
-            xy=(x[i], np.cumsum(yper)[i]), 
-            xytext=(x[i]-0.65, np.cumsum(yper)[i]+0.2), 
-            arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
-            
+            #ax2.annotate('{:.2f}%'.format(txt),
+            #xy=(x[i], np.cumsum(yper)[i]), 
+            #xytext=(x[i]-0.65, np.cumsum(yper)[i]+0.2), 
+            #arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
+            for bar in bars3:
+                height = bar.get_height()
+                ax3.annotate('{}'.format(height),
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
             ax4.annotate('{:.2f}%'.format(txt),
-            xy=(x[i], np.cumsum(yper)[i]), 
-            xytext=(x[i]-1, np.cumsum(yper)[i]+0.35), 
-            arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
+                xy=(x[i], np.cumsum(yper)[i]), 
+                xytext=(x[i]-1, np.cumsum(yper)[i]+0.35), 
+                arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
             
     return y_population
 

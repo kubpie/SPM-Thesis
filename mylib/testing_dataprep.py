@@ -10,7 +10,7 @@ from data_prep import CreateModelSplits, EncodeData
 from sklearn.model_selection import train_test_split
 
 PATH = os.getcwd() #+'\data\\'
-path = Path(PATH+"/data/")
+path = Path(PATH+"/../data/")
 ALLDATA = LoadData(path)
 
 #####################################################
@@ -24,8 +24,9 @@ data = FeatBathy(data, path)
 data = FeatSSPId(data, path, src_cond = True)
 #data4 = FeatSSPStat(data3,path)
 data = FeatSSPOnDepth(data, path, save = False)
-data_enc = EncodeData(data)
-
+#data_enc = EncodeData(data)
+y_pop = ClassImbalance(data, plot = True)
+"""
 target = 'num_rays'
 features = data.columns.tolist()
 features.remove(target)
@@ -35,10 +36,10 @@ X, y = data_enc[features_enc], data_enc[target]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123, shuffle = True, stratify = y)
         
 PlotCorrelation(data_enc,features_enc, annotate = False)
-y_pop = ClassImbalance(data, plot = True)
+"""
 print(y_pop)
 
-X_smot, y_smot = SMOTSampling(X_train, y_train)
+#X_smot, y_smot = SMOTSampling(X_train, y_train)
 #X_smot.to_csv(str(path) + '/xgbsets/dataset_smot.csv')
 """
 # SSP Identification
