@@ -142,8 +142,8 @@ datasets = {
     'data-sspcat': (data,[]),                          # 1. categorical ssp
     'data-sspvec': (data_sppvec,[]),                   # 2. ssp vector + categorical
     'data-sspid':  (data_complete,[]),                 # 3. ssp_id + categorical + selected_depths
-    #'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
-    #'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
+    'data-sspid-upsampled-100': (data_complete,[]),    # 4. ssp_id + categorical + selected_depth + upsampling in minority class
+    'data-sspid-upsampled-200': (data_complete,[])     # 5. same as above but minority upsampled to 300
 }
 setlabels = ['sspcat','sspvec','sspid','ups-100', 'ups-200'] #used for plotting
 
@@ -297,7 +297,7 @@ dump(totaltime, f'{resultpath}\\total_timing.dat')
 #best_model_name = 'xgb_class_data-sspcat'
 best_scores_nested_CV =[0.0, 0.0]
 best_params_guess_nested_CV = [1.0,1.0]
-best_models_nested_CV   = ['xgb_class_data-sspid-upsampled-200']#, 'xgb_reg_data-sspcat']
+#best_models_nested_CV   = ['xgb_class_data-sspid-upsampled-200']#, 'xgb_reg_data-sspcat']
 best_models_nested_CV   = ['xgb_reg_data-sspid-upsampled-200']#, 'xgb_reg_data-sspcat']
 
 #['xgb_class_data-sspid-upsampled-200', 'xgb_reg_data-sspid']
@@ -351,7 +351,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     # exp. quick tuning of a regression model
     
     best_model = best_model.set_params(**increase_learning)
-    #GS_results, best_params = HyperParamGS(best_model, X_train, y_train, model_type, param_tuning, cv = 2) #perform serach over param grid
+    #GS_results, best_params = HyperParamGS(best_model, X_train_best, y_train_best, model_type, param_tuning, cv = 2) #perform serach over param grid
 
     dump(GS_results, f'{resultpath}\\{model_type}\\GSCV_results.dat')
     dump(best_params, f'{resultpath}\\{model_type}\\best_params.dat')
@@ -392,3 +392,4 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     dump(modeltime, f'{resultpath}\\{model_type}\\training_timing.dat')
 
 dump(totaltime, f'{resultpath}\\total_timing.dat')
+#TODO: Got to rerun training for xgb_class because you overwritten them with splits

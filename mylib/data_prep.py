@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTENC
 
 from ssp_features import SSPStat
+from data_analysis import ClassImbalance
 """ 
 ### DATA PREPARATION & FEATURE VECTOR CREATION LIBRARY ###
 Contents:
