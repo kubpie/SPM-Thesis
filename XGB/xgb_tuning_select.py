@@ -39,7 +39,7 @@ from data_prep import LoadData, FeatDuct, EncodeData, FeatBathy, FeatSSPVec, Fea
 DATA = LoadData(datapath)
 
 """
-##### HYPERPARAMETER TUNING #####
+##### HYPERPARAMETER TUNING CHEAT SHEET #####
 
 ### model complexity ###
 # max_depth: maximum depth of a tree. 
@@ -77,6 +77,7 @@ param_all = {
     'subsample': [1, 0.8],  #range: (0,1]  [default=1]
     'colsample_bytree': [1, 0.8] # range: (0, 1] [default=1]
     'reg_lambda':[1, 5, 10], #[default=1]
+    'reg_alpha': [0, 1, 3] #[default=0]
 }
 """
 models_and_scorers = {
@@ -301,13 +302,12 @@ best_params_guess_nested_CV = [1.0,1.0]
 best_models_nested_CV   = ['xgb_reg_data-sspid-upsampled-200']#, 'xgb_reg_data-sspcat']
 
 #['xgb_class_data-sspid-upsampled-200', 'xgb_reg_data-sspid']
-
+"""
 
 for (best_model_name, best_model_avg_score, best_model_params) in zip(best_models_nested_CV, best_scores_nested_CV, best_params_guess_nested_CV):
     modeltime = []
     # retrieve information about the best model-dataset combination chosen in nested CV procedure
     best_model_dataset_name = best_model_name.split('_')[-1]
-    #TODO: bug here? at model_type
     model_type = best_model_name.replace('_' + best_model_dataset_name, '')
     best_model_data = datasets[best_model_dataset_name][1]
     X_train_best, y_train_best = best_model_data[0][0], best_model_data[0][2]
@@ -377,6 +377,7 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
                 X_train_best, y_train_best, X_test_best, y_test_best, 
                 early_stop=100, 
                 cv = 0,
+                split_nr = None,
                 learningcurve = True, 
                 importance = True, 
                 plottree = True, 
@@ -392,4 +393,4 @@ for (best_model_name, best_model_avg_score, best_model_params) in zip(best_model
     dump(modeltime, f'{resultpath}\\{model_type}\\training_timing.dat')
 
 dump(totaltime, f'{resultpath}\\total_timing.dat')
-#TODO: Got to rerun training for xgb_class because you overwritten them with splits
+"""

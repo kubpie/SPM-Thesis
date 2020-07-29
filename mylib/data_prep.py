@@ -25,7 +25,6 @@ Contents:
 2. UndersampleData: creates a stratified subset less or equal (=<) n samples in each ray-class
 3. XGB data prep:
     - EncodeData: One Hot encoder for categorical feautes and optionally the target feature
-    - TrainTestSplit: Splits for XGB
     - CreateModelSplits: split data on slope value to create 3 sub-models
 4. SSP Features:
     - FeatDuct: add or remove features connected to ducted propagation, used mostly with InputOnly = True to leave only 'raw' BELLHOP input data
@@ -41,7 +40,7 @@ Make sure to have env.xlsx created from ssp_features.py or downlaoded before run
 
 
 def LoadData(path):   
-        
+
     flist = [f for f in os.listdir(path) if "Dataset" in f]
     col = []
     frames = []
