@@ -162,7 +162,8 @@ def ICEPlot(data, model, features):
     #fig.tight_layout()
     fig.suptitle('ICE plot: Classification - all training data')
     fig.subplots_adjust(top=0.89)
-    
+    plt.show()
+
     return train_ice_dfs
     
 from matplotlib.backends.backend_pdf import PdfPages

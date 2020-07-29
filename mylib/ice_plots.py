@@ -15,10 +15,13 @@ from joblib import load
 import seaborn as sns
 from imblearn.under_sampling import RandomUnderSampler
 from collections import Counter
+from data_prep import FeatDuct, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
+from data_prep import LoadData, UndersampleData, SMOTSampling
+from data_prep import CreateModelSplits, EncodeData
+from data_analysis import PlotCorrelation, ICEPlot
+from sklearn.model_selection import train_test_split
 import os
-from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat
-from xgb_mylib import f1_eval_class
-from data_analysis_lib import PlotCorrelation, ICEPlot
+from pathlib import Path
 
 
 """"
@@ -27,15 +30,16 @@ Unlike partial dependence plots, ICE curves can uncover heterogeneous relationsh
 PDPs can obscure a heterogeneous relationship created by interactions. 
 PDPs can show you what the average relationship between a feature and the prediction looks like. This only works well if the interactions between the features for which the PDP is calculated and the other features are weak. In case of interactions, the ICE plot will provide much more insight.
 """
-
-path = os.getcwd()+'\data\\'
-rawdata = LoadData(path)
-data = FeatDuct(rawdata, Input_Only = True) #just to leave only input data
-data = FeatBathy(data, path)
-data = FeatSSPId(data, path, src_cond = True)
-data = FeatSSPStat(data, path)
-data_enc = EncodeData(data) #data with full features sspid, sspstat, but no ssp-vec
-
+PATH = os.getcwd()
+path = Path(PATH+"/data/")
+#ALLDATA = LoadData(path
+#data = FeatDuct(ALLDATA, Input_Only = True)
+#data = FeatBathy(data, path)
+#data = FeatSSPVec(data, path)
+#data_sspid = FeatSSPId(data, path, src_cond = True)
+#data = FeatSSPOnDepth(data_sspid, path, save = False)
+data = pd.read_csv(str(path)+"\data_complete.csv")
+data_enc = EncodeData(data)
 data_enc = data_enc.fillna(0) #ICE plot func has problems with NaNs :(
 
 target = 'num_rays'
@@ -45,6 +49,8 @@ seasons = ['Autumn', 'Spring', 'Summer', 'Winter']
 locations = ['Labrador-Sea', 'Mediterranean-Sea', 'North-Pacific-Ocean',
        'Norwegian-Sea', 'South-Atlantic-Ocean', 'South-Pacific-Ocean']
 ice_features = [ feat for feat in features if feat not in locations + seasons ]
+X, y = data_enc[features], data_enc[target]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123, shuffle = True, stratify = y)
 
 """
 # Undersampling of the TEST SET to avoid overcrowding the ICE plot
@@ -56,53 +62,17 @@ print(Counter(yt))
 print(Counter(yt_under))
 """
 
-### TODO: Data correlations?
-
-
 ### XGB MODEL SETUP
-
-xgb_class = xgb.XGBClassifier(
-        silent = 0,
-        learning_rate = 0.1, #0.05
-        n_estimators=1000, #3000
-        max_depth=10, #9 updated 
-        min_child_weight=0.0, #1 updated
-        min_split_loss=0.0, #0 updated
-        subsample= 1.0,
-        colsample_bytree=1.0,
-        reg_alpha = 0.0,
-        reg_lambda= 1.0,
-        objective= 'multi:softprob',
-        seed=27,
-        n_jobs = -1
-        )
-
-model = xgb_class
-
-eval_metric = ["f1_err","merror"] #the last item in eval_metric will be used for early stopping
-feval = f1_eval_class
-early_stop = 100
+resultpath = Path(PATH+"/XGB/results/xgb_class/")
+resultpath = str(resultpath) + '\\' 
+model = load(resultpath+'xgb_class_final_model.dat')
 
 ### ICE PLOT FOR THE WHOLE DATASET
 # Model 'fit' before 'predict' inside ICE plot function
-
-[dtrain, dtest] = TrainTestSplit(data_enc, test_size = 0.25)
-eval_set = [(dtrain[features].values, dtrain[target].values),(dtest[features].values, dtest[target].values)]
-
-X = dtrain[features]
-y = dtrain[target]
-Xt = dtest[features]
-yt = dtest[target]
-
-model_trained = model.fit(X.values, y.values, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
-results = model_trained.evals_result()
-print(f'Best iteration: {model_trained.best_iteration}\nF-score: {1-model_trained.best_score}')
-
-
+model = model.fit(X_train.values, y_train.values)
 # Ice plot for the whole dataset
-ICEdict = ICEPlot(Xt, model_trained, ice_features)
-
-
+ICEdict = ICEPlot(X_train, model, ice_features)
+"""
 ### ICE PLOTS FOR SPLITS
 SplitSets ,_ = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
 for s,subset in enumerate(SplitSets):
@@ -180,3 +150,4 @@ for split in SplitSets_test:
         ax.plot(list(Fdict.keys()), list(Rdict[raynr]), label = f'{raynr}')
     ax.legend()
 
+"""

@@ -4,13 +4,14 @@ from pathlib import Path
 import pandas as  pd
 import matplotlib.pyplot as plt
 import xgboost as xgb
+from joblib import load
+from sklearn.model_selection import train_test_split
+from pycebox.ice import ice, ice_plot
 
 from data_analysis import ClassImbalance, PlotCorrelation, plot_ice_grid, ICEPlot
 from data_prep import FeatDuct, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 from data_prep import LoadData, UndersampleData, SMOTSampling
 from data_prep import CreateModelSplits, EncodeData
-from sklearn.model_selection import train_test_split
-from joblib import load
 
 PATH = os.getcwd()
 path = Path(PATH+"/data/")
@@ -28,12 +29,13 @@ SSP_Stat = SSPStat(SSP_Input, path, plot = True, save = False)
 SSP_Prop = SSPId(SSP_Input, path, plot = True, save = False)
 """
 
-data = FeatDuct(ALLDATA, Input_Only = True)
-data = FeatBathy(data, path)
+#data = FeatDuct(ALLDATA, Input_Only = True)
+#data = FeatBathy(data, path)
 #data = FeatSSPVec(data, path)
-data_sspid = FeatSSPId(data, path, src_cond = True)
+#data_sspid = FeatSSPId(data, path, src_cond = True)
 #data4 = FeatSSPStat(data3,path)
-data = FeatSSPOnDepth(data_sspid, path, save = False)
+#data = FeatSSPOnDepth(data_sspid, path, save = False)
+data = pd.read_csv(str(path)+"\data_complete.csv")
 data_enc = EncodeData(data)
 
 target = 'num_rays'
@@ -41,8 +43,8 @@ features = data.columns.tolist()
 features.remove(target)
 features_enc = data_enc.columns.tolist()
 features_enc.remove(target)
-#X, y = data_enc[features_enc], data_enc[target]
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123, shuffle = True, stratify = y)
+X, y = data_enc[features_enc], data_enc[target]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123, shuffle = True, stratify = y)
 """        
 y_pop = ClassImbalance(data, plot = True)
 PlotCorrelation(data_enc,features_enc, annotate = False)
@@ -93,9 +95,6 @@ for i, ssp in enumerate(SSP_Input.iloc[:,1:]):
 """
 
 # ICE PLOTS
-X, y = data[features], data[target].values
-X_train, X_test, _, _ = train_test_split(X, y, test_size = 0.2, shuffle = True, stratify = y)
-
 #plot_features = features[0:5] + features[6:10]
 #target = {np.unique(y)[0]:300, np.unique(y)[1]:300, np.unique(y)[2]:300}
 
@@ -123,15 +122,18 @@ model = model.set_params(**best_params)
 resultpath = Path(PATH+"/XGB/results/xgb_class/")
 resultpath = str(resultpath) + '\\' 
 model = load(resultpath+'xgb_class_final_model.dat')
-model.fit(X_train,y_train)
 
 # create dict of ICE data for grid of ICE plots
-plot_features  = X_train.columns
+plot_features  = features_enc[:20]
+#Xdf =  pd.DataFrame(X_train.iloc[:,:20], columns = plot_features)
+#Xdf.sort_index(axis = 1, inplace = True)
+model.fit(X_train,y_train)
+ICEdict = ICEPlot(X_train, model, plot_features)
 
-train_ice_dfs = {feat: ice(data=X_train, column=feat, predict=model.predict) 
+train_ice_dfs = {feat: ice(data=Xdf, column=feat, predict=model.predict) 
                  for feat in plot_features}
 
-fig = plot_ice_grid(train_ice_dfs, X_train, plot_features,
+fig = plot_ice_grid(train_ice_dfs, Xdf, plot_features,
                     ax_ylabel='Pred. Ray Num', alpha=0.3, plot_pdp=True,
                     pdp_kwargs={'c': 'blue', 'linewidth': 3},
                     linewidth=0.5, c='dimgray')
