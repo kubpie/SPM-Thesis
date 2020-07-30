@@ -15,7 +15,7 @@ from pathlib import Path
 
 model_type = 'xgb_reg' #'xgb_class' 'xgb_reg'
 path = os.getcwd()
-resultpath = Path(path+"/XGB/results/splits/1")# + model_type)
+resultpath = Path(path+"/XGB/results/splits/0")# + model_type)
 resultpath = str(resultpath) + '\\' 
 
 #best_nested_score_and_model = load(resultpath + 'best_nested_score_and_model.dat')
