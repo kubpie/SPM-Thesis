@@ -146,7 +146,7 @@ def SSPStat(SSP_Input, path, plot = False, save = False):
                 upper_bound = SSP_Stat.loc[:,(ssp,'mean_SSP')]+SSP_Stat.loc[:,(ssp,'stdev_SSP')]
                 axes[i].plot(depth, np.array(SSP_Stat.loc[:,(ssp,'mean_SSP')]), linewidth = 1, label = 'Mean SSP' )
                 axes[i].fill_between(depth, lower_bound, upper_bound, facecolor='lightblue', label = 'Std. Dev. SSP')
-                axes[i].set_title("{}. {}".format(i, ssp))
+                axes[i].set_title("{}. {}".format(i, ssp), fontsize = 12)
             
             #TODO: Fix labels here and SSP plot
             #axes.set_xlabel("Depth")

@@ -10,7 +10,44 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pycebox.ice import ice, ice_plot
 
-def ClassImbalance(data, plot = False):
+def SplitDistribution(SplitSets):
+    counts = []
+    barset = []
+    labels = ['slope 0', 'slope 2', 'slope -2']
+    offset = [-0.2, 0, 0.2]
+    colors = ['darkblue','red','green']
+    fig,ax = plt.subplots(figsize=(10,4))
+    width = 0.2
+    for s, split in enumerate(SplitSets):
+        yclass, ycount = np.unique(split['num_rays'], return_counts=True)
+        labels[s] = labels[s] + ' ({} samples)'.format(sum(ycount))
+        counts.append(ycount)
+        x = np.arange(len(yclass))
+        bars = ax.bar(x+offset[s], ycount, width, label = labels[s], color = colors[s])
+        barset.append(bars)
+
+
+    for bs, bars in enumerate(barset):
+        for b, bar in enumerate(bars):
+            height = bar.get_height()
+            ax.annotate('{}'.format(height),
+            xy=(bar.get_x() + bar.get_width() / 2, height),
+            xytext=(offset[bs]*25, 3),  # 3 points vertical offset
+            textcoords="offset points",
+            ha='center', va='bottom',
+            color = colors[bs])
+    ax.set_ylabel('Number of Samples')
+    ax.set_xlabel('Number of Rays')
+    ax.set_title('Class distribution')
+    ax.set_xticks(x)
+    ax.set_xticklabels(yclass)#, rotation = 90)
+    ax.set_ylim(0,1700)
+    ax.grid()
+    ax.legend()
+    fig.tight_layout()
+    return
+
+def ClassImbalance(data, plot = False, plot_density = False):
     target = 'num_rays'
 
     yclass, ycount = np.unique(data[target], return_counts=True)
@@ -20,43 +57,31 @@ def ClassImbalance(data, plot = False):
     #print("y-variance: ", data[target].var())
     #print("y-mean:",  data[target].mean())
     #data.describe()
-    
-    if plot:
-        """
-        fig, ax = plt.subplots(figsize=(8, 5))
+    if plot:        
+        fig,ax = plt.subplots(figsize=(6,5))
         width = 0.5
         x = np.arange(len(yclass))
-        bars = ax.bar(x, ycount, width, label='Class Distribution')
+        bars = ax.bar(x, ycount, width, label = 'Number of samples')
         ax.set_ylabel('Number of Samples')
         ax.set_xlabel('Class: Number of Rays')
-        ax.set_title('Class Distribution')
+        ax.set_title('Total samples: {}'.format(sum(ycount)))
         ax.set_xticks(x)
-        ax.set_xticklabels(yclass)
+        ax.set_xticklabels(yclass, rotation = 90)
         ax.grid()
-        autolabel(bars)
-        #ax.legend()
         
         for b, bar in enumerate(bars):
             height = bar.get_height()
-            ax.annotate('{:.2f}%'.format(yper[b]),
+            ax.annotate('{}'.format(height),
             xy=(bar.get_x() + bar.get_width() / 2, height),
             xytext=(0, 3),  # 3 points vertical offset
             textcoords="offset points",
             ha='center', va='bottom')
-        
-        fig2, ax2 = plt.subplots()
-        x = np.arange(len(yclass))
-        ax2.plot(x, np.cumsum(yper), '-ok')
-        ax2.set_ylabel('Per-class Percentage of Total Dataset [%]')
-        ax2.set_xlabel('Class: Number of Rays')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(yclass)
-        ax2.set_title('Cumulative sum plot of class distributions')
-        ax2.grid()
-        """
-        plt.rcParams.update({'font.size': 15})
 
-        fig3,ax3 = plt.subplots(figsize=(15,5))
+        
+    if plot_density:
+        plt.rcParams.update({'font.size': 14})
+
+        fig3,ax3 = plt.subplots(figsize=(10,5))
         width = 0.5
         x = np.arange(len(yclass))
         bars3 = ax3.bar(x, ycount, width, label = 'Number of samples')
@@ -87,7 +112,7 @@ def ClassImbalance(data, plot = False):
                 xy=(x[i], np.cumsum(yper)[i]), 
                 xytext=(x[i]-1, np.cumsum(yper)[i]+0.35), 
                 arrowprops=dict(arrowstyle="-", connectionstyle="arc3"))
-            
+        fig3.tight_layout()        
     return y_population
 
 def autolabel(rects):
@@ -118,7 +143,7 @@ def PlotCorrelation(dat, features, annotate = True):
         plt.show() 
 
 def plot_ice_grid(dict_of_ice_dfs, data_df, features, ax_ylabel='', nrows=3, 
-                  ncols=3, figsize=(12, 12), sharex=False, sharey=True, 
+                  ncols=3, figsize=(8, 13), sharex=False, sharey=True, 
                   subplots_kws={}, rug_kws={'color':'k'}, **ice_plot_kws):
     """A function that plots ICE plots for different features in a grid."""
     fig, axes = plt.subplots(nrows=nrows, 
@@ -131,16 +156,20 @@ def plot_ice_grid(dict_of_ice_dfs, data_df, features, ax_ylabel='', nrows=3,
     # subplot
     #max value for y-axis based on water-depth-min which goes through the whole range
     ymax = dict_of_ice_dfs[features[0]].values.max()
-    
+    fit = 0
+    fitlabel = [0,4,8,12,16]
     for f, ax in zip(features, axes.flatten()):
         ice_plot(dict_of_ice_dfs[f], ax=ax, **ice_plot_kws)
         # add the rug
         sns.distplot(data_df[f], ax=ax, hist=False, kde=False, 
                      rug=True, rug_kws=rug_kws)
-        #ax.set_title('feature = ' + f)
-        ax.set_ylabel(ax_ylabel)
+        ax.set_title(f)
+        if fit in fitlabel:
+            ax.set_ylabel(ax_ylabel)
+        ax.set_xlabel('')
         ax.set_ylim(0, ymax)
         sns.despine()
+        fit += 1
         
     # get rid of blank plots
     for i in range(len(features), nrows*ncols):
@@ -153,16 +182,16 @@ def ICEPlot(data, model, features):
                      for feat in features}
     
     fig = plot_ice_grid(train_ice_dfs, data, features,
-                        ax_ylabel='Pred. Ray Num.', 
+                        ax_ylabel='num. of rays', 
                         nrows=5, 
                         ncols=4,
-                        alpha=0.3, plot_pdp=True,
-                        pdp_kwargs={'c': 'blue', 'linewidth': 2.0},
-                        linewidth=0.5, c='dimgray')
-    #fig.tight_layout()
-    fig.suptitle('ICE plot: Classification - all training data')
-    fig.subplots_adjust(top=0.89)
-    plt.show()
+                        sharey=True,
+                        plot_pdp=True,
+                        pdp_kwargs={'c': 'blue', 'linewidth': 2},
+                        linewidth=0.3, c='dimgray')
+    fig.tight_layout()
+    #fig.suptitle('ICE plot: Classification - all training data')
+    fig.subplots_adjust(wspace = 0.07, hspace=0.312)
 
     return train_ice_dfs
     

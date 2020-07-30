@@ -41,6 +41,7 @@ def ModelFit(best_model, model_type,
             early_stop, 
             cv,
             split_nr,
+            val_size,
             learningcurve = False, 
             importance = False, 
             plottree = False, 
@@ -86,7 +87,7 @@ def ModelFit(best_model, model_type,
         y_pred = cross_val_predict(best_model, X_test, y_test, cv=cv, n_jobs=-1, verbose=1, fit_params=None, method='predict')
 
     else: 
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = 0.1, random_state = 321, shuffle = True, stratify = y_train)
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = val_size, random_state = 321, shuffle = True, stratify = y_train)
         dtrainDM = xgb.DMatrix(X_train, label=y_train)
         eval_set = [(X_train, y_train),(X_val, y_val)]
         

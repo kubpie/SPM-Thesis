@@ -18,10 +18,11 @@ from collections import Counter
 from data_prep import FeatDuct, FeatBathy, FeatSSPVec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 from data_prep import LoadData, UndersampleData, SMOTSampling
 from data_prep import CreateModelSplits, EncodeData
-from data_analysis import PlotCorrelation, ICEPlot
+from data_analysis import PlotCorrelation, ICEPlot, SplitDistribution
 from sklearn.model_selection import train_test_split
 import os
 from pathlib import Path
+from sklearn.metrics import classification_report
 
 
 """"
@@ -32,6 +33,8 @@ PDPs can show you what the average relationship between a feature and the predic
 """
 PATH = os.getcwd()
 path = Path(PATH+"/data/")
+resultpath = Path(PATH+"/XGB/results/xgb_class/")
+resultpath = str(resultpath) + '\\' 
 #ALLDATA = LoadData(path
 #data = FeatDuct(ALLDATA, Input_Only = True)
 #data = FeatBathy(data, path)
@@ -40,7 +43,9 @@ path = Path(PATH+"/data/")
 #data = FeatSSPOnDepth(data_sspid, path, save = False)
 data = pd.read_csv(str(path)+"\data_complete.csv")
 data_enc = EncodeData(data)
-data_enc = data_enc.fillna(0) #ICE plot func has problems with NaNs :(
+
+#data_enc = UndersampleData(data_enc, 200) # Undersampling of the TEST SET to avoid overcrowding the ICE plot
+data_enc = data_enc.fillna(0) #ICE plot func has problems with NaNs
 
 target = 'num_rays'
 features = data_enc.columns.tolist()
@@ -51,51 +56,51 @@ locations = ['Labrador-Sea', 'Mediterranean-Sea', 'North-Pacific-Ocean',
 ice_features = [ feat for feat in features if feat not in locations + seasons ]
 X, y = data_enc[features], data_enc[target]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 123, shuffle = True, stratify = y)
-
+ice_features = ice_features[1:3]
 """
-# Undersampling of the TEST SET to avoid overcrowding the ICE plot
-# It reduces all clases to the size of the smallest class 7000: 20 samples
-undersample = RandomUnderSampler(sampling_strategy='auto')
-Xt_under, yt_under = undersample.fit_resample(Xt, yt)
-Xt_under_df = pd.DataFrame(Xt_under, columns = features)
-print(Counter(yt))
-print(Counter(yt_under))
-"""
+### XGB Model Load & Setup
 
-### XGB MODEL SETUP
-resultpath = Path(PATH+"/XGB/results/xgb_class/")
-resultpath = str(resultpath) + '\\' 
 model = load(resultpath+'xgb_class_final_model.dat')
-
+est = {'n_estimators': 200}
+model.set_params(**est)
 ### ICE PLOT FOR THE WHOLE DATASET
 # Model 'fit' before 'predict' inside ICE plot function
 model = model.fit(X_train.values, y_train.values)
 # Ice plot for the whole dataset
-ICEdict = ICEPlot(X_train, model, ice_features)
+#ICEdict = ICEPlot(X_train, model, ice_features)
+plt.savefig("C:\\Users\\kubap\\Documents\\THESIS\\MScTemplateLatex_new_01\\DCSC Thesis Style\\images\\ICE_plot.png")
+plt.show()
 """
 ### ICE PLOTS FOR SPLITS
-SplitSets ,_ = CreateSplits(data_enc, level_out = 1, remove_outliers = True, replace_outliers = True, plot_distributions = False, plot_correlations = False)
-for s,subset in enumerate(SplitSets):
-    
-    sub_features = subset.columns.tolist()
-    sub_features.remove(target)
-    ice_sub_features = [ feat for feat in sub_features if feat not in locations + seasons ]
-    [dtrain, dtest] = TrainTestSplit(subset, test_size = 0.20) #reduced training/test split to 20% because smaller datasets
-
-    Xs = dtrain[sub_features]
-    ys = dtrain[target]
-    Xst = dtest[sub_features]
-    yst = dtest[target]
-
-    eval_set = [(Xs.values, ys.values),(Xst.values, yst.values)]
-    submodel_trained = model.fit(Xs.values, ys.values, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
-    results = submodel_trained.evals_result()
-    print(f'Best iteration: {submodel_trained.best_iteration}\nF-score: {1-submodel_trained.best_score}')
-
-    # Ice plot for the whole dataset
-    ICEdict = ICEPlot(Xst, submodel_trained, ice_sub_features)
-
+model = load(resultpath+'xgb_class_final_model.dat')
+SplitSets, distributions  = CreateModelSplits(data_enc, level_out = 1, 
+                feature_dropout = True,
+                remove_outliers = True, replace_outliers = False, 
+                plot_distributions = False, plot_correlations = False)
+SplitDistribution(SplitSets)
+print(distributions)
+plt.show()
 """
+SplitSets[1] = pd.concat([SplitSets[1],SplitSets[2]],axis=0)
+SplitSets=SplitSets[:2]
+#for s,split in enumerate(SplitSets):
+split = SplitSets[1]
+features = split.columns.tolist()
+features.remove(target)
+#ice_sub_features = [ feat for feat in sub_features if feat not in locations + seasons ]
+X_train, X_test, y_train, y_test = train_test_split(split[features], split[target], test_size = 0.2, random_state = 111, shuffle = True, stratify = split[target])
+
+submodel = model.fit(X_train,y_train)#, eval_set=eval_set, eval_metric = feval, verbose=0, early_stopping_rounds = early_stop)
+#print(f'Best iteration: {submodel_trained.best_iteration}\nF-score: {1-submodel_trained.best_score}')
+y_pred = submodel.predict(X_test)
+print('\nPrediction on the test set')
+report = classification_report(y_test, y_pred, digits=2)
+print(report)
+"""
+    # Ice plot for the whole dataset
+    #ICEdict = ICEPlot(Xst, submodel_trained, ice_sub_features)
+
+
 # an attempt to split the plots further down on wdep_min
 # there's a clear correlation between shallow channel and high ray nr
 # however there are also not enough sample to create a separate model

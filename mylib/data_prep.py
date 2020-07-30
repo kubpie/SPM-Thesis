@@ -392,12 +392,12 @@ def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outli
                         dat = remove_outliers(dat,rayclass)
         
               
-            ystat = ClassImbalance(dat, plot = plot_distributions)
+            ystat = ClassImbalance(dat)
             distributions.append(ystat)  
             SplitSets.append(dat)  
         
         SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
-        distributions[1] = ClassImbalance(SplitSets[0], plot = plot_distributions)
+        distributions[1] = ClassImbalance(SplitSets[0])
         
     #2. TODO : A value is trying to be set on a copy of a slice from a DataFrame.
     #          Try using .loc[row_indexer,col_indexer] = value instead
@@ -418,7 +418,10 @@ def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outli
             if plot_correlations:
                 PlotCorrelation(SplitSets[i], features, annotate = True)
 
-    
+    if plot_distributions:
+        for split in SplitSets:
+            ClassImbalance(split, plot_splits = True)
+
     return SplitSets, distributions
 
 
