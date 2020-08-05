@@ -13,6 +13,7 @@ grpcio==1.23.0
 grakn-client==1.6.0
 grakn-kglib==0.2.1
 h5py==2.10.0
+imblearn==0.7.0
 Keras-Applications==1.0.8
 Keras-Preprocessing==1.1.0
 kiwisolver==1.1.0

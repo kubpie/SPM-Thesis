@@ -42,10 +42,12 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filt
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
 import os
+import sys
 from pathlib import Path
-from data_prep import LoadData, FeatDuct, UndersampleData
 PATH = os.getcwd() #+'\data\\'
-datapath = Path("../"+PATH+"/data/")
+sys.path.insert(1, PATH + '/mylib/')
+datapath = Path(PATH+"/data/")
+from data_prep import LoadData, FeatDuct, UndersampleData
 ALLDATA = LoadData(datapath)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
@@ -221,10 +223,10 @@ def create_concept_graphs(example_indices, grakn_session):
             graph = nx.read_gpickle(savepath+graph_filename)    
         
         graphs.append(graph)
-        
-        # new_graph = networkx.Graph(graph)
-        # nx.draw(new_graph)
-        # plt.show()
+        # plot NetworkX graphs 
+        new_graph = nx.Graph(graph)
+        nx.draw(new_graph)
+        plt.show()
     return graphs
 
 def obfuscate_labels(graph, types_and_roles_to_obfuscate):
@@ -535,9 +537,7 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 ##### RUN THE PIPELINE  #####  
 
 # DATA SELECTION FOR GRAKN TESTING
-from data_analysis_lib import ClassImbalance
-from data_prep import CreateSplits
-
+from data_analysis import ClassImbalance
 
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
