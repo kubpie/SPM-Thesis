@@ -96,11 +96,11 @@ class KGCNLearner:
         # Loss across processing steps.
         loss_op_tr = sum(loss_ops_tr) / self._num_processing_steps_tr
 
-        tf.summary.scalar('loss_op_tr', loss_op_tr)
+        tf.summary.scalar('loss_op_tr', loss_op_tr) #this should add training loss to a filewriter log
         # Test/generalization loss.
         loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge, weighted = weighted) #LOSS FUNCTION
         loss_op_ge = loss_ops_ge[-1]  # Loss from final processing step.
-        tf.summary.scalar('loss_op_ge', loss_op_ge)
+        tf.summary.scalar('loss_op_ge', loss_op_ge) #this should add generalisation loss to a filewriter log
 
 
         # Optimizer
@@ -131,7 +131,7 @@ class KGCNLearner:
         sess = tf.Session()
         merged_summaries = tf.summary.merge_all()
 
-        train_writer = None
+        train_writer = 1 #turned on the train writer! was None
 
         if self._log_dir is not None:
             train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)

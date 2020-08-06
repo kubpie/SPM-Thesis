@@ -46,14 +46,15 @@ import sys
 from pathlib import Path
 PATH = os.getcwd() #+'\data\\'
 sys.path.insert(1, PATH + '/mylib/')
-datapath = Path(PATH+"/data/")
+DATAPATH = Path(PATH+"/data/")
 from data_prep import LoadData, FeatDuct, UndersampleData
-ALLDATA = LoadData(datapath)
+ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
+PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
 
 KEYSPACE =  "ssp_2class" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
+SAVEPATH = PATH + "/nx_2class_500n1000/"
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -166,7 +167,7 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
     
     return concept_graph
 
-def create_concept_graphs(example_indices, grakn_session):
+def create_concept_graphs(example_indices, grakn_session, savepath):
     """
     Builds an in-memory graph for each example, with an scenario_id as an anchor for each example subgraph.
     Args:
@@ -195,7 +196,7 @@ def create_concept_graphs(example_indices, grakn_session):
     graphs = []
     infer = True
     #savepath = f"./networkx/"
-    savepath = PATH + "/nx_2class_500n2500/"
+    #savepath = PATH + "/nx_2class_500n1000/"
     total = len(example_indices)
     
     not_duct_idx = []
@@ -223,10 +224,11 @@ def create_concept_graphs(example_indices, grakn_session):
             graph = nx.read_gpickle(savepath+graph_filename)    
         
         graphs.append(graph)
-        # plot NetworkX graphs 
-        new_graph = nx.Graph(graph)
-        nx.draw(new_graph, with_labels=True)
-        plt.show()
+
+        # TODO: SWITCH plot NetworkX graphs 
+        #new_graph = nx.Graph(graph)
+        #nx.draw(new_graph, with_labels=True)
+        #plt.show()
     return graphs
 
 def obfuscate_labels(graph, types_and_roles_to_obfuscate):
@@ -424,9 +426,8 @@ def write_predictions_to_grakn(graphs, tx, commit = True):
         tx.commit()
 
 import re
-def ubuntu_rand_fix():
-
-    savepath = PATH + '/networkx/'
+def ubuntu_rand_fix(savepath):
+    #savepath = PATH + '/networkx/'
     graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
     example_idx = []
     for gfile in graphfiles:
@@ -434,7 +435,7 @@ def ubuntu_rand_fix():
         example_idx.append(idx)
     return example_idx
 
-def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True):
+def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_fix = True):
     """
     Args:
         data: full dataset with sorted scenario_id's that will be used for querying grakn
@@ -472,14 +473,14 @@ def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True
 
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
-        example_idx_tr = ubuntu_rand_fix()
+        example_idx_tr = ubuntu_rand_fix(savepath)
     #example_idx_val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
     print(f'\nCREATING {num_tr_graphs} TRAINING\TEST GRAPHS')
-    train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
+    train_graphs = create_concept_graphs(example_idx_tr, session, savepath)  # Create validation graphs in networkX
     #print(f'\nCREATING {num_val_graphs} VALIDATION GRAPHS')
-    #val_graphs = create_concept_graphs(example_idx_val, session) # Create training graphs in networkX
+    #val_graphs = create_concept_graphs(example_idx_val, session, savepath) # Create training graphs in networkX
     
     return  train_graphs, tr_ge_split, training_data, testing_data #, val_graphs,  val_ge_split
 
@@ -543,9 +544,9 @@ from data_analysis import ClassImbalance
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
 # === 2 classes of 2000 sample 500/1000 ==== 
-keyspace = "ssp_2class"
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 300)
+#keyspace = "ssp_2class"
+data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
+data = UndersampleData(data_sparse2, max_sample = 100)
 #data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
@@ -558,7 +559,7 @@ print(class_population)
 
 
 client = GraknClient(uri=URI)
-session = client.session(keyspace=keyspace)
+session = client.session(keyspace=KEYSPACE)
 
 with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
@@ -569,7 +570,7 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
-train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= False)
+train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
