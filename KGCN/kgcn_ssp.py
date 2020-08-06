@@ -195,7 +195,7 @@ def create_concept_graphs(example_indices, grakn_session):
     graphs = []
     infer = True
     #savepath = f"./networkx/"
-    savepath = PATH + "/nx_2class/"
+    savepath = PATH + "/nx_2class_500n2500/"
     total = len(example_indices)
     
     not_duct_idx = []
@@ -225,7 +225,7 @@ def create_concept_graphs(example_indices, grakn_session):
         graphs.append(graph)
         # plot NetworkX graphs 
         new_graph = nx.Graph(graph)
-        nx.draw(new_graph)
+        nx.draw(new_graph, with_labels=True)
         plt.show()
     return graphs
 
@@ -544,9 +544,9 @@ from data_analysis import ClassImbalance
 
 # === 2 classes of 2000 sample 500/1000 ==== 
 keyspace = "ssp_2class"
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
-data = UndersampleData(data_sparse2, max_sample = 2000)
-data = data[:20]
+data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data = UndersampleData(data_sparse2, max_sample = 300)
+#data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
 #keyspace = "ssp_3class"

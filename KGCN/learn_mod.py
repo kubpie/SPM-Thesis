@@ -83,7 +83,7 @@ class KGCNLearner:
         #batch_size = 2 # TOTAL number of graphs per batch
         #training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
         #for tr_input_graphs in training_batches:
-        
+
         # Create placeholders and define tf training
         input_ph, target_ph = create_placeholders(tr_input_graphs, tr_target_graphs)
 
@@ -101,6 +101,7 @@ class KGCNLearner:
         loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge, weighted = weighted) #LOSS FUNCTION
         loss_op_ge = loss_ops_ge[-1]  # Loss from final processing step.
         tf.summary.scalar('loss_op_ge', loss_op_ge)
+
 
         # Optimizer
         # TODO: Optimize learning rate?? Adaptive learning_raye\sqrt(time) for example? vars: learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False
@@ -133,8 +134,8 @@ class KGCNLearner:
         train_writer = None
 
         if self._log_dir is not None:
-            #train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
-            train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
+            train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
+            #train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
         sess.run(tf.global_variables_initializer())
         model_saver = tf.train.Saver()
 
