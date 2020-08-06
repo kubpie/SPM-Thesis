@@ -577,12 +577,12 @@ kgcn_vars = {
           'num_processing_steps_tr': 10, #13
           'num_processing_steps_ge': 10, #13
           'num_training_iterations': 100, #10000?
-          'learning_rate': 1e-5, #1e-4
+          'learning_rate': 1e-3, #1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
           'clip': 1e2, #gradient clipping 5
           'weighted': False, #loss function modification
-          'log_every_epochs': 50, #logging of the results
+          'log_every_epochs': 1, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,

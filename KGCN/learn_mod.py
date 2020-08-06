@@ -129,12 +129,16 @@ class KGCNLearner:
         #    pass
 
         sess = tf.Session()
+        #loss_tr_summ = tf.summary.scalar('loss_tr', loss_tr)
+        #loss_ge_summ = tf.summary.scalar('loss_ge', loss_ge)
         merged_summaries = tf.summary.merge_all()
 
-        train_writer = 1 #turned on the train writer! was None
+        #train_writer = None #turned on the train writer! was None
 
         if self._log_dir is not None:
+            print(f'\nFileWriter: {self._log_dir}')
             train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
+            #scalar_writer = tf.summary.FileWriter(self._log_dir+'/scalars/',sess.graph)
             #train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
         sess.run(tf.global_variables_initializer())
         model_saver = tf.train.Saver()
@@ -170,7 +174,11 @@ class KGCNLearner:
                     feed_dict=feed_dict)
 
                 if train_writer is not None:
+                    print(f'Added summary to writer')
                     train_writer.add_summary(train_values["summary"], iteration)
+                    #scalar_writer.add_summary(loss_op_tr, iteration)
+                    #scalar_writer.add_summary(output_ops_tr, iteration)
+
 
                 feed_dict = create_feed_dict(input_ph, target_ph, ge_input_graphs, ge_target_graphs)
                 test_values = sess.run(
@@ -180,6 +188,7 @@ class KGCNLearner:
                         "outputs": output_ops_ge
                     },
                     feed_dict=feed_dict)
+
                 #print(f'target: {train_values["target"]}') #my add
                 #print(f'output: {train_values["outputs"]}')
                 correct_tr, solved_tr = existence_accuracy(
@@ -208,7 +217,7 @@ class KGCNLearner:
                         "outputs": output_ops_tr
                     },
                     feed_dict=feed_dict)
-                
+
         # Train the model and save it in the end
         # TODO: Could modify saver to save model checkpoint every n-epochs
         if not save_fle.is_dir():
