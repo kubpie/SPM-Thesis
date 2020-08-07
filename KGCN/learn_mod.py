@@ -78,7 +78,6 @@ class KGCNLearner:
         tf.set_random_seed(42)
 
         #### TODO: SPLIT INPUT GRAPHS INTO MANAGEABLE BATCHES
-
         # Split input graphs into mini-batches
         #batch_size = 2 # TOTAL number of graphs per batch
         #training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
@@ -129,8 +128,6 @@ class KGCNLearner:
         #    pass
 
         sess = tf.Session()
-        #loss_tr_summ = tf.summary.scalar('loss_tr', loss_tr)
-        #loss_ge_summ = tf.summary.scalar('loss_ge', loss_ge)
         merged_summaries = tf.summary.merge_all()
 
         #train_writer = None #turned on the train writer! was None
@@ -174,10 +171,9 @@ class KGCNLearner:
                     feed_dict=feed_dict)
 
                 if train_writer is not None:
-                    print(f'Added summary to writer')
+                    #print(f'Added summary to writer')
                     train_writer.add_summary(train_values["summary"], iteration)
-                    #scalar_writer.add_summary(loss_op_tr, iteration)
-                    #scalar_writer.add_summary(output_ops_tr, iteration)
+
 
 
                 feed_dict = create_feed_dict(input_ph, target_ph, ge_input_graphs, ge_target_graphs)
@@ -221,7 +217,7 @@ class KGCNLearner:
         # Train the model and save it in the end
         # TODO: Could modify saver to save model checkpoint every n-epochs
         if not save_fle.is_dir():
-            model_saver.save(sess, save_fle.as_posix())  #global_step = 
+            model_saver.save(sess, save_fle.as_posix())
             #save_fle.with_suffix('.pbtxt').as_posix() = 
             tf.train.write_graph(sess.graph.as_graph_def(), logdir=self._log_dir, name='graph_model.pbtxt', as_text=True) 
             #print(f'Saved model to {log_dir+save_fle}')

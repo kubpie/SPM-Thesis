@@ -52,9 +52,9 @@ ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
 
-KEYSPACE =  "ssp_2class" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn_schema_full" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/nx_2class_500n1000/"
+SAVEPATH = PATH + "/nx_2class_500n2500/"
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -85,8 +85,8 @@ CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500),
                          'bottom_type': (1,2),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179),
-                         'number_of_ducts': (0,2)}
+                         'grad': (-0.290954924,0.040374179)}
+                         #'number_of_ducts': (0,2)}
 
 TYPES_TO_IGNORE = ['candidate-convergence', 'scenario_id', 'probability_exists', 'probability_nonexists', 'probability_preexists']
 ROLES_TO_IGNORE = ['candidate_resolution', 'candidate_scenario']
@@ -225,7 +225,7 @@ def create_concept_graphs(example_indices, grakn_session, savepath):
         
         graphs.append(graph)
 
-        # TODO: SWITCH plot NetworkX graphs 
+        #TODO: SWITCH plot NetworkX graphs 
         #new_graph = nx.Graph(graph)
         #nx.draw(new_graph, with_labels=True)
         #plt.show()
@@ -251,9 +251,10 @@ def get_query_handles(scenario_idx, not_duct_idx):
     """
     # === Query variables ===
     conv, scn, ray, nray, src, dsrc, seg, dseg, l, s, srcp, bathy, bt, ssp, loc, ses,\
-    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct, nod = 'conv','scn','ray', 'nray',\
+    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct = 'conv','scn','ray', 'nray',\
     'src', 'dsrc', 'seg', 'dseg','l','s','srcp','bathy','bt','ssp','loc','ses',\
-    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct','nod'
+    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct'
+    # nod ,'nod'
     # dt, 'dt'
     
     
@@ -288,11 +289,12 @@ def get_query_handles(scenario_idx, not_duct_idx):
             $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
             $dct isa duct, has depth $ddct, has grad $gd;
             $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
-            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
+            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel;
             $sspval has depth $dssp;
             {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
             get;'''
             )
+        #isa SSP-channel, has number_of_ducts $nod; 
         # has duct_type $dt,
         
         convergence_query_full_graph = (QueryGraph()
@@ -300,7 +302,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
                                             l, s, srcp, bathy, bt, ssp, loc, ses, \
                                             sspval, dsspmax, speed, dssp, dct, ddct,\
-                                            gd, duct, nod], PREEXISTS) #dt,
+                                            gd, duct], PREEXISTS) #dt, nod
                                  .add_has_edge(ray, nray, PREEXISTS)
                                  .add_has_edge(src, dsrc, PREEXISTS)
                                  .add_has_edge(seg, dseg, PREEXISTS)
@@ -314,7 +316,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  #.add_has_edge(dct, dt, PREEXISTS)
                                  .add_has_edge(dct, gd, PREEXISTS)
                                  .add_has_edge(bathy, bt, PREEXISTS)
-                                 .add_has_edge(duct, nod, PREEXISTS)
+                                 #.add_has_edge(duct, nod, PREEXISTS)
                                  .add_has_edge(sspval, dssp, PREEXISTS)
                                  .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
                                  .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
@@ -545,7 +547,7 @@ from data_analysis import ClassImbalance
 
 # === 2 classes of 2000 sample 500/1000 ==== 
 #keyspace = "ssp_2class"
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
+data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
 data = UndersampleData(data_sparse2, max_sample = 100)
 #data = data[:20]
 
@@ -580,18 +582,19 @@ kgcn_vars = {
           'learning_rate': 1e-3, #1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
-          'clip': 1e2, #gradient clipping 5
+          'clip': 5, #gradient clipping 5
           'weighted': False, #loss function modification
           'log_every_epochs': 1, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"./events/{time.time()}/"
+          'output_dir': f"./events/ssp/{time.time()}/",
+          'save_fle': "ssp_summ.ckpt" 
           }           
 
 
-tr_ge_graphs, training_evals, graphs_enc, tr_input_graphs, tr_target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
+tr_ge_graphs, training_evals, graphs_enc, tr_input_graphs, tr_target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, do_test = False, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
