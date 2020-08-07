@@ -84,8 +84,8 @@ def diagnosis_example(num_graphs=200, #100
     """
 
     tr_ge_split = int(num_graphs*0.5)
-
-    generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri) #comment to run without creating new graphs
+    #TODO: #comment to run without creating new graphs
+    #generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri) #comment out this
 
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)
@@ -112,7 +112,7 @@ def diagnosis_example(num_graphs=200, #100
     'num_layers': 2, #MLP param
     'weighted': False, #loss function modification
     'log_every_epochs': 50, #logging of the results
-    'clip': 5.0, #gradient clipping 5
+    'clip': 5, #gradient clipping 5
     'node_types': node_types,
     'edge_types': edge_types,
     'continuous_attributes': CONTINUOUS_ATTRIBUTES,
@@ -135,7 +135,8 @@ def diagnosis_example(num_graphs=200, #100
                                                  save_fle = save_fle,
                                                  reload_fle = "")
     """
-    tr_ge_graphs, training_evals, graphs_enc, tr_input_graphs, tr_target_graphs, feed_dict= pipeline(graphs = train_graphs,             
+
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,             
                                                 tr_ge_split = tr_ge_split,                         
                                                 do_test = False,
                                                 **kgcn_vars)
@@ -146,7 +147,7 @@ def diagnosis_example(num_graphs=200, #100
     session.close()
     client.close()
 
-    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs
+    return ge_graphs, solveds_tr, solveds_ge
 
 
 def create_concept_graphs(example_indices, grakn_session):

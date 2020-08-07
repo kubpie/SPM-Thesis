@@ -437,7 +437,7 @@ data_pop = ClassImbalance(ALLDATA)
 #data = UndersampleData(data_sparse2, max_sample = 2000)
 #data = UndersampleData(data_sparse3, max_sample = 1020)
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
-data = ALLDATA
+data = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 2500)] 
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
 for ssp,dmax,idx in zip(data['profile'],data['water_depth_max'], data.index):
@@ -533,7 +533,7 @@ Relations = [
 ]
 """
 
-KEYSPACE = "kgcn_schema_full"
+KEYSPACE = "kgcn500n2500"
 
 if __name__ == "__main__":
     build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 

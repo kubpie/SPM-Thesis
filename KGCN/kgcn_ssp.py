@@ -52,7 +52,7 @@ ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
 
-KEYSPACE =  "kgcn_schema_full" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn500n2500" #"kgcn_schema_full" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
 SAVEPATH = PATH + "/nx_2class_500n2500/"
 
@@ -486,7 +486,7 @@ def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_
     
     return  train_graphs, tr_ge_split, training_data, testing_data #, val_graphs,  val_ge_split
 
-def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
+def go_train(train_graphs, tr_ge_split, **kwargs):
     """
     Args:
            
@@ -504,15 +504,14 @@ def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
 
     """
     # Run the pipeline with prepared networkx graph
-    ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict = pipeline(graphs = train_graphs,             
+    #ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict 
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,             
                                                 tr_ge_split = tr_ge_split,                         
                                                 do_test = False,
-                                                save_fle = save_fle,
-                                                reload_fle = "",
                                                 **kwargs)
     
     training_evals= [solveds_tr, solveds_ge]   
-    return ge_graphs, training_evals, graphs_enc, input_graphs, target_graphs, feed_dict
+    return ge_graphs, solveds_tr, solveds_ge
 """
 def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     
@@ -548,7 +547,7 @@ from data_analysis import ClassImbalance
 # === 2 classes of 2000 sample 500/1000 ==== 
 #keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 100)
+data = UndersampleData(data_sparse2, max_sample = 300)
 #data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
@@ -572,29 +571,31 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
-train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= False, savepath = SAVEPATH)
+train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
+                                            train_split = 0.5, validation_split = 0., 
+                                            ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
           'num_processing_steps_tr': 10, #13
           'num_processing_steps_ge': 10, #13
-          'num_training_iterations': 100, #10000?
-          'learning_rate': 1e-3, #1e-4
+          'num_training_iterations': 1000, #10000?
+          'learning_rate': 1e-2, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
           'clip': 5, #gradient clipping 5
           'weighted': False, #loss function modification
-          'log_every_epochs': 1, #logging of the results
+          'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"./events/ssp/{time.time()}/",
+          'output_dir': f"./events/ssp_2class/{time.time()}/",
           'save_fle': "ssp_summ.ckpt" 
           }           
 
 
-tr_ge_graphs, training_evals, graphs_enc, tr_input_graphs, tr_target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, do_test = False, **kgcn_vars)
+ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities

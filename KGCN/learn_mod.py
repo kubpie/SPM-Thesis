@@ -174,8 +174,6 @@ class KGCNLearner:
                     #print(f'Added summary to writer')
                     train_writer.add_summary(train_values["summary"], iteration)
 
-
-
                 feed_dict = create_feed_dict(input_ph, target_ph, ge_input_graphs, ge_target_graphs)
                 test_values = sess.run(
                     {
@@ -222,7 +220,7 @@ class KGCNLearner:
             tf.train.write_graph(sess.graph.as_graph_def(), logdir=self._log_dir, name='graph_model.pbtxt', as_text=True) 
             #print(f'Saved model to {log_dir+save_fle}')
         training_info = logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge
-        return train_values, test_values, training_info, feed_dict
+        return train_values, test_values, training_info#, feed_dict
     
     ###############################
     # VALIDATION WITHOUT TRAINING #
