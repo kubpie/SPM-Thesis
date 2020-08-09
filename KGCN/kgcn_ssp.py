@@ -79,8 +79,18 @@ CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc}
                           #duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
+"""
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
                          'num_rays': (500, 15000), 
+                         'slope': (-2, 2), 
+                         'bottom_type': (1,2),
+                         'length': (0, 44000),
+                         'SSP_value':(1463.486641,1539.630391),
+                         'grad': (-0.290954924,0.040374179)}
+                         #'number_of_ducts': (0,2)}
+"""
+CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
+                         'num_rays': (500, 2500), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
@@ -195,8 +205,6 @@ def create_concept_graphs(example_indices, grakn_session, savepath):
     
     graphs = []
     infer = True
-    #savepath = f"./networkx/"
-    #savepath = PATH + "/nx_2class_500n1000/"
     total = len(example_indices)
     
     not_duct_idx = []
@@ -547,7 +555,8 @@ from data_analysis import ClassImbalance
 # === 2 classes of 2000 sample 500/1000 ==== 
 #keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 300)
+data = UndersampleData(data_sparse2, max_sample = 2000)
+data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
 #data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
@@ -555,7 +564,8 @@ data = UndersampleData(data_sparse2, max_sample = 300)
 #data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 1500) |
 #data = UndersampleData(data_sparse3, max_sample = 1020)
 
-class_population = ClassImbalance(data, plot = False)
+class_population = ClassImbalance(data, plot = True)
+plt.show()
 print(class_population)
 
 
@@ -572,15 +582,15 @@ with session.transaction().read() as tx:
         print(f'Found edge types: {edge_types}')   
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
-                                            train_split = 0.5, validation_split = 0., 
+                                            train_split = 0.8, validation_split = 0., 
                                             ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10, #13
-          'num_processing_steps_ge': 10, #13
-          'num_training_iterations': 1000, #10000?
-          'learning_rate': 1e-2, #down to even 1e-4
+          'num_processing_steps_tr': 5, #13
+          'num_processing_steps_ge': 5, #13
+          'num_training_iterations': 500, #10000?
+          'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
           'clip': 5, #gradient clipping 5
