@@ -290,12 +290,15 @@ def SSPId(SSP_Input, path, plot = False, save = False):
         #4. (Optional) Plot SSP with props for each depth max   
         if plot == True:
             
-            fig, axes = plt.subplots(nrows = 3, ncols = 8, figsize = (15,20), sharey = True)
+            fig, axes = plt.subplots(nrows = 6, ncols = 4, figsize = (6,36), sharey = True)
             axes = axes.flat
             axes[0].invert_yaxis()
+            seasons = ['winter', 'spring', 'summer','autumn']
+            locations = [1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6]
             for i, ssp in enumerate(SSP_table):
                 axes[i].plot(np.array(SSP_table[ssp]), depth[0:depth.index(md)+1], linewidth = 2, label = 'Sound Speed Profile' )
-                axes[i].set_title("{}. {}".format(i, ssp))
+                axes[i].set_title("loc-{}. {}".format(locations[i], seasons[i%4]), fontsize = 10)
+                axes[i].set_xticks([])
                 for j in range(len(SL_depth)):
                     if i == SL_depth[j,0] and SL_depth[j,1] != -1:    
                         axes[i].axhline(y = depth[SL_depth[j,1]], linestyle = '-', color = 'red', linewidth = 1, label = 'Sonic Layer Depth')
@@ -310,7 +313,6 @@ def SSPId(SSP_Input, path, plot = False, save = False):
             
             handles, labels = axes[9].get_legend_handles_labels()
             fig.legend(handles, labels, ncol = 5, loc='upper center')
-            
             plt.show()
                 
         # In depth loop
