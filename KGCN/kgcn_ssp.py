@@ -42,16 +42,19 @@ warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filt
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
 import os
+import sys
 from pathlib import Path
-from data_prep import LoadData, FeatDuct, UndersampleData
 PATH = os.getcwd() #+'\data\\'
-datapath = Path("../"+PATH+"/data/")
-ALLDATA = LoadData(datapath)
+sys.path.insert(1, PATH + '/mylib/')
+DATAPATH = Path(PATH+"/data/")
+from data_prep import LoadData, FeatDuct, UndersampleData
+ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(str(datapath)+"/data_complete.csv")
+PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
 
-KEYSPACE =  "ssp_2class" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn500n2500" #"kgcn_schema_full" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
+SAVEPATH = PATH + "/nx_2class_500n2500/"
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -76,14 +79,24 @@ CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc}
                           #duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
+"""
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
                          'num_rays': (500, 15000), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179),
-                         'number_of_ducts': (0,2)}
+                         'grad': (-0.290954924,0.040374179)}
+                         #'number_of_ducts': (0,2)}
+"""
+CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
+                         'num_rays': (500, 2500), 
+                         'slope': (-2, 2), 
+                         'bottom_type': (1,2),
+                         'length': (0, 44000),
+                         'SSP_value':(1463.486641,1539.630391),
+                         'grad': (-0.290954924,0.040374179)}
+                         #'number_of_ducts': (0,2)}
 
 TYPES_TO_IGNORE = ['candidate-convergence', 'scenario_id', 'probability_exists', 'probability_nonexists', 'probability_preexists']
 ROLES_TO_IGNORE = ['candidate_resolution', 'candidate_scenario']
@@ -164,7 +177,7 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
     
     return concept_graph
 
-def create_concept_graphs(example_indices, grakn_session):
+def create_concept_graphs(example_indices, grakn_session, savepath):
     """
     Builds an in-memory graph for each example, with an scenario_id as an anchor for each example subgraph.
     Args:
@@ -192,8 +205,6 @@ def create_concept_graphs(example_indices, grakn_session):
     
     graphs = []
     infer = True
-    #savepath = f"./networkx/"
-    savepath = PATH + "/nx_2class/"
     total = len(example_indices)
     
     not_duct_idx = []
@@ -221,10 +232,11 @@ def create_concept_graphs(example_indices, grakn_session):
             graph = nx.read_gpickle(savepath+graph_filename)    
         
         graphs.append(graph)
-        
-        # new_graph = networkx.Graph(graph)
-        # nx.draw(new_graph)
-        # plt.show()
+
+        #TODO: SWITCH plot NetworkX graphs 
+        #new_graph = nx.Graph(graph)
+        #nx.draw(new_graph, with_labels=True)
+        #plt.show()
     return graphs
 
 def obfuscate_labels(graph, types_and_roles_to_obfuscate):
@@ -247,9 +259,10 @@ def get_query_handles(scenario_idx, not_duct_idx):
     """
     # === Query variables ===
     conv, scn, ray, nray, src, dsrc, seg, dseg, l, s, srcp, bathy, bt, ssp, loc, ses,\
-    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct, nod = 'conv','scn','ray', 'nray',\
+    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct = 'conv','scn','ray', 'nray',\
     'src', 'dsrc', 'seg', 'dseg','l','s','srcp','bathy','bt','ssp','loc','ses',\
-    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct','nod'
+    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct'
+    # nod ,'nod'
     # dt, 'dt'
     
     
@@ -284,11 +297,12 @@ def get_query_handles(scenario_idx, not_duct_idx):
             $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
             $dct isa duct, has depth $ddct, has grad $gd;
             $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
-            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; 
+            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel;
             $sspval has depth $dssp;
             {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
             get;'''
             )
+        #isa SSP-channel, has number_of_ducts $nod; 
         # has duct_type $dt,
         
         convergence_query_full_graph = (QueryGraph()
@@ -296,7 +310,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
                                             l, s, srcp, bathy, bt, ssp, loc, ses, \
                                             sspval, dsspmax, speed, dssp, dct, ddct,\
-                                            gd, duct, nod], PREEXISTS) #dt,
+                                            gd, duct], PREEXISTS) #dt, nod
                                  .add_has_edge(ray, nray, PREEXISTS)
                                  .add_has_edge(src, dsrc, PREEXISTS)
                                  .add_has_edge(seg, dseg, PREEXISTS)
@@ -310,7 +324,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  #.add_has_edge(dct, dt, PREEXISTS)
                                  .add_has_edge(dct, gd, PREEXISTS)
                                  .add_has_edge(bathy, bt, PREEXISTS)
-                                 .add_has_edge(duct, nod, PREEXISTS)
+                                 #.add_has_edge(duct, nod, PREEXISTS)
                                  .add_has_edge(sspval, dssp, PREEXISTS)
                                  .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
                                  .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
@@ -422,9 +436,8 @@ def write_predictions_to_grakn(graphs, tx, commit = True):
         tx.commit()
 
 import re
-def ubuntu_rand_fix():
-
-    savepath = PATH + '/networkx/'
+def ubuntu_rand_fix(savepath):
+    #savepath = PATH + '/networkx/'
     graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
     example_idx = []
     for gfile in graphfiles:
@@ -432,7 +445,7 @@ def ubuntu_rand_fix():
         example_idx.append(idx)
     return example_idx
 
-def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True):
+def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_fix = True):
     """
     Args:
         data: full dataset with sorted scenario_id's that will be used for querying grakn
@@ -470,18 +483,18 @@ def prepare_data(session, data, train_split, validation_split, ubuntu_fix = True
 
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
-        example_idx_tr = ubuntu_rand_fix()
+        example_idx_tr = ubuntu_rand_fix(savepath)
     #example_idx_val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
     print(f'\nCREATING {num_tr_graphs} TRAINING\TEST GRAPHS')
-    train_graphs = create_concept_graphs(example_idx_tr, session)  # Create validation graphs in networkX
+    train_graphs = create_concept_graphs(example_idx_tr, session, savepath)  # Create validation graphs in networkX
     #print(f'\nCREATING {num_val_graphs} VALIDATION GRAPHS')
-    #val_graphs = create_concept_graphs(example_idx_val, session) # Create training graphs in networkX
+    #val_graphs = create_concept_graphs(example_idx_val, session, savepath) # Create training graphs in networkX
     
     return  train_graphs, tr_ge_split, training_data, testing_data #, val_graphs,  val_ge_split
 
-def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
+def go_train(train_graphs, tr_ge_split, **kwargs):
     """
     Args:
            
@@ -499,15 +512,14 @@ def go_train(train_graphs, tr_ge_split, save_fle, **kwargs):
 
     """
     # Run the pipeline with prepared networkx graph
-    ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict = pipeline(graphs = train_graphs,             
+    #ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict 
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,             
                                                 tr_ge_split = tr_ge_split,                         
                                                 do_test = False,
-                                                save_fle = save_fle,
-                                                reload_fle = "",
                                                 **kwargs)
     
     training_evals= [solveds_tr, solveds_ge]   
-    return ge_graphs, training_evals, graphs_enc, input_graphs, target_graphs, feed_dict
+    return ge_graphs, solveds_tr, solveds_ge
 """
 def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     
@@ -535,30 +547,30 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 ##### RUN THE PIPELINE  #####  
 
 # DATA SELECTION FOR GRAKN TESTING
-from data_analysis_lib import ClassImbalance
-from data_prep import CreateSplits
-
+from data_analysis import ClassImbalance
 
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
 # === 2 classes of 2000 sample 500/1000 ==== 
-keyspace = "ssp_2class"
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
+#keyspace = "ssp_2class"
+data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
 data = UndersampleData(data_sparse2, max_sample = 2000)
-data = data[:20]
+data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
+#data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
 #keyspace = "ssp_3class"
 #data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 1500) |
 #data = UndersampleData(data_sparse3, max_sample = 1020)
 
-class_population = ClassImbalance(data, plot = False)
+class_population = ClassImbalance(data, plot = True)
+plt.show()
 print(class_population)
 
 
 client = GraknClient(uri=URI)
-session = client.session(keyspace=keyspace)
+session = client.session(keyspace=KEYSPACE)
 
 with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
@@ -569,28 +581,31 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
-train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2, ubuntu_fix= False)
+train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
+                                            train_split = 0.8, validation_split = 0., 
+                                            ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10, #13
-          'num_processing_steps_ge': 10, #13
-          'num_training_iterations': 100, #10000?
-          'learning_rate': 1e-5, #1e-4
+          'num_processing_steps_tr': 5, #13
+          'num_processing_steps_ge': 5, #13
+          'num_training_iterations': 500, #10000?
+          'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
-          'clip': 1e2, #gradient clipping 5
+          'clip': 5, #gradient clipping 5
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"./events/{time.time()}/"
+          'output_dir': f"./events/ssp_2class/{time.time()}/",
+          'save_fle': "ssp_summ.ckpt" 
           }           
 
 
-tr_ge_graphs, training_evals, graphs_enc, tr_input_graphs, tr_target_graphs, feed_dict = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
+ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities

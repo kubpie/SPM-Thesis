@@ -78,12 +78,11 @@ class KGCNLearner:
         tf.set_random_seed(42)
 
         #### TODO: SPLIT INPUT GRAPHS INTO MANAGEABLE BATCHES
-
         # Split input graphs into mini-batches
         #batch_size = 2 # TOTAL number of graphs per batch
         #training_batches = create_batches_from_input(tr_input_graphs, batch_size = batch_size)
         #for tr_input_graphs in training_batches:
-        
+
         # Create placeholders and define tf training
         input_ph, target_ph = create_placeholders(tr_input_graphs, tr_target_graphs)
 
@@ -96,11 +95,12 @@ class KGCNLearner:
         # Loss across processing steps.
         loss_op_tr = sum(loss_ops_tr) / self._num_processing_steps_tr
 
-        tf.summary.scalar('loss_op_tr', loss_op_tr)
+        tf.summary.scalar('loss_op_tr', loss_op_tr) #this should add training loss to a filewriter log
         # Test/generalization loss.
         loss_ops_ge = loss_ops_preexisting_no_penalty(target_ph, output_ops_ge, weighted = weighted) #LOSS FUNCTION
         loss_op_ge = loss_ops_ge[-1]  # Loss from final processing step.
-        tf.summary.scalar('loss_op_ge', loss_op_ge)
+        tf.summary.scalar('loss_op_ge', loss_op_ge) #this should add generalisation loss to a filewriter log
+
 
         # Optimizer
         # TODO: Optimize learning rate?? Adaptive learning_raye\sqrt(time) for example? vars: learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False
@@ -130,11 +130,13 @@ class KGCNLearner:
         sess = tf.Session()
         merged_summaries = tf.summary.merge_all()
 
-        train_writer = None
+        #train_writer = None #turned on the train writer! was None
 
         if self._log_dir is not None:
-            #train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
-            train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
+            print(f'\nFileWriter: {self._log_dir}')
+            train_writer = tf.summary.FileWriter(self._log_dir, sess.graph)
+            #scalar_writer = tf.summary.FileWriter(self._log_dir+'/scalars/',sess.graph)
+            #train_writer = tf.compat.v1.summary.FileWriter(self._log_dir, sess.graph)
         sess.run(tf.global_variables_initializer())
         model_saver = tf.train.Saver()
 
@@ -169,6 +171,7 @@ class KGCNLearner:
                     feed_dict=feed_dict)
 
                 if train_writer is not None:
+                    #print(f'Added summary to writer')
                     train_writer.add_summary(train_values["summary"], iteration)
 
                 feed_dict = create_feed_dict(input_ph, target_ph, ge_input_graphs, ge_target_graphs)
@@ -179,6 +182,7 @@ class KGCNLearner:
                         "outputs": output_ops_ge
                     },
                     feed_dict=feed_dict)
+
                 #print(f'target: {train_values["target"]}') #my add
                 #print(f'output: {train_values["outputs"]}')
                 correct_tr, solved_tr = existence_accuracy(
@@ -207,16 +211,16 @@ class KGCNLearner:
                         "outputs": output_ops_tr
                     },
                     feed_dict=feed_dict)
-                
+
         # Train the model and save it in the end
         # TODO: Could modify saver to save model checkpoint every n-epochs
         if not save_fle.is_dir():
-            model_saver.save(sess, save_fle.as_posix())  #global_step = 
+            model_saver.save(sess, save_fle.as_posix())
             #save_fle.with_suffix('.pbtxt').as_posix() = 
             tf.train.write_graph(sess.graph.as_graph_def(), logdir=self._log_dir, name='graph_model.pbtxt', as_text=True) 
             #print(f'Saved model to {log_dir+save_fle}')
         training_info = logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge
-        return train_values, test_values, training_info, feed_dict
+        return train_values, test_values, training_info#, feed_dict
     
     ###############################
     # VALIDATION WITHOUT TRAINING #

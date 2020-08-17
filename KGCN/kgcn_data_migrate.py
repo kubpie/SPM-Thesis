@@ -7,39 +7,26 @@ Created on Tue Jun  9 12:20:55 2020
 from grakn.client import GraknClient
 import numpy as np
 import pandas as pd
-#import sys
-#sys.path.append(r'C:\Users\kubap\Documents\THESIS\DATA_PREP')
-from mylib.ssp_features import SSPGrad, SSPStat, SSPId
-from mylib.data_prep import LoadData, FeatDuct, FeatBathy, FeatSSPId, FeatSSPOnDepth, UndersampleData
-from mylib.data_analysis import ClassImbalance
-
-from decimal import Decimal
-
-# 1. Insert ENTITIES  
-# 2. Insert RELATIONS
-# 3. In a long run, take a look at tube_network example for concurrent insert
-
-# Query tips:
-# * string-vars need to be put in "apostrophe", numericals don't
-# * mind spaces and semi-colons
-# * input files need to be saved as .csv comma-delimited (not UTF-8 as it gives BOM at the start of the file )
-# * You can create query for ONLY ONE entity/relation at a time to avoid Unique-ID conflicts
-#   while committing the transaction later
-
-
 import os
+import sys
 from pathlib import Path
-PATH = os.getcwd() #+'\data\\'
-path = Path("../"+PATH+"/data/")
-
-Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
-SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+from decimal import Decimal
+from pathlib import Path
+PATH = os.getcwd()
+sys.path.insert(1, PATH + '/mylib/')
+from ssp_features import SSPGrad, SSPStat, SSPId
+from data_prep import LoadData, FeatDuct, FeatBathy, FeatSSPId, FeatSSPOnDepth, UndersampleData
+from data_analysis import ClassImbalance
+path = Path(PATH+"/data/")
+path = str(path)
+Bathy = pd.read_excel(path+"/env.xlsx", sheet_name = "BATHY")
+SSP_Input = pd.read_excel(path+"/env.xlsx", sheet_name = "SSP")
 #SSP_Grad = SSPGrad(SSP_Input, path, save = False
-SSP_Stat = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_STAT")#SSPStat(SSP_Input, path, plot = False, save = False)
-SSP_Prop = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Input, path, plot = False, save = False)
+SSP_Stat = pd.read_excel(path+"/env.xlsx", sheet_name = "SSP_STAT")#SSPStat(SSP_Input, path, plot = False, save = False)
+SSP_Prop = pd.read_excel(path+"/env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Input, path, plot = False, save = False)
 raw_data = LoadData(path)
 ALLDATA = FeatDuct(raw_data, Input_Only = True) #leave only model input
-DATA_COMPLETE = pd.read_csv(path+"data_complete.csv")
+DATA_COMPLETE = pd.read_csv(path+"/data_complete.csv")
 
 
 def build_graph(Inputs, keyspace_name):
@@ -445,11 +432,12 @@ def rel_SSPvecToDepth(SSP_Input):
 #SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
 
 data_pop = ClassImbalance(ALLDATA)
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
-data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000) | (ALLDATA.loc[:, 'num_rays'] == 1500)] #3classes
+#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
+#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000) | (ALLDATA.loc[:, 'num_rays'] == 1500)] #3classes
 #data = UndersampleData(data_sparse2, max_sample = 2000)
-data = UndersampleData(data_sparse3, max_sample = 1020)
+#data = UndersampleData(data_sparse3, max_sample = 1020)
 # Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
+data = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 2500)] 
 ducts = np.zeros([np.size(data,0),3],int)
 i = 0
 for ssp,dmax,idx in zip(data['profile'],data['water_depth_max'], data.index):
@@ -545,7 +533,7 @@ Relations = [
 ]
 """
 
-KEYSPACE = "ssp_3class"
+KEYSPACE = "kgcn500n2500"
 
 if __name__ == "__main__":
     build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 

@@ -63,10 +63,10 @@ TYPES_AND_ROLES_TO_OBFUSCATE = {'candidate-diagnosis': 'diagnosis',
                                 'candidate-diagnosed-disease': 'diagnosed-disease'}
 
 
-def diagnosis_example(num_graphs=10, #100
-                      num_processing_steps_tr=10,
-                      num_processing_steps_ge=10,
-                      num_training_iterations=400, #1000
+def diagnosis_example(num_graphs=200, #100
+                      num_processing_steps_tr=5,
+                      num_processing_steps_ge=5,
+                      num_training_iterations=1000, #1000
                       keyspace=KEYSPACE, uri=URI):
     """
     Run the diagnosis example from start to finish, including traceably ingesting predictions back into Grakn
@@ -84,8 +84,8 @@ def diagnosis_example(num_graphs=10, #100
     """
 
     tr_ge_split = int(num_graphs*0.5)
-
-    #generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri)
+    #TODO: #comment to run without creating new graphs
+    #generate_example_graphs(num_graphs, keyspace=keyspace, uri=uri) #comment out this
 
     client = GraknClient(uri=uri)
     session = client.session(keyspace=keyspace)
@@ -104,19 +104,21 @@ def diagnosis_example(num_graphs=10, #100
         print(f'Found edge types: {edge_types}')
         
     kgcn_vars = {
-    'num_processing_steps_tr': 10,
-    'num_processing_steps_ge': 10,
-    'num_training_iterations': 300,
+    'num_processing_steps_tr': 5,
+    'num_processing_steps_ge': 5,
+    'num_training_iterations': 1000,
     'learning_rate': 1e-2, #added to tube
     'latent_size': 16, #MLP param
-    'num_layers': 3, #MLP param
+    'num_layers': 2, #MLP param
     'weighted': False, #loss function modification
     'log_every_epochs': 50, #logging of the results
+    'clip': 5, #gradient clipping 5
     'node_types': node_types,
     'edge_types': edge_types,
     'continuous_attributes': CONTINUOUS_ATTRIBUTES,
     'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-    'output_dir': f"./events/{time.time()}/"
+    'output_dir': f"./events/diagnosis/{time.time()}/",
+    'save_fle': "diag_summ.ckpt"
     }   
     """
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs,
@@ -133,11 +135,10 @@ def diagnosis_example(num_graphs=10, #100
                                                  save_fle = save_fle,
                                                  reload_fle = "")
     """
-    ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs = pipeline(graphs = train_graphs,             
+
+    ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = train_graphs,             
                                                 tr_ge_split = tr_ge_split,                         
                                                 do_test = False,
-                                                save_fle = 'diag.txt',
-                                                reload_fle = "",
                                                 **kgcn_vars)
     
     #with session.transaction().write() as tx:
@@ -146,7 +147,7 @@ def diagnosis_example(num_graphs=10, #100
     session.close()
     client.close()
 
-    return ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs
+    return ge_graphs, solveds_tr, solveds_ge
 
 
 def create_concept_graphs(example_indices, grakn_session):
