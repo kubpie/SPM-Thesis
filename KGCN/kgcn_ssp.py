@@ -550,8 +550,9 @@ from data_analysis import ClassImbalance
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
 # === 2 classes of 2000 sample 500/2500 ==== 
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 300)
+data = ALLDATA
+#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+#data = UndersampleData(data_sparse2, max_sample = 300)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
 #data = data[:20]
 
