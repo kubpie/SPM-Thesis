@@ -95,16 +95,7 @@ CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc}
                           #duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
-"""
-CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
-                         'num_rays': (500, 15000), 
-                         'slope': (-2, 2), 
-                         'bottom_type': (1,2),
-                         'length': (0, 44000),
-                         'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179),
-                         'number_of_ducts': (1,2)}
-"""
+
 CONTINUOUS_ATTRIBUTES = {'depth': (0, max(data['water_depth_max'])), 
                          'num_rays': (min(data['num_rays']), max(data['num_rays'])), 
                          'slope': (-2, 2), 
