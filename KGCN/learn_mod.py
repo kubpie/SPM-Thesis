@@ -105,7 +105,7 @@ class KGCNLearner:
         # Optimizer
         # TODO: Optimize learning rate?? Adaptive learning_raye\sqrt(time) for example? vars: learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False
         # https://www.tensorflow.org/api_docs/python/tf/compat/v1/train/AdamOptimizer
-        optimizer = tf.train.AdamOptimizer(learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate, beta1 = 0.9, beta2 = 0.999)
         gradients, variables = zip(*optimizer.compute_gradients(loss_op_tr))
 
         for grad, var in zip(gradients, variables):

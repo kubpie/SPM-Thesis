@@ -67,6 +67,8 @@ def loss_ops_preexisting_no_penalty(target_op, output_ops, weighted=False):
             tf.math.not_equal(target_op.nodes, tf.constant(np.array([1., 0., 0.]), dtype=tf.float32)), axis=1)
         target_nodes = tf.boolean_mask(target_op.nodes, node_mask_op)
         output_nodes = tf.boolean_mask(output_op.nodes, node_mask_op)
+        print(f'Target nodes: {target_nodes}') #my add
+        print(f'Output nodes: {output_nodes}') #my add
 
         if weighted:
             label_prevalence = tf.reduce_sum(target_nodes, axis=0)
