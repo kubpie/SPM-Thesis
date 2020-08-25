@@ -590,7 +590,7 @@ kgcn_vars = {
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
           'output_dir': f"./events/ssp_2class/{time.time()}/",
-          'save_fle': "ssp_summ.ckpt" 
+          'save_fle': "summary.ckpt" 
           }           
 
 
