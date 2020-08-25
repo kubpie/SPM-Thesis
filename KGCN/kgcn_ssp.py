@@ -63,6 +63,8 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filter out mpl warnings
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
+### DEFINE GLOBAL VARIABLES
+
 PATH = os.getcwd() #+'\data\\'
 DATAPATH = Path(PATH+"/data/")
 ALLDATA = LoadData(DATAPATH)
@@ -72,7 +74,7 @@ KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_s
 URI = "localhost:48555"
 SAVEPATH = DATAPATH + "/nx_500n2500_bias/" #nx_500n2500
 
-# DATA SELECTION FOR GRAKN TESTING
+### DATA SELECTION FOR GRAKN TESTING
 
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
