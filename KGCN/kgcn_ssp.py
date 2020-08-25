@@ -50,11 +50,11 @@ DATAPATH = Path(PATH+"/data/")
 from data_prep import LoadData, FeatDuct, UndersampleData
 ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
+PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/nx_fullschema/" #nx_500n2500
+SAVEPATH = PATH + "/nx_500n2500/" #nx_500n2500
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -86,7 +86,7 @@ CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500),
                          'bottom_type': (1,2),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179)}
+                         'grad': (-0.290954924,0.040374179),
                          'number_of_ducts': (1,2)}
 """
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
@@ -549,21 +549,16 @@ from data_analysis import ClassImbalance
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
-# === 2 classes of 2000 sample 500/1000 ==== 
+# === 2 classes of 2000 sample 500/2500 ==== 
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
 data = UndersampleData(data_sparse2, max_sample = 300)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
 #data = data[:20]
 
-# === 3 classes of 1020 samples: 500/6000/15000 ===== 
-#keyspace = "ssp_3class"
-#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 1500) |
-#data = UndersampleData(data_sparse3, max_sample = 1020)
 
 class_population = ClassImbalance(data, plot = True)
-plt.show()
+#plt.show()
 print(class_population)
-
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
