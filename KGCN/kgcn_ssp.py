@@ -52,9 +52,9 @@ ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
-KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn_500n2500" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/data/nx_fullschema/" #nx_500n2500
+SAVEPATH = PATH + "/data/nx_500n2500_bias/" #/data/nx_500n1000/ #nx_500n2500
 
 # DATA SELECTION FOR GRAKN TESTING
 from data_analysis import ClassImbalance
@@ -63,12 +63,12 @@ from data_analysis import ClassImbalance
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
 # === 2 classes of 2000 sample 500/2500 ==== 
-data = ALLDATA
-#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-#data = UndersampleData(data_sparse2, max_sample = 300)
+#data = ALLDATA
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data = UndersampleData(data_select, max_sample = 300)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:20]
-
+data = data[:330]
+#data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
 print(class_population)
@@ -488,7 +488,7 @@ def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
         example_idx_tr = ubuntu_rand_fix(savepath)
-    #example_idx_val = X_val.index.tolist()
+    #example_idx_: 5val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
     print(f'\nCREATING {num_tr_graphs} TRAINING\TEST GRAPHS')
@@ -582,7 +582,7 @@ kgcn_vars = {
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
           'output_dir': f"./events/ssp_2class/{time.time()}/",
-          'save_fle': "ssp_summ.ckpt" 
+          'save_fle': "training_summary.ckpt" 
           }           
 
 
