@@ -95,7 +95,7 @@ CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200),
                          'bottom_type': (1,2),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179)}
+                         'grad': (-0.290954924,0.040374179),
                          'number_of_ducts': (1,2)}
 
 TYPES_TO_IGNORE = ['candidate-convergence', 'scenario_id', 'probability_exists', 'probability_nonexists', 'probability_preexists']
@@ -550,10 +550,9 @@ from data_analysis import ClassImbalance
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 
 # === 2 classes of 2000 sample 500/1000 ==== 
-#keyspace = "ssp_2class"
 data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 2000)
-data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
+data = UndersampleData(data_sparse2, max_sample = 300)
+#data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
 #data = data[:20]
 
 # === 3 classes of 1020 samples: 500/6000/15000 ===== 
@@ -602,7 +601,7 @@ kgcn_vars = {
           }           
 
 
-ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
