@@ -75,20 +75,10 @@ loc = np.unique(locations).tolist()
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc}
-                          #duct_type': ["NotDuct","SLD","DC"]}
+
 # Continuous Attribute types and their min and max values
-"""
-CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
-                         'num_rays': (500, 15000), 
-                         'slope': (-2, 2), 
-                         'bottom_type': (1,2),
-                         'length': (0, 44000),
-                         'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179),
-                         'number_of_ducts': (1,2)}
-"""
-CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
-                         'num_rays': (500, 2500), 
+CONTINUOUS_ATTRIBUTES = {'depth': (0, max(data['water_depth_max'])), 
+                         'num_rays': (min(data['num_rays']), max(data['num_rays'])), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
@@ -129,24 +119,6 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
 
         concept_maps = sampler(grakn_transaction.query(query, infer=infer))
         concept_dicts = [concept_dict_from_concept_map(concept_map) for concept_map in concept_maps]
-        #TODO: Implement removal of NotDuct cases at NetworkX level instead of query workaround
-        """
-        #print(concept_dicts)
-        notaduct = 0
-        for cd in concept_dicts:
-            print(cd)
-            for variable, thing in cd.items(): #key, value
-                if variable == 'gd' and thing.value == 0.0:#and '0.0' in value:
-                    print(variable, thing.value)
-                    #cd.pop('gd')
-                    #cd.pop('dct')
-                    #cd.pop('SSP-channel')
-                    #cd.pop()
-                    #val = 'grad' in cd['gd']
-                    #print(val)
-                    #if '0.0' in value:
-                    #    print('asdasda')
-        """
         answer_concept_graphs = []
         for concept_dict in concept_dicts:
             try:
@@ -557,9 +529,9 @@ class_population = ClassImbalance(data, plot = True)
 #plt.show()
 print(class_population)
 
-client = GraknClient(uri=URI)
-session = client.session(keyspace=KEYSPACE)
-
+client = None
+session = None
+"""
 with session.transaction().read() as tx:
         # Change the terminology here onwards from thing -> node and role -> edge
         node_types = get_thing_types(tx)
@@ -568,6 +540,9 @@ with session.transaction().read() as tx:
         [edge_types.remove(el) for el in ROLES_TO_IGNORE]
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
+"""
+node_types = ['SSP-vec', 'bottom-segment', 'duct', 'ray-input', 'source', 'sound-propagation-scenario', 'SSP_value', 'depth', 'location', 'season', 'grad', 'num_rays', 'length', 'slope', 'bottom_type', 'number_of_ducts', 'SSP-channel', 'convergence', 'src-position', 'bathymetry', 'sound-speed']
+edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bathy', 'converged_scenario', 'defined_by_bathy', 'defined_by_src', 'minimum_resolution', 'define_src', 'defined_by_SSP']
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
                                             train_split = 0.8, validation_split = 0., 
@@ -589,7 +564,7 @@ kgcn_vars = {
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
           'output_dir': f"./events/ssp_2class/{time.time()}/",
-          'save_fle': "summary.ckpt" 
+          'save_fle': "training_summary.ckpt" 
           }           
 
 
