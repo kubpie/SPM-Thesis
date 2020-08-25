@@ -25,8 +25,8 @@ from pathlib import Path
 
 #from kglib.kgcn.learn.feed import create_placeholders, create_feed_dict, make_all_runnable_in_session
 #from kglib.kgcn.learn.loss import loss_ops_preexisting_no_penalty
-from feed_mod import create_placeholders, create_feed_dict, create_batches_from_input, make_all_runnable_in_session
-from loss_mod import loss_ops_preexisting_no_penalty, loss_ops_from_difference
+from KGCN.feed_mod import create_placeholders, create_feed_dict, create_batches_from_input, make_all_runnable_in_session
+from KGCN.loss_mod import loss_ops_preexisting_no_penalty, loss_ops_from_difference
 from kglib.kgcn.learn.metrics import existence_accuracy
 
 from graph_nets import utils_np
