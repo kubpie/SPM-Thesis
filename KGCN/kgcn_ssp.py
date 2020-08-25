@@ -4,7 +4,6 @@ Created on Fri Jun 12 14:50:54 2020
 
 @author: kubap
 """
-
 import copy
 import inspect
 import time
@@ -13,7 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 import pandas as pd
-
+import os 
+import sys
 from grakn.client import GraknClient
 from KGCN.pipeline_mod import pipeline
 #from kglib.kgcn.pipeline.pipeline import pipeline
@@ -24,27 +24,45 @@ from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing
 from kglib.utils.graph.thing.queries_to_graph import combine_2_graphs, combine_n_graphs, concept_dict_from_concept_map
 from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
-
 from sklearn.model_selection import train_test_split
+from pathlib import Path
+from mylib.data_prep import LoadData, FeatDuct, UndersampleData
+from mylib.data_analysis import ClassImbalance
 
+### TENSORFLOW CONFIGURATION
 import tensorflow as tf
-config = tf.ConfigProto()
-config.gpu_options.allow_growth=True
-sess = tf.Session(config=config)
-### Test tf for GPU acceleration
-# TODO: Issues with GPU acceleration
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-tf.reset_default_graph() #fix bugs with tensor of uknonw size
+print("Tensorflow version " + tf.__version__)
 
+# Choose Config
+use_tpu = False #@param {type:"boolean"} # TPU is not supported on TF 1.14
+use_gpu = True 
+
+# TPU Config
+if use_tpu:
+  assert 'COLAB_TPU_ADDR' in os.environ, 'Missing TPU; did you request a TPU in Notebook Settings?'
+  if 'COLAB_TPU_ADDR' in os.environ:
+    TF_MASTER = 'grpc://{}'.format(os.environ['COLAB_TPU_ADDR']) #tpu address
+  else:
+    TF_MASTER=''
+
+  resolver = tf.distribute.cluster_resolver.TPUClusterResolver(TF_MASTER)
+  tf.config.experimental_connect_to_cluster(resolver)
+  tf.tpu.experimental.initialize_tpu_system(resolver)
+  strategy = tf.distribute.experimental.TPUStrategy(resolver)
+
+# GPU Config
+if use_gpu:
+  config = tf.ConfigProto()
+  config.gpu_options.allow_growth=True
+  sess = tf.Session(config=config)
+  print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU'))) # Test tf for GPU acceleration
+
+# Turn off some TF1 warnings and old packages deprecieations
 import warnings
 import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation) #filter out mpl warnings
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.WARN) #filter out annoying messages about name format with ':'
 
-import os
-import sys
-from pathlib import Path
-from mylib.data_prep import LoadData, FeatDuct, UndersampleData
 PATH = os.getcwd() #+'\data\\'
 DATAPATH = Path(PATH+"/data/")
 ALLDATA = LoadData(DATAPATH)
@@ -52,7 +70,23 @@ ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = DATAPATH + "/nx_500n2500/" #nx_500n2500
+SAVEPATH = DATAPATH + "/nx_500n2500_bias/" #nx_500n2500
+
+# DATA SELECTION FOR GRAKN TESTING
+
+#data = UndersampleData(ALLDATA, max_sample = 100)
+#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
+
+# === 2 classes of 2000 sample 500/2500 ==== 
+#data = ALLDATA
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data = UndersampleData(data_select, max_sample = 300)
+#data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
+data = data[:330]
+data = data_select
+class_population = ClassImbalance(data, plot = True)
+#plt.show()
+print(class_population)
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -60,7 +94,6 @@ PREEXISTS = 0
 CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
-
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -142,7 +175,6 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
                            f'could not be created, since none of these queries returned results')
 
     concept_graph = combine_n_graphs(query_concept_graphs)
-    #TODO: Remove NotDuct result from NetworkX graph completely: entity duct, attr grad 0, depth 0
      
     
     return concept_graph
@@ -510,24 +542,7 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     validation_evals = [solveds_tr, solveds_ge] 
     return ge_graphs, validation_evals
 """
-##### RUN THE PIPELINE  #####  
-
-# DATA SELECTION FOR GRAKN TESTING
-from data_analysis import ClassImbalance
-
-#data = UndersampleData(ALLDATA, max_sample = 100)
-#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
-
-# === 2 classes of 2000 sample 500/2500 ==== 
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 300)
-#data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:20]
-
-
-class_population = ClassImbalance(data, plot = True)
-#plt.show()
-print(class_population)
+##### RUN THE TRAINING IN COLAB W/O GRAKN CONNECTION  #####  
 
 client = None
 session = None
@@ -545,14 +560,14 @@ node_types = ['SSP-vec', 'bottom-segment', 'duct', 'ray-input', 'source', 'sound
 edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bathy', 'converged_scenario', 'defined_by_bathy', 'defined_by_src', 'minimum_resolution', 'define_src', 'defined_by_SSP']
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
-                                            train_split = 0.8, validation_split = 0., 
+                                            train_split = 0.7, validation_split = 0., 
                                             ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 5, #13
-          'num_processing_steps_ge': 5, #13
-          'num_training_iterations': 500, #10000?
+          'num_processing_steps_tr': 15, #13
+          'num_processing_steps_ge': 15, #13
+          'num_training_iterations': 5000, #10000?
           'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
@@ -568,13 +583,13 @@ kgcn_vars = {
           }           
 
 
-#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
     
-session.close()
-client.close()
+#session.close()
+#client.close()
 
 #val_ge_graphs, validation_evals = go_train(val_graphs, val_ge_split, reload_fle = "test_model.ckpt", **kgcn_vars)    
 # Close transaction, session and client due to write query
