@@ -432,7 +432,6 @@ def write_predictions_to_grakn(graphs, tx, commit = True):
 
 import re
 def ubuntu_rand_fix(savepath):
-    #savepath = PATH + '/networkx/'
     graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
     example_idx = []
     for gfile in graphfiles:
@@ -572,7 +571,7 @@ with session.transaction().read() as tx:
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
                                             train_split = 0.8, validation_split = 0., 
-                                            ubuntu_fix= False, savepath = SAVEPATH)
+                                            ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
