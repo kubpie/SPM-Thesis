@@ -87,7 +87,7 @@ CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
                          'grad': (-0.290954924,0.040374179)}
-                         #'number_of_ducts': (0,2)}
+                         'number_of_ducts': (1,2)}
 """
 CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
                          'num_rays': (500, 2500), 
@@ -96,7 +96,7 @@ CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
                          'grad': (-0.290954924,0.040374179)}
-                         #'number_of_ducts': (0,2)}
+                         'number_of_ducts': (1,2)}
 
 TYPES_TO_IGNORE = ['candidate-convergence', 'scenario_id', 'probability_exists', 'probability_nonexists', 'probability_preexists']
 ROLES_TO_IGNORE = ['candidate_resolution', 'candidate_scenario']
@@ -206,7 +206,7 @@ def create_concept_graphs(example_indices, grakn_session, savepath):
     graphs = []
     infer = True
     total = len(example_indices)
-    
+    # finds scenarios idx without ducts
     not_duct_idx = []
     for idx, sld, dc in zip(range(len(PROCESSED_DATA)),PROCESSED_DATA['SLD_depth'],PROCESSED_DATA['DC_axis']):
         if np.isnan(sld) and np.isnan(dc):
@@ -259,10 +259,9 @@ def get_query_handles(scenario_idx, not_duct_idx):
     """
     # === Query variables ===
     conv, scn, ray, nray, src, dsrc, seg, dseg, l, s, srcp, bathy, bt, ssp, loc, ses,\
-    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct = 'conv','scn','ray', 'nray',\
+    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct, nod = 'conv','scn','ray', 'nray',\
     'src', 'dsrc', 'seg', 'dseg','l','s','srcp','bathy','bt','ssp','loc','ses',\
-    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct'
-    # nod ,'nod'
+    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct','nod'
     # dt, 'dt'
     
     
@@ -272,7 +271,6 @@ def get_query_handles(scenario_idx, not_duct_idx):
            '''$ray isa ray-input, has num_rays $nray;
            $conv(candidate_scenario: $scn, candidate_resolution: $ray) isa candidate-convergence; 
            get;''')    
-          # {$nray == 500;} or {$nray == 1000;}; -> takes too much time to do it like that, better limit at data migration
  
     candidate_convergence_query_graph = (QueryGraph()
                                        .add_vars([conv], CANDIDATE)
@@ -297,12 +295,11 @@ def get_query_handles(scenario_idx, not_duct_idx):
             $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
             $dct isa duct, has depth $ddct, has grad $gd;
             $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
-            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel;
+            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod;
             $sspval has depth $dssp;
             {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
             get;'''
             )
-        #isa SSP-channel, has number_of_ducts $nod; 
         # has duct_type $dt,
         
         convergence_query_full_graph = (QueryGraph()
@@ -310,7 +307,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
                                             l, s, srcp, bathy, bt, ssp, loc, ses, \
                                             sspval, dsspmax, speed, dssp, dct, ddct,\
-                                            gd, duct], PREEXISTS) #dt, nod
+                                            gd, duct, nod], PREEXISTS) #dt
                                  .add_has_edge(ray, nray, PREEXISTS)
                                  .add_has_edge(src, dsrc, PREEXISTS)
                                  .add_has_edge(seg, dseg, PREEXISTS)
@@ -324,7 +321,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  #.add_has_edge(dct, dt, PREEXISTS)
                                  .add_has_edge(dct, gd, PREEXISTS)
                                  .add_has_edge(bathy, bt, PREEXISTS)
-                                 #.add_has_edge(duct, nod, PREEXISTS)
+                                 .add_has_edge(duct, nod, PREEXISTS)
                                  .add_has_edge(sspval, dssp, PREEXISTS)
                                  .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
                                  .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)

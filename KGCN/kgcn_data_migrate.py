@@ -435,8 +435,8 @@ def rel_SSPvecToDepth(SSP_Input):
 #data = UndersampleData(data_sparse2, max_sample = 2000)
 #data = UndersampleData(data_sparse3, max_sample = 1020)
 
-#data = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 2500)] 
-data = ALLDATA
+data = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 2500)] 
+#data = ALLDATA
 ###########################################
 ###     Build input data dictionaries   ###
 ###########################################
@@ -519,7 +519,7 @@ Relations = [
 ]
 """
 
-KEYSPACE = "kgcn_schema_full"
+KEYSPACE = "kgcn_500n2500"
 
 if __name__ == "__main__":
     build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 
