@@ -178,7 +178,7 @@ def FeatSSPVec(data, path):
 
 def FeatSSPId(data, path, src_cond):
     
-    ssp_prop = pd.read_excel(str(path)+"\env.xlsx",  sheet_name = "SSP_PROP")
+    ssp_prop = pd.read_excel(str(path)+"/env.xlsx",  sheet_name = "SSP_PROP")
     # beacause 0 is a meaningful value, to allocate space, use an array of NaNs
     dat = np.empty([len(data), len(ssp_prop.columns)])
     dat[:,:] = np.nan

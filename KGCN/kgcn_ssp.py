@@ -52,9 +52,9 @@ ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
 
-KEYSPACE =  "kgcn500n2500" #"kgcn_schema_full" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/nx_2class_500n2500/"
+SAVEPATH = PATH + "/nx_fullschema/" #nx_500n2500
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
