@@ -54,7 +54,24 @@ PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/nx_500n2500/" #nx_500n2500
+SAVEPATH = PATH + "/data/nx_fullschema/" #nx_500n2500
+
+# DATA SELECTION FOR GRAKN TESTING
+from data_analysis import ClassImbalance
+
+#data = UndersampleData(ALLDATA, max_sample = 100)
+#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
+
+# === 2 classes of 2000 sample 500/2500 ==== 
+data = ALLDATA
+#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+#data = UndersampleData(data_sparse2, max_sample = 300)
+#data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
+#data = data[:20]
+
+class_population = ClassImbalance(data, plot = True)
+#plt.show()
+print(class_population)
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -62,7 +79,6 @@ PREEXISTS = 0
 CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
-
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -89,8 +105,8 @@ CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500),
                          'grad': (-0.290954924,0.040374179),
                          'number_of_ducts': (1,2)}
 """
-CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
-                         'num_rays': (500, 2500), 
+CONTINUOUS_ATTRIBUTES = {'depth': (0, max(data['water_depth_max'])), 
+                         'num_rays': (min(data['num_rays']), max(data['num_rays'])), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
@@ -542,24 +558,6 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     return ge_graphs, validation_evals
 """
 ##### RUN THE PIPELINE  #####  
-
-# DATA SELECTION FOR GRAKN TESTING
-from data_analysis import ClassImbalance
-
-#data = UndersampleData(ALLDATA, max_sample = 100)
-#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
-
-# === 2 classes of 2000 sample 500/2500 ==== 
-data = ALLDATA
-#data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-#data = UndersampleData(data_sparse2, max_sample = 300)
-#data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:20]
-
-
-class_population = ClassImbalance(data, plot = True)
-#plt.show()
-print(class_population)
 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
