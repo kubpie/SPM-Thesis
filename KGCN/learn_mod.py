@@ -28,7 +28,7 @@ from pathlib import Path
 from feed_mod import create_placeholders, create_feed_dict, create_batches_from_input, make_all_runnable_in_session
 from loss_mod import loss_ops_preexisting_no_penalty, loss_ops_from_difference
 from kglib.kgcn.learn.metrics import existence_accuracy
-from average_gradients import calc_average_grad
+#from average_gradients import calc_average_grad
 from graph_nets import utils_np
 from graph_nets.graphs import GraphsTuple
 

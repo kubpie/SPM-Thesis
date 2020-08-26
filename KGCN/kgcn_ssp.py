@@ -86,7 +86,7 @@ data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_r
 data = UndersampleData(data_select, max_sample = 300)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
 data = data[:330]
-data = data_select
+#data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
 print(class_population)
@@ -564,12 +564,12 @@ edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bat
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
                                             train_split = 0.7, validation_split = 0., 
-                                            ubuntu_fix= True, savepath = SAVEPATH)
+                                            ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 15, #13
-          'num_processing_steps_ge': 15, #13
+          'num_processing_steps_tr': 5, #13
+          'num_processing_steps_ge': 5, #13
           'num_training_iterations': 5000, #10000?
           'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
