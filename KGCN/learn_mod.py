@@ -209,11 +209,11 @@ class KGCNLearner:
                     feed_dict=feed_dict)
 
                 #print(f'target: {train_values["target"]}') #my add
-                #print(f'output: {train_values["outputs"]}')
+                #print(f'output: {train_values["outputs"][-1]}')
                 correct_tr, solved_tr = existence_accuracy(
-                    train_values["target"], train_values["outputs"][-1], use_edges=True)
+                    train_values["target"], train_values["outputs"][-1], use_edges=False)
                 correct_ge, solved_ge = existence_accuracy(
-                    test_values["target"], test_values["outputs"][-1], use_edges=True)
+                    test_values["target"], test_values["outputs"][-1], use_edges=False)
 
                 elapsed = time.time() - start_time
                 losses_tr.append(train_values["loss"])
