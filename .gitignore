@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 
 # TF output files
-#events/
+events/
 
 # Saved KGCN models
 kgcnmodels/
