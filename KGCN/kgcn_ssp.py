@@ -568,9 +568,9 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
-          'num_processing_steps_tr': 5, #13
-          'num_processing_steps_ge': 5, #13
-          'num_training_iterations': 500, #10000?
+          'num_processing_steps_tr': 15, #13
+          'num_processing_steps_ge': 15, #13
+          'num_training_iterations': 5000, #10000?
           'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 2, #MLP param 2 (try deeper configs)
