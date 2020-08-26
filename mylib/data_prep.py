@@ -16,8 +16,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 #from imblearn.over_sampling import SMOTENC #TODO: problems with import six in colab
 
-from mylib.ssp_features import SSPStat
-from mylib.data_analysis import ClassImbalance
+from ssp_features import SSPStat
+from data_analysis import ClassImbalance
 """ 
 ### DATA PREPARATION & FEATURE VECTOR CREATION LIBRARY ###
 Contents:
