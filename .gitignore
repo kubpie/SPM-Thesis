@@ -10,7 +10,7 @@ kgcnmodels/
 
 # Saved NetworkX graphs
 networkx/
-#nx_*/
+nx_*/
 
 # XGB results
 XGB/results/
