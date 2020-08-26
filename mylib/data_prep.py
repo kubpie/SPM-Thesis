@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
-from imblearn.over_sampling import SMOTENC
+#from imblearn.over_sampling import SMOTENC #TODO: problems with import six in colab
 
 from mylib.ssp_features import SSPStat
 from mylib.data_analysis import ClassImbalance
