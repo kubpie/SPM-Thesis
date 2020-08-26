@@ -52,7 +52,7 @@ ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
-KEYSPACE =  "kgcn_500n1000" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn_500n1000" #"kgcn500n2500"
 URI = "localhost:48555"
 SAVEPATH = PATH + "/data/nx_500n1000/" #/data/nx_500n1000/ #nx_500n2500
 
