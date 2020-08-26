@@ -15,7 +15,7 @@ import pandas as pd
 import os 
 import sys
 from grakn.client import GraknClient
-from KGCN.pipeline_mod import pipeline
+from pipeline_mod import pipeline
 #from kglib.kgcn.pipeline.pipeline import pipeline
 from kglib.utils.graph.iterate import multidigraph_data_iterator
 from kglib.utils.graph.query.query_graph import QueryGraph
@@ -26,8 +26,8 @@ from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 from pathlib import Path
-from mylib.data_prep import LoadData, FeatDuct, UndersampleData
-from mylib.data_analysis import ClassImbalance
+from data_prep import LoadData, FeatDuct, UndersampleData
+from data_analysis import ClassImbalance
 
 ### TENSORFLOW CONFIGURATION
 import tensorflow as tf
