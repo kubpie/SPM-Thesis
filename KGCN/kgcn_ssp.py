@@ -581,7 +581,7 @@ kgcn_vars = {
           'edge_types': edge_types,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"events/ssp_2class/{time.time()}/",
+          'output_dir': f"./events/ssp_2class/{time.time()}/",
           'save_fle': "training_summary.ckpt" 
           }           
 
