@@ -328,7 +328,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  .add_has_edge(bathy, bt, PREEXISTS)
                                  .add_has_edge(duct, nod, PREEXISTS)
                                  .add_has_edge(sspval, dssp, PREEXISTS)
-                                 .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
+                                 .add_role_edge(conv, scn, 'converged_scenario', TO_INFER)
                                  .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
                                  .add_role_edge(srcp, scn, 'defined_by_src', PREEXISTS)
                                  .add_role_edge(srcp, src, 'define_src', PREEXISTS)
