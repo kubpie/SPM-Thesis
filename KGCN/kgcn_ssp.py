@@ -26,6 +26,8 @@ from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
 from sklearn.model_selection import train_test_split
 from pathlib import Path
+PATH = os.getcwd() #+'\data\\'
+sys.path.insert(1, PATH + '/mylib/')
 from data_prep import LoadData, FeatDuct, UndersampleData
 from data_analysis import ClassImbalance
 
