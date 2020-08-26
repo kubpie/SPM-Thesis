@@ -54,7 +54,7 @@ PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
 KEYSPACE =  "kgcn_500n1000" #"kgcn500n2500"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/data/nx_500n1000/" #/data/nx_500n1000/ #nx_500n2500
+SAVEPATH = PATH + "/data/nx_500n2500_bias/" #/data/nx_500n1000/ #nx_500n2500
 
 # DATA SELECTION FOR GRAKN TESTING
 from data_analysis import ClassImbalance
@@ -64,11 +64,11 @@ from data_analysis import ClassImbalance
 
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
-data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
-#data = UndersampleData(data_select, max_sample = 300)
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data = UndersampleData(data_select, max_sample = 300)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:330]
-data = data_select
+data = data[:330]
+#data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
 print(class_population)
@@ -586,7 +586,7 @@ kgcn_vars = {
           }           
 
 
-#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
