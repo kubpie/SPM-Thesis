@@ -564,7 +564,7 @@ edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bat
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
                                             train_split = 0.7, validation_split = 0., 
-                                            ubuntu_fix= False, savepath = SAVEPATH)
+                                            ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
 
 kgcn_vars = {
