@@ -74,13 +74,12 @@ ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = DATAPATH + "/nx_500n2500_bias/" #nx_500n2500
+SAVEPATH = str(DATAPATH) + "/nx_500n2500_bias/" #nx_500n2500
 
 ### DATA SELECTION FOR GRAKN TESTING
 
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
-
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
 data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
