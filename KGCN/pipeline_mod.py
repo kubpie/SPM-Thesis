@@ -49,6 +49,7 @@ def pipeline(graphs,
              attr_embedding_dim=6,  
              edge_output_size=3,    #TODO!
              node_output_size=3,    #TODO!
+             global_output_size=3,
              output_dir=None,
              do_test=False,
              clip = 5.0,
@@ -91,6 +92,7 @@ def pipeline(graphs,
                 role_embedder,
                 edge_output_size=edge_output_size,
                 node_output_size=node_output_size,
+                global_output_size=global_output_size,
                 latent_size=latent_size, #MLP parameters
                 num_layers=num_layers)
 
