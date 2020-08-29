@@ -23,7 +23,7 @@ from pathlib import Path
 from graph_nets.utils_np import graphs_tuple_to_networkxs
 #from learn_mod_try import KGCNLearner
 from learn_mod import KGCNLearner
-from kglib.kgcn.models.core import softmax, KGCN
+from core_mod import softmax, KGCN
 from kglib.kgcn.models.embedding import ThingEmbedder, RoleEmbedder
 from kglib.kgcn.pipeline.encode import encode_types, create_input_graph, create_target_graph, encode_values
 from kglib.kgcn.pipeline.utils import apply_logits_to_graphs, duplicate_edges_in_reverse
