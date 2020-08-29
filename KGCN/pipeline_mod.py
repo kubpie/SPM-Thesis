@@ -124,7 +124,8 @@ def pipeline(graphs,
     #Turned off plotting to speed up the runs
     plot_across_training(*tr_info, output_file=f'{output_dir}/learning.png')
     plot_predictions(graphs[tr_ge_split:], test_values, num_processing_steps_ge, output_file=f'{output_dir}/graph.png')
-
+    plt.show()
+    
     logit_graphs = graphs_tuple_to_networkxs(test_values["outputs"][-1])
 
     indexed_ge_graphs = indexed_graphs[tr_ge_split:]
