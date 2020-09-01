@@ -68,7 +68,7 @@ data = UndersampleData(data_select, max_sample = 1000)
 data = data[:1010]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
-plt.show()
+#plt.show()
 print(class_population)
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
@@ -603,7 +603,7 @@ kgcn_vars = {
           }           
 
 
-ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
