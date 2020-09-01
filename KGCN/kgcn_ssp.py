@@ -16,11 +16,9 @@ import pandas as pd
 
 from grakn.client import GraknClient
 from pipeline_mod import pipeline
-#from kglib.kgcn.pipeline.pipeline import pipeline
 from kglib.utils.graph.iterate import multidigraph_data_iterator
 from kglib.utils.graph.query.query_graph import QueryGraph
 from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing in vehicle
-#from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
 from kglib.utils.graph.thing.queries_to_graph import combine_2_graphs, combine_n_graphs, concept_dict_from_concept_map
 from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
