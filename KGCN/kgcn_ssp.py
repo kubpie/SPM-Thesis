@@ -82,14 +82,14 @@ SAVEPATH = str(DATAPATH) + "/nx_fullschema/" #nx_500n2500
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 # === 2 classes of 2000 sample 500/2500 ==== 
 data = ALLDATA
-#data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-#data = UndersampleData(data_select, max_sample = 2000)
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data = UndersampleData(data_select, max_sample = 1000)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:310]
+data = data[:1010]
 #data = data_select
-#class_population = ClassImbalance(data, plot = True)
-#plt.show()
-#print(class_population)
+class_population = ClassImbalance(data, plot = True)
+plt.show()
+print(class_population)
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -566,24 +566,44 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
                                             train_split = 0.7, validation_split = 0., 
                                             ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
-
+        
+edge_opt = {'use_edges': False, #False
+'use_receiver_nodes': True,
+'use_sender_nodes': True,
+'use_globals': True
+}
+node_opt = {'use_sent_edges': False, #False
+    'use_received_edges': True, #False
+    'use_nodes': True,
+    'use_globals': True
+}
+global_opt = {'use_edges': True, #True for all gives the best result
+    'use_nodes': True,
+    'use_globals': True
+}
 kgcn_vars = {
-          'num_processing_steps_tr': 3, #13
-          'num_processing_steps_ge': 3, #13
+          'num_processing_steps_tr': 15, #13
+          'num_processing_steps_ge': 15, #13
           'num_training_iterations': 100, #10000?
-          'learning_rate': 1e-4, #down to even 1e-4
+          'learning_rate': 1e-3, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 4, #MLP param 2 (try deeper configs)
-          'clip': 5, #gradient clipping 5
+          'clip': 10,  #gradient clipping 5
+          'edge_output_size': 3,  #3  #TODO! size of embeddings
+          'node_output_size': 3,  #3  #TODO!
+          'global_output_size': 3, #3
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
+          'node_block_opt': node_opt,
+          'edge_block_opt': edge_opt,
+          'global_block_opt': global_opt,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"./events/{time.time()}/",
+          'output_dir': f"./events/global/{time.time()}/",
           'save_fle': "training_summary.ckpt" 
-          }           
+          }          
 
 
 ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
