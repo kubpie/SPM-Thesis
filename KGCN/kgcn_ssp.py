@@ -52,7 +52,7 @@ PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
 KEYSPACE =  "kgcn_500n2500" #"kgcn500n2500"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/data/nx_500n2500_biasbig/" #/data/nx_500n1000/ #nx_500n2500
+SAVEPATH = PATH + "/data/nx_500n2500_bias/" #/data/nx_500n1000/ #nx_500n2500
 
 # DATA SELECTION FOR GRAKN TESTING
 from data_analysis import ClassImbalance
@@ -63,9 +63,9 @@ from data_analysis import ClassImbalance
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
 data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_select, max_sample = 1000)
+data = UndersampleData(data_select, max_sample = 300)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-data = data[:1010]
+data = data[:330]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
