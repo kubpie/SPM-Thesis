@@ -526,16 +526,13 @@ Entities = [
 Relations = [
     {"NodeName": 'dummy',
     "QueryList": []
-    },
-       {"NodeName": 'relation SSP-vec order',
-     "QueryList": rel_SSPvecOrdered(data_complete)
-     }
+    }
 ]
 """
 
 KEYSPACE = "kgcn500n2500"
 
 if __name__ == "__main__":
-    build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 
+    #build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 
     print("Importing data to GRAKN finished OK!")
     
