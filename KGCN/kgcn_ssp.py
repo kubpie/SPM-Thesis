@@ -50,11 +50,28 @@ DATAPATH = Path(PATH+"/data/")
 from data_prep import LoadData, FeatDuct, UndersampleData
 ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
-PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/data_complete.csv")
+PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
-KEYSPACE =  "kgcn500n2500" #"kgcn_schema_full" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
+KEYSPACE =  "kgcn_500n2500" #"kgcn500n2500"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/nx_2class_500n2500/"
+SAVEPATH = PATH + "/data/nx_500n2500_bias/" #/data/nx_500n1000/ #nx_500n2500
+
+# DATA SELECTION FOR GRAKN TESTING
+from data_analysis import ClassImbalance
+
+#data = UndersampleData(ALLDATA, max_sample = 100)
+#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
+
+# === 2 classes of 2000 sample 500/2500 ==== 
+#data = ALLDATA
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data = UndersampleData(data_select, max_sample = 300)
+#data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
+data = data[:303]
+#data = data_select
+class_population = ClassImbalance(data, plot = True)
+#plt.show()
+print(class_population)
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
 PREEXISTS = 0
@@ -62,7 +79,6 @@ PREEXISTS = 0
 CANDIDATE = 1
 # Elements to infer are the graph elements whose existence we want to predict to be true, they are positive samples
 TO_INFER = 2
-
 
 # Categorical Attribute types and the values of their categories
 ses = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -77,26 +93,16 @@ loc = np.unique(locations).tolist()
 # Categorical Attributes and lists of their values
 CATEGORICAL_ATTRIBUTES = {'season': ses,
                           'location': loc}
-                          #duct_type': ["NotDuct","SLD","DC"]}
 # Continuous Attribute types and their min and max values
-"""
-CONTINUOUS_ATTRIBUTES = {'depth': (0, 1500), 
-                         'num_rays': (500, 15000), 
+
+CONTINUOUS_ATTRIBUTES = {'depth': (0, max(data['water_depth_max'])), 
+                         'num_rays': (min(data['num_rays']), max(data['num_rays'])), 
                          'slope': (-2, 2), 
                          'bottom_type': (1,2),
                          'length': (0, 44000),
                          'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179)}
-                         #'number_of_ducts': (0,2)}
-"""
-CONTINUOUS_ATTRIBUTES = {'depth': (0, 1200), 
-                         'num_rays': (500, 2500), 
-                         'slope': (-2, 2), 
-                         'bottom_type': (1,2),
-                         'length': (0, 44000),
-                         'SSP_value':(1463.486641,1539.630391),
-                         'grad': (-0.290954924,0.040374179)}
-                         #'number_of_ducts': (0,2)}
+                         'grad': (-0.290954924,0.040374179),
+                         'number_of_ducts': (1,2)}
 
 TYPES_TO_IGNORE = ['candidate-convergence', 'scenario_id', 'probability_exists', 'probability_nonexists', 'probability_preexists']
 ROLES_TO_IGNORE = ['candidate_resolution', 'candidate_scenario']
@@ -206,7 +212,7 @@ def create_concept_graphs(example_indices, grakn_session, savepath):
     graphs = []
     infer = True
     total = len(example_indices)
-    
+    # finds scenarios idx without ducts
     not_duct_idx = []
     for idx, sld, dc in zip(range(len(PROCESSED_DATA)),PROCESSED_DATA['SLD_depth'],PROCESSED_DATA['DC_axis']):
         if np.isnan(sld) and np.isnan(dc):
@@ -259,10 +265,9 @@ def get_query_handles(scenario_idx, not_duct_idx):
     """
     # === Query variables ===
     conv, scn, ray, nray, src, dsrc, seg, dseg, l, s, srcp, bathy, bt, ssp, loc, ses,\
-    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct = 'conv','scn','ray', 'nray',\
+    sspval, dsspmax, speed, dssp, dct, ddct, gd, duct, nod = 'conv','scn','ray', 'nray',\
     'src', 'dsrc', 'seg', 'dseg','l','s','srcp','bathy','bt','ssp','loc','ses',\
-    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct'
-    # nod ,'nod'
+    'sspval','dsspmax','speed','dssp','dct','ddct','gd','duct','nod'
     # dt, 'dt'
     
     
@@ -272,7 +277,6 @@ def get_query_handles(scenario_idx, not_duct_idx):
            '''$ray isa ray-input, has num_rays $nray;
            $conv(candidate_scenario: $scn, candidate_resolution: $ray) isa candidate-convergence; 
            get;''')    
-          # {$nray == 500;} or {$nray == 1000;}; -> takes too much time to do it like that, better limit at data migration
  
     candidate_convergence_query_graph = (QueryGraph()
                                        .add_vars([conv], CANDIDATE)
@@ -297,12 +301,11 @@ def get_query_handles(scenario_idx, not_duct_idx):
             $ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;
             $dct isa duct, has depth $ddct, has grad $gd;
             $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;
-            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel;
+            $duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod;
             $sspval has depth $dssp;
             {$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; 
             get;'''
             )
-        #isa SSP-channel, has number_of_ducts $nod; 
         # has duct_type $dt,
         
         convergence_query_full_graph = (QueryGraph()
@@ -310,7 +313,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  .add_vars([scn, ray, nray, src, dsrc, seg, dseg, \
                                             l, s, srcp, bathy, bt, ssp, loc, ses, \
                                             sspval, dsspmax, speed, dssp, dct, ddct,\
-                                            gd, duct], PREEXISTS) #dt, nod
+                                            gd, duct, nod], PREEXISTS) #dt
                                  .add_has_edge(ray, nray, PREEXISTS)
                                  .add_has_edge(src, dsrc, PREEXISTS)
                                  .add_has_edge(seg, dseg, PREEXISTS)
@@ -324,7 +327,7 @@ def get_query_handles(scenario_idx, not_duct_idx):
                                  #.add_has_edge(dct, dt, PREEXISTS)
                                  .add_has_edge(dct, gd, PREEXISTS)
                                  .add_has_edge(bathy, bt, PREEXISTS)
-                                 #.add_has_edge(duct, nod, PREEXISTS)
+                                 .add_has_edge(duct, nod, PREEXISTS)
                                  .add_has_edge(sspval, dssp, PREEXISTS)
                                  .add_role_edge(conv, scn, 'converged_scenario', TO_INFER) #TO_INFER VS CANDIDATE BELOW
                                  .add_role_edge(conv, ray, 'minimum_resolution', TO_INFER)
@@ -484,7 +487,7 @@ def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
         example_idx_tr = ubuntu_rand_fix(savepath)
-    #example_idx_val = X_val.index.tolist()
+    #example_idx_: 5val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
     print(f'\nCREATING {num_tr_graphs} TRAINING\TEST GRAPHS')
@@ -546,29 +549,6 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
 """
 ##### RUN THE PIPELINE  #####  
 
-# DATA SELECTION FOR GRAKN TESTING
-from data_analysis import ClassImbalance
-
-#data = UndersampleData(ALLDATA, max_sample = 100)
-#data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
-
-# === 2 classes of 2000 sample 500/1000 ==== 
-#keyspace = "ssp_2class"
-data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_sparse2, max_sample = 2000)
-data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:20]
-
-# === 3 classes of 1020 samples: 500/6000/15000 ===== 
-#keyspace = "ssp_3class"
-#data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #3classes  (ALLDATA.loc[:, 'num_rays'] == 1500) |
-#data = UndersampleData(data_sparse3, max_sample = 1020)
-
-class_population = ClassImbalance(data, plot = True)
-plt.show()
-print(class_population)
-
-
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
 
@@ -582,26 +562,46 @@ with session.transaction().read() as tx:
         print(f'Found edge types: {edge_types}')   
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
-                                            train_split = 0.8, validation_split = 0., 
+                                            train_split = 0.7, validation_split = 0., 
                                             ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
-
+        
+edge_opt = {'use_edges': True, #False
+'use_receiver_nodes': True,
+'use_sender_nodes': True,
+'use_globals': True
+}
+node_opt = {'use_sent_edges': True, #False
+    'use_received_edges': True, #False
+    'use_nodes': True,
+    'use_globals': True
+}
+global_opt = {'use_edges': True, #True for all gives the best result
+    'use_nodes': True,
+    'use_globals': True
+}
 kgcn_vars = {
-          'num_processing_steps_tr': 5, #13
-          'num_processing_steps_ge': 5, #13
-          'num_training_iterations': 500, #10000?
-          'learning_rate': 1e-4, #down to even 1e-4
+          'num_processing_steps_tr': 10, #13
+          'num_processing_steps_ge': 10, #13
+          'num_training_iterations': 2000, #10000?
+          'learning_rate': 1e-3, #down to even 1e-4
           'latent_size': 16, #MLP param 16
-          'num_layers': 2, #MLP param 2 (try deeper configs)
-          'clip': 5, #gradient clipping 5
+          'num_layers': 4, #MLP param 2 (try deeper configs)
+          'clip': 10^5,  #gradient clipping 5
+          'edge_output_size': 3,  #3  #TODO! size of embeddings
+          'node_output_size': 3,  #3  #TODO!
+          'global_output_size': 3, #3
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
           'edge_types': edge_types,
+          'node_block_opt': node_opt,
+          'edge_block_opt': edge_opt,
+          'global_block_opt': global_opt,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"./events/ssp_2class/{time.time()}/",
-          'save_fle': "ssp_summ.ckpt" 
+          'output_dir': f"./events/global/{time.time()}/",
+          'save_fle': "training_summary.ckpt" 
           }           
 
 

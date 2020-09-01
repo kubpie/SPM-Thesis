@@ -23,7 +23,7 @@ from pathlib import Path
 from graph_nets.utils_np import graphs_tuple_to_networkxs
 #from learn_mod_try import KGCNLearner
 from learn_mod import KGCNLearner
-from kglib.kgcn.models.core import softmax, KGCN
+from core_mod import softmax, KGCN
 from kglib.kgcn.models.embedding import ThingEmbedder, RoleEmbedder
 from kglib.kgcn.pipeline.encode import encode_types, create_input_graph, create_target_graph, encode_values
 from kglib.kgcn.pipeline.utils import apply_logits_to_graphs, duplicate_edges_in_reverse
@@ -36,6 +36,9 @@ def pipeline(graphs,
              tr_ge_split,
              node_types,
              edge_types,
+             node_block_opt,
+             edge_block_opt,
+             global_block_opt,
              num_processing_steps_tr=10,
              num_processing_steps_ge=10,
              num_training_iterations=10000,
@@ -45,10 +48,11 @@ def pipeline(graphs,
              log_every_epochs=20,
              continuous_attributes=None,
              categorical_attributes=None,
-             type_embedding_dim=5,
-             attr_embedding_dim=6,
-             edge_output_size=3,
-             node_output_size=3,
+             type_embedding_dim=5,  
+             attr_embedding_dim=6,  
+             edge_output_size=3,    #TODO!
+             node_output_size=3,    #TODO!
+             global_output_size=3,
              output_dir=None,
              do_test=False,
              clip = 5.0,
@@ -89,8 +93,12 @@ def pipeline(graphs,
 
     kgcn = KGCN(thing_embedder,
                 role_embedder,
+                node_block_opt,
+                edge_block_opt,
+                global_block_opt,
                 edge_output_size=edge_output_size,
                 node_output_size=node_output_size,
+                global_output_size=global_output_size,
                 latent_size=latent_size, #MLP parameters
                 num_layers=num_layers)
 

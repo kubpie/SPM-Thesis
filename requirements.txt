@@ -13,7 +13,6 @@ grpcio==1.23.0
 grakn-client==1.6.0
 grakn-kglib==0.2.1
 h5py==2.10.0
-imblearn==0.7.0
 Keras-Applications==1.0.8
 Keras-Preprocessing==1.1.0
 kiwisolver==1.1.0
@@ -34,7 +33,7 @@ semantic-version==2.8.2
 six==1.12.0
 tensorboard==1.14.0
 tensorflow==1.14.0
-#tensorflow-gpu==1.14.0
+tensorflow-gpu==1.14.0
 tensorflow-estimator==1.14.0
 tensorflow-probability==0.7.0
 termcolor==1.1.0

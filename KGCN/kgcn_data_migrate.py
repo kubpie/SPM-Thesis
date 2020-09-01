@@ -25,8 +25,11 @@ SSP_Input = pd.read_excel(path+"/env.xlsx", sheet_name = "SSP")
 SSP_Stat = pd.read_excel(path+"/env.xlsx", sheet_name = "SSP_STAT")#SSPStat(SSP_Input, path, plot = False, save = False)
 SSP_Prop = pd.read_excel(path+"/env.xlsx", sheet_name = "SSP_PROP")#SSPId(SSP_Input, path, plot = False, save = False)
 raw_data = LoadData(path)
+#raw_data.to_csv(str(path) + '/raw_data.csv', index = None, header = True)
+#ducts_data = FeatSSPId(raw_data, path, src_cond = False)
+#ducts_data.to_csv(str(path) + '/ducts_data.csv', index = None, header = True)
 ALLDATA = FeatDuct(raw_data, Input_Only = True) #leave only model input
-DATA_COMPLETE = pd.read_csv(path+"/data_complete.csv")
+#DATA_COMPLETE = pd.read_csv(path+"/data_complete.csv") #src_cond = True 
 
 
 def build_graph(Inputs, keyspace_name):
@@ -269,7 +272,7 @@ def DeepChannel(SSP_Prop):
         if np.isnan(dcax) == False:
             graql_queries.append(DeepChannel_inner(dcax, dctop, dcbot, dcgtop, dcgbot, query_type = 'insert'))
     return graql_queries
-        
+"""        
 def DuctExists():
     graql_queries = []
     number_of_ducts = [0]
@@ -281,7 +284,7 @@ def DuctExists_inner(query_type = 'insert'):
     graql_insert_query = query_type
     graql_insert_query += f' $dex isa duct, has depth 0, has grad 0;' #, has duct_type "NotDuct";'
     return graql_insert_query
-    
+"""     
 #########################################################
 ### Data loading functions library for RELATION nodes ###
 #########################################################
@@ -376,8 +379,7 @@ def rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop):
     graql_queries = []
     for index, row in SSP_Prop.iterrows():
         graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-        #if (row['SLD_depth'] == None and row['DC_axis'] == None):
-        
+        """
         if (np.isnan(row['SLD_depth']) and np.isnan(row['DC_axis'])):
             nod = 0
             graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
@@ -385,29 +387,30 @@ def rel_SSPChannel(SSP_Input, SSP_Stat, SSP_Prop):
             graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dex) isa SSP-channel, has number_of_ducts {nod};'
             graql_queries.append(graql_insert_query)
         else:
-            if np.isnan(row['SLD_depth']) == False and np.isnan(row['DC_axis']) == True:
-                nod = 1
-                graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-                graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
-                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel, has number_of_ducts {nod};'
-                graql_queries.append(graql_insert_query)
-                
-            if np.isnan(row['DC_axis']) == False and np.isnan(row['SLD_depth']) == True:
-                nod = 1
-                graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-                graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
-                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel, has number_of_ducts {nod};'
-                graql_queries.append(graql_insert_query)
-            if np.isnan(row['SLD_depth']) == False and np.isnan(row['DC_axis']) == False:
-                nod = 2
-                graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-                graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
-                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel, has number_of_ducts {nod};'
-                graql_queries.append(graql_insert_query)
-                graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
-                graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
-                graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel, has number_of_ducts {nod};'
-                graql_queries.append(graql_insert_query)
+        """
+        if np.isnan(row['SLD_depth']) == False and np.isnan(row['DC_axis']) == True:
+            nod = 1
+            graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
+            graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
+            graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel, has number_of_ducts {nod};'
+            graql_queries.append(graql_insert_query)
+            
+        if np.isnan(row['DC_axis']) == False and np.isnan(row['SLD_depth']) == True:
+            nod = 1
+            graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
+            graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
+            graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel, has number_of_ducts {nod};'
+            graql_queries.append(graql_insert_query)
+        if np.isnan(row['SLD_depth']) == False and np.isnan(row['DC_axis']) == False:
+            nod = 2
+            graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
+            graql_insert_query += Sonic_Layer_inner(row['SLD_depth'], row['SLD_avgrad'], query_type = '')
+            graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $sld) isa SSP-channel, has number_of_ducts {nod};'
+            graql_queries.append(graql_insert_query)
+            graql_insert_query = SSPVec_inner(row['SSP'], row['dmax'], SSP_Input, SSP_Stat, query_type = 'match')
+            graql_insert_query += DeepChannel_inner(row['DC_axis'], row['DC_top'], row['DC_bot'], row['DC_avgrad_top'], row['DC_avgrad_bot'], query_type = '')
+            graql_insert_query += f' insert $sspch(find_channel: $ssp, channel_exists: $dc) isa SSP-channel, has number_of_ducts {nod};'
+            graql_queries.append(graql_insert_query)
 
     return graql_queries  
 
@@ -425,32 +428,15 @@ def rel_SSPvecToDepth(SSP_Input):
             
 
 #### DATA SELECTION FOR GRAKN TESTING
-#data = pd.concat([ALLDATA.iloc[0:10,:],ALLDATA.iloc[440:446,:],ALLDATA.iloc[9020:9026,:]])
-#ssp_select = ["Mediterranean Sea Winter","Mediterranean Sea Spring","South Pacific Ocean Spring"]
-#SSP_Stat[ssp_select][:]
-#SSP_Prop = SSP_Prop[(SSP_Prop['SSP'] == "Mediterranean Sea Winter") | (SSP_Prop['SSP'] == "Mediterranean Sea Spring") | (SSP_Prop['SSP'] == "South Pacific Ocean Spring")]
-#SSP_Input = SSP_Input.loc[:,["DEPTH"]+ssp_select]
 
-data_pop = ClassImbalance(ALLDATA)
+#data_pop = ClassImbalance(ALLDATA)
 #data_sparse2 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] #2classes
 #data_sparse3 = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000) | (ALLDATA.loc[:, 'num_rays'] == 1500)] #3classes
 #data = UndersampleData(data_sparse2, max_sample = 2000)
 #data = UndersampleData(data_sparse3, max_sample = 1020)
-# Check for sound ducts for the selected data, ducts[:,0] = 'SLD', ducts[:,1] = 'DC'
-data = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 2500)] 
-ducts = np.zeros([np.size(data,0),3],int)
-i = 0
-for ssp,dmax,idx in zip(data['profile'],data['water_depth_max'], data.index):
-    for SSP,DMAX,SLD,DC in zip(SSP_Prop['SSP'], SSP_Prop['dmax'], SSP_Prop['SLD_depth'], SSP_Prop['DC_axis']):
-        ducts[i,0] = idx
-        if str(ssp) == str(SSP) and int(dmax) == int(DMAX):
-            if np.isnan(SLD)==False:
-                ducts[i,1] = 1
-            if np.isnan(DC)==False:
-                ducts[i,2] = 1
 
-    i += 1
-
+data = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:, 'num_rays'] == 1000)] 
+#data = ALLDATA
 ###########################################
 ###     Build input data dictionaries   ###
 ###########################################
@@ -483,11 +469,11 @@ Entities = [
     
     {"NodeName": 'deep-channel',
      "QueryList": DeepChannel(SSP_Prop)
-     },
-    
-    {"NodeName": 'not-a-duct',
-     "QueryList": DuctExists()
      }
+    
+    #{"NodeName": 'not-a-duct',
+    # "QueryList": DuctExists()
+    # }
 ]
 
 Relations = [
@@ -530,7 +516,7 @@ Relations = [
 ]
 """
 
-KEYSPACE = "kgcn500n2500"
+KEYSPACE = "kgcn_500n1000"
 
 if __name__ == "__main__":
     #build_graph(Inputs=[Entities, Relations], keyspace_name = KEYSPACE) 

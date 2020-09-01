@@ -85,7 +85,6 @@ class KGCNLearner:
 
         # Create placeholders and define tf training
         input_ph, target_ph = create_placeholders(tr_input_graphs, tr_target_graphs)
-
         # A list of outputs, one per processing step.
         output_ops_tr = self._model(input_ph, self._num_processing_steps_tr)
         output_ops_ge = self._model(input_ph, self._num_processing_steps_ge)
@@ -105,7 +104,7 @@ class KGCNLearner:
         # Optimizer
         # TODO: Optimize learning rate?? Adaptive learning_raye\sqrt(time) for example? vars: learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False
         # https://www.tensorflow.org/api_docs/python/tf/compat/v1/train/AdamOptimizer
-        optimizer = tf.train.AdamOptimizer(learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate, beta1 = 0.9, beta2 = 0.999)
         gradients, variables = zip(*optimizer.compute_gradients(loss_op_tr))
 
         for grad, var in zip(gradients, variables):
@@ -184,7 +183,7 @@ class KGCNLearner:
                     feed_dict=feed_dict)
 
                 #print(f'target: {train_values["target"]}') #my add
-                #print(f'output: {train_values["outputs"]}')
+                #print(f'output: {train_values["outputs"][-1]}')
                 correct_tr, solved_tr = existence_accuracy(
                     train_values["target"], train_values["outputs"][-1], use_edges=False)
                 correct_ge, solved_ge = existence_accuracy(
