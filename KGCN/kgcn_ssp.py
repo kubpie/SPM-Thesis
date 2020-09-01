@@ -135,24 +135,6 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
 
         concept_maps = sampler(grakn_transaction.query(query, infer=infer))
         concept_dicts = [concept_dict_from_concept_map(concept_map) for concept_map in concept_maps]
-        #TODO: Implement removal of NotDuct cases at NetworkX level instead of query workaround
-        """
-        #print(concept_dicts)
-        notaduct = 0
-        for cd in concept_dicts:
-            print(cd)
-            for variable, thing in cd.items(): #key, value
-                if variable == 'gd' and thing.value == 0.0:#and '0.0' in value:
-                    print(variable, thing.value)
-                    #cd.pop('gd')
-                    #cd.pop('dct')
-                    #cd.pop('SSP-channel')
-                    #cd.pop()
-                    #val = 'grad' in cd['gd']
-                    #print(val)
-                    #if '0.0' in value:
-                    #    print('asdasda')
-        """
         answer_concept_graphs = []
         for concept_dict in concept_dicts:
             try:
@@ -444,9 +426,24 @@ def ubuntu_rand_fix(savepath):
     for gfile in graphfiles:
         idx = re.findall(r'\d+', gfile)[0]    
         example_idx.append(idx)
+    
     return example_idx
 
-def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_fix = True):
+def directory_cleanup(savepath, example_idx_tr):
+    graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
+    folder_idx = []
+    for gfile in graphfiles:
+        idx = re.findall(r'\d+', gfile)[0]    
+        folder_idx.append(int(idx))
+    idx_to_remove = [x for x in folder_idx if x not in example_idx_tr]
+    for idxr in idx_to_remove:
+        graph_to_remove =  'graph_' + str(idxr) + '.gpickle'
+        print(savepath + graph_to_remove)
+        os.remove(savepath + graph_to_remove)
+    return
+
+
+def prepare_data(session, data, train_split, validation_split, savepath, cleanup_dir = False, ubuntu_fix = True):
     """
     Args:
         data: full dataset with sorted scenario_id's that will be used for querying grakn
@@ -485,6 +482,10 @@ def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
         example_idx_tr = ubuntu_rand_fix(savepath)
+    cleanup_dir = False
+    if cleanup_dir:
+        example_idx_tr = directory_cleanup(savepath, example_idx_tr)
+
     #example_idx_: 5val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
