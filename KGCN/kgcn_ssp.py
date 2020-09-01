@@ -16,11 +16,9 @@ import pandas as pd
 
 from grakn.client import GraknClient
 from pipeline_mod import pipeline
-#from kglib.kgcn.pipeline.pipeline import pipeline
 from kglib.utils.graph.iterate import multidigraph_data_iterator
 from kglib.utils.graph.query.query_graph import QueryGraph
 from kglib.utils.grakn.type.type import get_thing_types, get_role_types #missing in vehicle
-#from kglib.utils.graph.thing.queries_to_graph import build_graph_from_queries
 from kglib.utils.graph.thing.queries_to_graph import combine_2_graphs, combine_n_graphs, concept_dict_from_concept_map
 from kglib.utils.grakn.object.thing import build_thing
 from kglib.utils.graph.thing.concept_dict_to_graph import concept_dict_to_graph
@@ -566,12 +564,12 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
                                             ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
         
-edge_opt = {'use_edges': True, #False
+edge_opt = {'use_edges': False, #False
 'use_receiver_nodes': True,
 'use_sender_nodes': True,
 'use_globals': True
 }
-node_opt = {'use_sent_edges': True, #False
+node_opt = {'use_sent_edges': False, #False
     'use_received_edges': True, #False
     'use_nodes': True,
     'use_globals': True
@@ -581,8 +579,8 @@ global_opt = {'use_edges': True, #True for all gives the best result
     'use_globals': True
 }
 kgcn_vars = {
-          'num_processing_steps_tr': 10, #13
-          'num_processing_steps_ge': 10, #13
+          'num_processing_steps_tr': 15, #13
+          'num_processing_steps_ge': 15, #13
           'num_training_iterations': 3000, #10000?
           'learning_rate': 1e-3, #down to even 1e-4
           'latent_size': 16, #MLP param 16
@@ -605,7 +603,7 @@ kgcn_vars = {
           }           
 
 
-ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities

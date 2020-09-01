@@ -55,10 +55,7 @@ define
 	
 	grad sub attribute,
 		datatype double;
-		
-	#duct_type sub attribute,
-	#	datatype string;
-	
+
 	number_of_ducts sub attribute,
 		datatype long;
 		
@@ -106,7 +103,6 @@ define
 	duct sub entity,
 		has depth,
 		has grad,
-		#has duct_type,
 		plays channel_exists;
 	
 	
