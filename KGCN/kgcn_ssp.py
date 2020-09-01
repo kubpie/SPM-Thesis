@@ -74,7 +74,7 @@ ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = str(DATAPATH) + "/nx_500n2500_biasbig" #nx_500n2500
+SAVEPATH = str(DATAPATH) + "/nx_500n2500_biasbig/" #nx_500n2500 #"/nx_500n2500_biasbig/"
 
 ### DATA SELECTION FOR GRAKN TESTING
 
