@@ -49,9 +49,9 @@ ALLDATA = LoadData(DATAPATH)
 ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 
-KEYSPACE =  "kgcn_500n2500" #"kgcn500n2500"
+KEYSPACE =  "kgcn500n2500" #"kgcn500n2500"
 URI = "localhost:48555"
-SAVEPATH = PATH + "/data/nx_500n2500_biasbig/" #/data/nx_500n1000/ #nx_500n2500
+SAVEPATH = PATH + "/data/nx_500n2500/" #/data/nx_500n1000/ #nx_500n2500
 
 # DATA SELECTION FOR GRAKN TESTING
 from data_analysis import ClassImbalance
@@ -62,9 +62,9 @@ from data_analysis import ClassImbalance
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
 data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_select, max_sample = 1000)
+data = UndersampleData(data_select, max_sample = 2000)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-data = data[:1010]
+#data = data[:1010]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
@@ -420,7 +420,7 @@ def ubuntu_rand_fix(savepath):
         example_idx.append(idx)
     
     return example_idx
-#sth sth
+
 def directory_cleanup(savepath, example_idx_tr):
     graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
     folder_idx = []
@@ -474,7 +474,7 @@ def prepare_data(session, data, train_split, validation_split, savepath, cleanup
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
         example_idx_tr = ubuntu_rand_fix(savepath)
-    cleanup_dir = False
+    cleanup_dir = True
     if cleanup_dir:
         example_idx_tr = directory_cleanup(savepath, example_idx_tr)
 
