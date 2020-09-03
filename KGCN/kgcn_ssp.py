@@ -1,4 +1,4 @@
-s# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Fri Jun 12 14:50:54 2020
 
@@ -83,7 +83,7 @@ SAVEPATH = str(DATAPATH) + "/nx_500n1000/" #nx_500n2500 #"/nx_500n2500_biasbig/"
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
 data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
-data = UndersampleData(data_select, max_sample = 2400)
+data = UndersampleData(data_select, max_sample = 1000)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
 #data = data[:1010]
 #data = data_select
