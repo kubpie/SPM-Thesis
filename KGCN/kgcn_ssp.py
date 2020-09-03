@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+s# -*- coding: utf-8 -*-
 """
 Created on Fri Jun 12 14:50:54 2020
 
@@ -88,7 +88,7 @@ data = UndersampleData(data_select, max_sample = 2400)
 #data = data[:1010]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
-plt.show()
+#plt.show()
 print(class_population)
 
 # Existing elements in the graph are those that pre-exist in the graph, and should be predicted to continue to exist
@@ -580,16 +580,16 @@ edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bat
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
                                             train_split = 0.7, validation_split = 0., 
-                                            ubuntu_fix= False, savepath = SAVEPATH)
+                                            ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
         
-edge_opt = {'use_edges': False, #False
+edge_opt = {'use_edges': True, #False
 'use_receiver_nodes': True,
 'use_sender_nodes': True,
 'use_globals': True
 }
-node_opt = {'use_sent_edges': False, #False
-    'use_received_edges': False, #False
+node_opt = {'use_sent_edges': True, #False
+    'use_received_edges': True, #False
     'use_nodes': True,
     'use_globals': True
 }
@@ -600,14 +600,14 @@ global_opt = {'use_edges': True, #True for all gives the best result
 kgcn_vars = {
           'num_processing_steps_tr': 15, #13
           'num_processing_steps_ge': 15, #13
-          'num_training_iterations': 100, #10000?
-          'learning_rate': 1e-3, #down to even 1e-4
+          'num_training_iterations': 5000, #10000?
+          'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 4, #MLP param 2 (try deeper configs)
           'clip': 10,  #gradient clipping 5
           'edge_output_size': 3,  #3  #TODO! size of embeddings
           'node_output_size': 3,  #3  #TODO!
-          'global_output_size': 3, #3
+          'global_output_size': 5, #3
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
@@ -622,7 +622,7 @@ kgcn_vars = {
           }          
 
 
-#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities

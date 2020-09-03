@@ -4,9 +4,9 @@ import os
 import sys
 from pathlib import Path
 PATH = os.getcwd() #+'\data\\'
-SAVEPATH = PATH + "/data/nx_500n2500/"
+SAVEPATH = PATH + "/data/nx_500n1000/"
 
-scn_idx = 8860
+scn_idx = 10
 graph = nx.read_gpickle(str(SAVEPATH) + "graph_" + str(scn_idx) + ".gpickle")
 
 new_graph = nx.Graph(graph)
