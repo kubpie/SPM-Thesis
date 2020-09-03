@@ -74,18 +74,18 @@ ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = str(DATAPATH) + "/nx_500n2500_biasbig/" #nx_500n2500 #"/nx_500n2500_biasbig/"
+SAVEPATH = str(DATAPATH) + "/nx_500n1000/" #nx_500n2500 #"/nx_500n2500_biasbig/"
 
 ### DATA SELECTION FOR GRAKN TESTING
 
 #data = UndersampleData(ALLDATA, max_sample = 100)
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 # === 2 classes of 2000 sample 500/2500 ==== 
-data = ALLDATA
-data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
-data = UndersampleData(data_select, max_sample = 1000)
+#data = ALLDATA
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
+data = UndersampleData(data_select, max_sample = 2400)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-data = data[:1010]
+#data = data[:1010]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
 plt.show()
@@ -446,6 +446,19 @@ def ubuntu_rand_fix(savepath):
         example_idx.append(idx)
     return example_idx
 
+def directory_cleanup(savepath, example_idx_tr):
+    graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
+    folder_idx = []
+    for gfile in graphfiles:
+        idx = re.findall(r'\d+', gfile)[0]    
+        folder_idx.append(int(idx))
+    idx_to_remove = [x for x in folder_idx if x not in example_idx_tr]
+    for idxr in idx_to_remove:
+        graph_to_remove =  'graph_' + str(idxr) + '.gpickle'
+        print(savepath + graph_to_remove)
+        os.remove(savepath + graph_to_remove)
+    return
+
 def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_fix = True):
     """
     Args:
@@ -485,6 +498,9 @@ def prepare_data(session, data, train_split, validation_split, savepath, ubuntu_
     # rand in linux and windows generates different number in effect the data selected in windows is different than ubuntu
     if ubuntu_fix:
         example_idx_tr = ubuntu_rand_fix(savepath)
+    dir_cleanup = False
+    if dir_cleanup:
+        example_idx_tr = directory_cleanup(SAVEPATH, example_idx_tr)
     #example_idx_val = X_val.index.tolist()
     tr_ge_split = int(num_tr_graphs * train_split)  # Define graph number split in train graphs[:tr_ge_split] and test graphs[tr_ge_split:] sets
     #val_ge_split = int(len(X_val)*(1-validation_split))
@@ -564,7 +580,7 @@ edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bat
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
                                             train_split = 0.7, validation_split = 0., 
-                                            ubuntu_fix= True, savepath = SAVEPATH)
+                                            ubuntu_fix= False, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
         
 edge_opt = {'use_edges': False, #False
@@ -606,7 +622,7 @@ kgcn_vars = {
           }          
 
 
-ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
+#ge_graphs, solveds_tr, solveds_ge  = go_train(train_graphs, tr_ge_split, **kgcn_vars)
 
 #with session.transaction().write() as tx:
 #        write_predictions_to_grakn(tr_ge_graphs, tx, commit = False)  # Write predictions to grakn with learned probabilities
