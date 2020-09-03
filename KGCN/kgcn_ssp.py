@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Jun 12 14:50:54 2020
-
 @author: kubap
 """
 
@@ -117,7 +116,6 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
     """
     Builds a graph of Things, interconnected by roles (and *has*), from a set of queries and graphs representing those
     queries (variable graphs)of those queries, over a Grakn transaction
-
     Args:
         infer: whether to use Grakn's inference engine
         query_sampler_variable_graph_tuples: A list of tuples, each tuple containing a query, a sampling function,
@@ -125,7 +123,6 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
         grakn_transaction: A Grakn transaction
         concept_dict_converter: The function to use to convert from concept_dicts to a Grakn model. This could be
             a typical model or a mathematical model
-
     Returns:
         A networkx graph
     """
@@ -170,7 +167,6 @@ def create_concept_graphs(example_indices, grakn_session, savepath):
         example_indices: The values used to anchor the subgraph queries within the entire knowledge graph
         =>> SCENARIO_ID
         grakn_session: Grakn Session
-
     Returns:
         In-memory graphs of Grakn subgraphs
         
@@ -186,7 +182,6 @@ def create_concept_graphs(example_indices, grakn_session, savepath):
             5. save ns.graph as pickle file
             6. append graph to list of graphs and return the list as func. output
             
-
     """
     
     graphs = []
@@ -379,13 +374,10 @@ def get_query_handles(scenario_idx, not_duct_idx):
 def write_predictions_to_grakn(graphs, tx, commit = True):
     """
     Take predictions from the ML model, and insert representations of those predictions back into the graph.
-
     Args:
         graphs: graphs containing the concepts, with their class predictions and class probabilities
         tx: Grakn write transaction to use
-
     Returns: None
-
     """
     
     #TODO: Revise these loops and see why nothing is being predicted as data['prediction']=2 (exists?)
@@ -506,12 +498,10 @@ def go_train(train_graphs, tr_ge_split, **kwargs):
     tr_ge_split : int. value marking the number of training graphs in train_graphs
     save_fle : model filename to be saved as tf. checkpoin
     **kwargs : TYPE
-
     Returns:
     ge_graphs: Encoded in-memory graphs of Grakn concepts for generalisation
     solveds_tr: training fraction examples solved correctly
     solveds_ge: test/generalization fraction examples solved correctly
-
     """
     # Run the pipeline with prepared networkx graph
     #ge_graphs, solveds_tr, solveds_ge, graphs_enc, input_graphs, target_graphs, feed_dict 
@@ -528,7 +518,6 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     # opens session once again, if closed after training  
     client = GraknClient(uri=URI)
     session = client.session(keyspace=KEYSPACE)
-
     ge_graphs, solveds_tr, solveds_ge = pipeline(graphs = val_graphs,  # Run the pipeline with prepared graph
                                                  tr_ge_split = val_ge_split,
                                                  do_test = True,
@@ -614,4 +603,3 @@ client.close()
 
 #val_ge_graphs, validation_evals = go_train(val_graphs, val_ge_split, reload_fle = "test_model.ckpt", **kgcn_vars)    
 # Close transaction, session and client due to write query
-    

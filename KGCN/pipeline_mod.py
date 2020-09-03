@@ -21,7 +21,6 @@ import networkx as nx
 import numpy as np
 from pathlib import Path
 from graph_nets.utils_np import graphs_tuple_to_networkxs
-#from learn_mod_try import KGCNLearner
 from learn_mod import KGCNLearner
 from core_mod import softmax, KGCN
 from kglib.kgcn.models.embedding import ThingEmbedder, RoleEmbedder
