@@ -428,7 +428,7 @@ def ubuntu_rand_fix(savepath):
         example_idx.append(idx)
     
     return example_idx
-
+#sth sth
 def directory_cleanup(savepath, example_idx_tr):
     graphfiles = [f for f in os.listdir(savepath) if os.path.isfile(os.path.join(savepath, f))]
     folder_idx = []
