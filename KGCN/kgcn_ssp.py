@@ -74,7 +74,7 @@ ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = str(DATAPATH) + "/nx_500n1000/" #nx_500n2500 #"/nx_500n2500_biasbig/"
+SAVEPATH = str(DATAPATH) + "/nx_500n2500_biasbig/" #nx_500n2500 #"/nx_500n2500_biasbig/"
 
 ### DATA SELECTION FOR GRAKN TESTING
 
@@ -82,10 +82,10 @@ SAVEPATH = str(DATAPATH) + "/nx_500n1000/" #nx_500n2500 #"/nx_500n2500_biasbig/"
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
-data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
 data = UndersampleData(data_select, max_sample = 1000)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-#data = data[:1010]
+data = data[:1010]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
@@ -583,13 +583,13 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
                                             ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
         
-edge_opt = {'use_edges': False, #False
+edge_opt = {'use_edges': True, #False
 'use_receiver_nodes': True,
 'use_sender_nodes': True,
 'use_globals': True
 }
-node_opt = {'use_sent_edges': False, #False
-    'use_received_edges': False, #False
+node_opt = {'use_sent_edges': True, #False
+    'use_received_edges': True, #False
     'use_nodes': True,
     'use_globals': True
 }
@@ -599,13 +599,13 @@ global_opt = {'use_edges': True, #True for all gives the best result
 }
 
 kgcn_vars = {
-          'num_processing_steps_tr': 10, #13
-          'num_processing_steps_ge': 10, #13
+          'num_processing_steps_tr': 15, #13
+          'num_processing_steps_ge': 15, #13
           'num_training_iterations': 5000, #10000?
-          'learning_rate': 1e-3, #down to even 1e-4
+          'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 4, #MLP param 2 (try deeper configs)
-          'clip': 10^5,  #gradient clipping 5
+          'clip': 10,  #gradient clipping 5
           'edge_output_size': 3,  #3  #TODO! size of embeddings
           'node_output_size': 3,  #3  #TODO!
           'global_output_size': 3, #3
@@ -618,7 +618,7 @@ kgcn_vars = {
           'global_block_opt': global_opt,
           'continuous_attributes': CONTINUOUS_ATTRIBUTES,
           'categorical_attributes': CATEGORICAL_ATTRIBUTES,
-          'output_dir': f"./events/global/{time.time()}/",
+          'output_dir': f"./events/tuning/{time.time()}/",
           'save_fle': "training_summary.ckpt" 
           }         
 
