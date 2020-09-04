@@ -579,7 +579,7 @@ node_types = ['SSP-vec', 'bottom-segment', 'duct', 'ray-input', 'source', 'sound
 edge_types = ['has', 'channel_exists', 'define_SSP', 'find_channel', 'define_bathy', 'converged_scenario', 'defined_by_bathy', 'defined_by_src', 'minimum_resolution', 'define_src', 'defined_by_SSP']
 
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, 
-                                            train_split = 0.7, validation_split = 0., 
+                                            train_split = 0.8, validation_split = 0., 
                                             ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
         
@@ -599,16 +599,16 @@ global_opt = {'use_edges': True, #True for all gives the best result
 }
 
 kgcn_vars = {
-          'num_processing_steps_tr': 15, #13
-          'num_processing_steps_ge': 15, #13
-          'num_training_iterations': 5000, #10000?
+          'num_processing_steps_tr': 12, #13
+          'num_processing_steps_ge': 12, #13
+          'num_training_iterations': 1000, #10000?
           'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
-          'num_layers': 4, #MLP param 2 (try deeper configs)
+          'num_layers': 3, #MLP param 2 (try deeper configs)
           'clip': 10,  #gradient clipping 5
           'edge_output_size': 3,  #3  #TODO! size of embeddings
           'node_output_size': 3,  #3  #TODO!
-          'global_output_size': 3, #3
+          'global_output_size': 4, #3
           'weighted': False, #loss function modification
           'log_every_epochs': 50, #logging of the results
           'node_types': node_types,
