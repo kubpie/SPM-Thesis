@@ -597,14 +597,15 @@ global_opt = {'use_edges': True, #True for all gives the best result
     'use_nodes': True,
     'use_globals': True
 }
+
 kgcn_vars = {
           'num_processing_steps_tr': 10, #13
           'num_processing_steps_ge': 10, #13
-          'num_training_iterations': 100, #10000?
+          'num_training_iterations': 1000, #10000?
           'learning_rate': 1e-3, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 4, #MLP param 2 (try deeper configs)
-          'clip': 5,  #gradient clipping 5
+          'clip': 10^5,  #gradient clipping 5
           'edge_output_size': 3,  #3  #TODO! size of embeddings
           'node_output_size': 3,  #3  #TODO!
           'global_output_size': 3, #3

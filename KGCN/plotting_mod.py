@@ -30,7 +30,7 @@ import kglib.kgcn.plot.draw as custom_nx
 def plot_across_training(logged_iterations, losses_tr, losses_ge, corrects_tr, corrects_ge, solveds_tr, solveds_ge,
                          output_file='./learning.png'):
     # Plot results curves.
-    fig = plt.figure(1, figsize=(18, 3))
+    fig = plt.figure(100, figsize=(18, 3))
     fig.clf()
     x = np.array(logged_iterations)
     # Loss.
