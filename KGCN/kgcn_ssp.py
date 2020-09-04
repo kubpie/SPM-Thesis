@@ -583,13 +583,13 @@ train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, d
                                             ubuntu_fix= True, savepath = SAVEPATH)
 #, val_graphs,  val_ge_split
         
-edge_opt = {'use_edges': True, #False
+edge_opt = {'use_edges': False, #False
 'use_receiver_nodes': True,
 'use_sender_nodes': True,
 'use_globals': True
 }
-node_opt = {'use_sent_edges': True, #False
-    'use_received_edges': True, #False
+node_opt = {'use_sent_edges': False, #False
+    'use_received_edges': False, #False
     'use_nodes': True,
     'use_globals': True
 }
@@ -601,7 +601,7 @@ global_opt = {'use_edges': True, #True for all gives the best result
 kgcn_vars = {
           'num_processing_steps_tr': 10, #13
           'num_processing_steps_ge': 10, #13
-          'num_training_iterations': 1000, #10000?
+          'num_training_iterations': 5000, #10000?
           'learning_rate': 1e-3, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 4, #MLP param 2 (try deeper configs)
