@@ -106,7 +106,7 @@ class KGCNLearner:
         optimizer = tf.train.AdamOptimizer(learning_rate)
         gradients, variables = zip(*optimizer.compute_gradients(loss_op_tr))
         
-        print(gradients) #my_add
+        #print(gradients)
 
 
         for grad, var in zip(gradients, variables):
