@@ -74,7 +74,7 @@ ALLDATA = FeatDuct(ALLDATA, Input_Only = True) #leave only model input
 PROCESSED_DATA = pd.read_csv(str(DATAPATH)+"/ducts_data.csv")
 KEYSPACE =  "kgcn_schema_full" #"kgcn500n2500" #"ssp_schema_slope0"  #"sampled_ssp_schema_kgcn"
 URI = "localhost:48555"
-SAVEPATH = str(DATAPATH) + "/nx_500n2500_biasbig/" #nx_500n2500 #"/nx_500n2500_biasbig/"
+SAVEPATH = str(DATAPATH) + "/nx_500n1000/" #nx_500n2500 #"/nx_500n2500_biasbig/"
 
 ### DATA SELECTION FOR GRAKN TESTING
 
@@ -82,10 +82,10 @@ SAVEPATH = str(DATAPATH) + "/nx_500n2500_biasbig/" #nx_500n2500 #"/nx_500n2500_b
 #data = UndersampleData(data, max_sample = 30) #at 30 you got 507 nx graphs created, howeve with NotDuct at this point
 # === 2 classes of 2000 sample 500/2500 ==== 
 #data = ALLDATA
-data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 2500)]
+data_select = ALLDATA[(ALLDATA.loc[:,'num_rays'] == 500) | (ALLDATA.loc[:,'num_rays'] == 1000)]
 data = UndersampleData(data_select, max_sample = 1000)
 #data = data[(data.loc[:,'num_rays']==500) | (data.loc[:31,'num_rays'] == 2500)]
-data = data[:1010]
+#data = data[:1010]
 #data = data_select
 class_population = ClassImbalance(data, plot = True)
 #plt.show()
@@ -599,13 +599,13 @@ global_opt = {'use_edges': True, #True for all gives the best result
 }
 
 kgcn_vars = {
-          'num_processing_steps_tr': 12, #13
-          'num_processing_steps_ge': 12, #13
-          'num_training_iterations': 1000, #10000?
+          'num_processing_steps_tr': 13, #13
+          'num_processing_steps_ge': 13, #13
+          'num_training_iterations': 5000, #10000?
           'learning_rate': 1e-4, #down to even 1e-4
           'latent_size': 16, #MLP param 16
           'num_layers': 3, #MLP param 2 (try deeper configs)
-          'clip': 10,  #gradient clipping 5
+          'clip': 7,  #gradient clipping 5
           'edge_output_size': 3,  #3  #TODO! size of embeddings
           'node_output_size': 3,  #3  #TODO!
           'global_output_size': 4, #3
