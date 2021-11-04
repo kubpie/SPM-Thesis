@@ -269,12 +269,6 @@ def EncodeData(data):
         feature.columns = alph_srt
         data_enc = pd.concat((data_enc, feature), axis=1)
         
-    #TODO: See if encoding target is still necessary with the new method
-    # encode y for k-folded valdiation
-    #label_encoder = LabelEncoder()
-    #label_encoder = label_encoder.fit(y)
-    #y_enc = label_encoder.transform(y)
-    #y_enc = y
     return data_enc 
 
 
@@ -431,8 +425,6 @@ def UndersampleData(data, max_sample):
             
     return data_sampled
 
-
-"""
 # Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
 #categorical_var = np.hstack([2, np.arange(5,33)])
 categorical_var = np.hstack([2,np.arange(5,33)])
@@ -444,8 +436,7 @@ smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=popul
 X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
 dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
 dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
-"""
-"""
+
 # TESTING NEW FEATURES AND THEIR CORRELATIONS
 
 import os
@@ -469,4 +460,3 @@ ClassImbalance(data, plot = True)
 #features.remove(target)
 
 #PlotCorrelation(data5,features, annotate = False)
-"""
