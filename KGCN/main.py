@@ -117,24 +117,6 @@ def build_graph_from_queries(query_sampler_variable_graph_tuples, grakn_transact
 
         concept_maps = sampler(grakn_transaction.query(query, infer=infer))
         concept_dicts = [concept_dict_from_concept_map(concept_map) for concept_map in concept_maps]
-        #TODO: Implement removal of NotDuct cases at NetworkX level instead of query workaround
-        """
-        #print(concept_dicts)
-        notaduct = 0
-        for cd in concept_dicts:
-            print(cd)
-            for variable, thing in cd.items(): #key, value
-                if variable == 'gd' and thing.value == 0.0:#and '0.0' in value:
-                    print(variable, thing.value)
-                    #cd.pop('gd')
-                    #cd.pop('dct')
-                    #cd.pop('SSP-channel')
-                    #cd.pop()
-                    #val = 'grad' in cd['gd']
-                    #print(val)
-                    #if '0.0' in value:
-                    #    print('asdasda')
-        """
         answer_concept_graphs = []
         for concept_dict in concept_dicts:
             try:
@@ -185,8 +167,6 @@ def create_concept_graphs(example_indices, grakn_session):
             4. graph.name = scenario_idx
             5. save ns.graph as pickle file
             6. append graph to list of graphs and return the list as func. output
-            
-
     """
     
     graphs = []

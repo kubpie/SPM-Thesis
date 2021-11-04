@@ -17,9 +17,9 @@ def ClassImbalance(data, plot = False):
     yper = ycount/sum(ycount)*100
     y_population = dict(zip(yclass, zip(ycount, yper)))
     
-    #print("y-variance: ", data[target].var())
-    #print("y-mean:",  data[target].mean())
-    #data.describe()
+    print("y-variance: ", data[target].var())
+    print("y-mean:",  data[target].mean())
+    data.describe()
     
     if plot:
         fig, ax = plt.subplots(figsize=(8, 5))

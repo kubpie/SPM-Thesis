@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Fri Mar 27 13:42:50 2020
 
@@ -14,7 +15,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
-from imblearn.over_sampling import SMOTENC
+#from imblearn.over_sampling import SMOTENC
 
 from data_analysis_lib import ClassImbalance, PlotCorrelation
 from ssp_features import SSPStat
@@ -49,28 +50,29 @@ def LoadData(path):
     convData = convData.drop(columns = ['runID','residual','runtime','criterion'])
     # reset index values (loses info from the initial set)
     convData.reset_index(drop=True, inplace=True)
-    print(flist)
+    print(f' Files {flist} were merged and initally formatted.')
     return convData
     
-# FORMATTING
+# DATA FORMATTING
 def FeatDuct(data, Input_Only = True):   
     # merge SD/BD features into one to emphasize duct propagation mode
     duct_cols = ['duct_prop_type','duct_width_if_sourceinduct', 'duct_SSP_if_sourceinduct']
     duct_df = pd.DataFrame(0, index=np.arange(len(data)), columns=duct_cols)
    
     data = pd.concat((data,duct_df), axis = 1)
-    
+    # Surface duct propagation features
     data.loc[data['duct_type'] == 'SD', 'duct_prop_type'] = 1
     data.loc[data['duct_type'] == 'SD', 'duct_width_if_sourceinduct'] =  data.loc[data['duct_type'] == 'SD', 'surface_duct_depth']
     data.loc[data['duct_type'] == 'SD', 'duct_SSP_if_sourceinduct'] = data.loc[data['duct_type'] == 'SD', 'surface_duct_SSP']
-
+    #Bottom duct propagation features
     data.loc[data['duct_type'] == 'BD', 'duct_prop_type'] = -1
     data.loc[data['duct_type'] == 'BD', 'duct_width_if_sourceinduct'] =  data.loc[data['duct_type'] == 'BD', 'bottom_duct_width']
     data.loc[data['duct_type'] == 'BD', 'duct_SSP_if_sourceinduct'] = data.loc[data['duct_type'] == 'BD', 'bottom_duct_SSP']
 
     data = data.drop(columns = ['duct_type', 'surface_duct', 'bottom_duct', 'source_in_duct','surface_duct_depth','surface_duct_SSP','bottom_duct_width','bottom_duct_depth','bottom_duct_SSP'])        
                
-    #DROPPING LOTS OF COLUMNS HERE TO LEAVE OUT PLAIN SIMULATION I/O DATA
+    # DROPPING LOTS OF COLUMNS HERE TO LEAVE OUT PLAIN SIMULATION I/O DATA
+    # These features were mostly inaccurate and will be re-created in the later process
     if Input_Only == True:
         data = data.drop(columns = ['deep_CH_axis','deep_CH_SSP','shallow_CH_axis','shallow_CH_SSP'])
         data = data.drop(columns = ['waveguide','CHmax_axis','SSP_CHmax'])
@@ -162,7 +164,7 @@ def FeatSSPvec(data, path):
     #data = data.drop(columns = 'profile')
     return data
 
-def FeatSSPId(data, path, src_cond):
+def FeatSSPId(data, path, src_cond = True):
     
     ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
     # beacause 0 is a meaningful value, to allocate space, use an array of NaNs
@@ -425,7 +427,18 @@ def UndersampleData(data, max_sample):
             
     return data_sampled
 
-""" CODE TESTING """
+# Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
+#categorical_var = np.hstack([2, np.arange(5,33)])
+categorical_var = np.hstack([2,np.arange(5,33)])
+minority = np.arange(4,17)
+samplenr = 250
+population_target = dict(zip(minority, (np.ones(len(minority))*samplenr).astype(int)))
+smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
+#smote_nc_max = SMOTENC(categorical_features=categorical_var, sampling_strategy='auto', random_state=42)
+X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
+dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
+dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
+
 # TESTING NEW FEATURES AND THEIR CORRELATIONS
 
 import os
@@ -435,7 +448,7 @@ path = os.getcwd()+'\data\\'
 #ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
 
 rawdata = LoadData(path)
-#data1 = FeatDuct(rawdata, Input_Only = True)
+data1 = FeatDuct(rawdata, Input_Only = True)
 #data2 = FeatBathy(data1, path)
 #data3 = FeatSSPId(data2, path, src_cond = True)
 #data4 = FeatSSPStat(data3,path)
@@ -447,16 +460,5 @@ ClassImbalance(data, plot = True)
 #target = 'num_rays'
 #features = data5.columns.tolist()
 #features.remove(target)
+
 #PlotCorrelation(data5,features, annotate = False)
-
-# Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
-categorical_var = np.hstack([2,np.arange(5,33)])
-minority = np.arange(4,17)
-samplenr = 250
-population_target = dict(zip(minority, (np.ones(len(minority))*samplenr).astype(int)))
-smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
-#smote_nc_max = SMOTENC(categorical_features=categorical_var, sampling_strategy='auto', random_state=42)
-X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
-dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
-dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
-
