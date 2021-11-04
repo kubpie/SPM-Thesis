@@ -72,4 +72,4 @@ target/
 events/
 
 # NetworkX graphs
-nx_backup_*/
+networkx_graphs/
