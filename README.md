@@ -20,7 +20,3 @@ for reflected and refracted paths of rays travelling through a water column. SSP
 propagation mode. A predictive model to effectively capture acoustic phenomena,
 requires a mean of representing interactions in very scarce feature space with
 respect to the unknown polynomial function representation of the sound speed profile.
-
-
-links for colab notebooks:
-https://colab.research.google.com/github/kubpie/SPM-Thesis/blob/master/data_processing/testing_notebook.ipynb
