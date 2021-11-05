@@ -2,7 +2,22 @@
 Master of Science Project 
 repo by Jakub Pietrak
 
-*under construction*
+**Graph Neural Networks** are a unique type of Deep Learning models that have a capability to
+exploit an explicitly stated structure of data representation. By design they carry a strong
+_relational inductive bias_, which is a set of assumptions that makes the algorithm prioritize
+some solutions over another, independent of observed data. This makes the method especially
+interesting for applications to problems, that are naturally relation-centric, or in which local
+interactions between features are the main value of interest.
+![Fig.1: Simulation Setup](https://github.com/kubpie/SPM-Thesis/blob/master/pics/problem_setup.JPG)
+The presented research case, aims to explore GNN potential in application to an Ocean
+Acoustics problem. Using the geometric ray-tracing algorithm - BELLHOP - a large number
+of underwater sound propagation scenarios (aprox. 40,000 data points) were simulated. Each scenario is described by a
+limited set of parameters and a Sound Speed Profile function. The latter, acting as a guideline
+for reflected and refracted paths of rays travelling through a water column, has a critical impact on sound
+propagation mode. For the data-driven model to effectively capture the acoustic phenomena,
+requires a mean of representing interactions in very scarce feature space and especially with
+respect to the unknown polynomial function representation of the sound speed profile.
+
 
 links for colab notebooks:
 https://colab.research.google.com/github/kubpie/SPM-Thesis/blob/master/data_processing/testing_notebook.ipynb
