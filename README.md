@@ -8,7 +8,10 @@ _relational inductive bias_, which is a set of assumptions that makes the algori
 some solutions over another, independent of observed data. This makes the method especially
 interesting for applications to problems, that are naturally relation-centric, or in which local
 interactions between features are the main value of interest.
-![Fig.1: Simulation Setup](https://github.com/kubpie/SPM-Thesis/blob/master/pics/problem_setup.JPG)
+<p align="center">
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/problem_setup.JPG" alt="drawing" width="700"/>
+</p>
+
 The presented research case, aims to explore GNN potential in application to an Ocean
 Acoustics problem. Using the geometric ray-tracing algorithm - BELLHOP - a large number
 of underwater sound propagation scenarios (aprox. 40,000 data points) were simulated. Each scenario is described by a
