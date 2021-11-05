@@ -1,7 +1,7 @@
 # Design of a Graph Neural Network to predict the optimal resolution of the Sonar Performance Model.
 Master of Science Project 
 repo by Jakub Pietrak
-
+## Project Introduction
 **Graph Neural Networks** are a unique type of Deep Learning models that have a capability to
 exploit an explicitly stated structure of data representation. By design they carry a strong
 _relational inductive bias_, which is a set of assumptions that makes the algorithm prioritize
@@ -20,3 +20,5 @@ for reflected and refracted paths of rays travelling through a water column. SSP
 propagation mode. A predictive model to effectively capture acoustic phenomena,
 requires a mean of representing interactions in very scarce feature space with
 respect to the unknown polynomial function representation of the sound speed profile.
+
+## General Approach Description
