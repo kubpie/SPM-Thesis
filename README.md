@@ -1,4 +1,4 @@
-# Design of a Graph Neural Network to predict the optimal resolution of the Sonar Performance Model.
+# Design of a Graph Neural Network to predict the optimal resolution of the Sonar Performance Model
 Master of Science Thesis by Jakub Pietrak
 
 _Faculty of Mechanical, Maritime and Materials Engineering (3mE) · Delft University of
