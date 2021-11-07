@@ -181,8 +181,8 @@ def WedgeSegment(Bathy):
 
 
 def SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat, query_type = 'insert'):
-    #TODO: Load from pre-formatted data file, such that SSP-val are already pre-selected for each scenario
-    #       The filter at the end should remove all doubles happpening in the process
+    # Loads from pre-formatted data file, such that SSP-val are already pre-selected for each scenario
+    # The filter at the end should remove all doubles happpening in the process
     
     #set floating-point numbers precision
     precision = 10    
@@ -200,7 +200,6 @@ def SSPVec_inner(ssp, dmax, SSP_Input, SSP_Stat, query_type = 'insert'):
     graql_insert_query += ', has location "' + location + '"'
     graql_insert_query += ', has season "' + season + '"'
     graql_insert_query += f', has depth {dmax}' 
-    
     
     # TODO: Change stat to True if you want to add statistical data on SSP
     stat = False
@@ -530,6 +529,7 @@ Relations = [
          
 ]
 """
+# TEST QUERIES
 Entities = [
     {"NodeName": 'dummy',
      "QueryList": []
