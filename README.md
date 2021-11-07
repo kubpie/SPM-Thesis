@@ -1,8 +1,12 @@
 # Design of a Graph Neural Network to predict the optimal resolution of the Sonar Performance Model.
-Master of Science Project by Jakub Pietrak
+Master of Science Thesis by Jakub Pietrak
+
+_Faculty of Mechanical, Maritime and Materials Engineering (3mE) · Delft University of
+Technology_
+
 ## Foreword
-This repository is an archive of code written for the graduation project carried out at TNO Acoustic & Sonar in Den Haag. 
-Its main purpose is the presentation of replicable results and the outline of the proposed methods. Attached descriptions focus on the code functionality and thus they do not dive into mathematical derivation and the decision process. For the one's interested, the complete report can be found [here](https://github.com/kubpie/SPM-Thesis/blob/master/docs/mscThesis.pdf "MSc Thesis Report").
+This repository is an archive of the code written for my graduation project carried out at TNO Acoustic & Sonar in Den Haag. 
+Its main purpose is the presentation of replicable results and the outline of the proposed methods. Attached descriptions focus on the code functionality and hence they rarely dive into mathematical derivations or the decision process. For those interested, the complete report can be found [here](https://github.com/kubpie/SPM-Thesis/blob/master/docs/mscThesis.pdf "MSc Thesis Report").
 
 ## Project Introduction
 **Graph Neural Networks** are a unique type of Deep Learning models that have a capability to exploit an explicitly stated structure of data representation. By design they carry a strong _relational inductive bias_, which is a set of assumptions that makes the algorithm prioritize some solutions over another, independent of observed data. This makes the method especially interesting for applications to problems that are naturally relation-centric, or in which local interactions between features are the main value of interest.
