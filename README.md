@@ -23,7 +23,7 @@ This is the traditional way in which finding the sufficent number of waves requi
 
 A predictive model, which is to capture acoustic phenomena effectively, requires a mean of representing local interactions in a very scarce feature space which also cannot be trivially transformed into an input vector or a matrix for a machine learning model.
 
-## General Problem Approach
+## General Approach & Folder Structure
 The solution consists of the 3 main steps which correspond to folder structure of the presented repo:
 1. [data_processing](https://github.com/kubpie/SPM-Thesis/tree/master/data_processing): data processig and exploratory data analysis 
 2. [XGB](https://github.com/kubpie/SPM-Thesis/tree/master/XGB): development of a tradtional machine learning model in which performance indicates how well the problem could be solved using non-relational database structure
