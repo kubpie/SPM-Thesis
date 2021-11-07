@@ -17,13 +17,13 @@ from decimal import Decimal
 
 # 1. Insert ENTITIES  
 # 2. Insert RELATIONS
-# 3. In a long run, take a look at tube_network example for concurrent insert
+# Based on the tube_network example for concurrent insert
 
 # Query tips:
 # * string-vars need to be put in "apostrophe", numericals don't
 # * mind spaces and semi-colons
 # * input files need to be saved as .csv comma-delimited (not UTF-8 as it gives BOM at the start of the file )
-# * You can create query for ONLY ONE entity/relation at a time to avoid Unique-ID conflicts
+# * You can create query for ONLY ONE entity or relation at a time to avoid Unique-ID conflicts
 #   while committing the transaction later
 
 KEYSPACE = "ssp_2class_full"
