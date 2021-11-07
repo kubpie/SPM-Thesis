@@ -9,7 +9,7 @@ This repository is an archive of code written for my graduation project carried 
 Its main purpose is to present replicable results and to give an outline of proposed methods. Attached descriptions focus on the code functionality and hence they rarely dive into mathematical derivations or the decision process. For those interested, the complete report can be found [here](https://github.com/kubpie/SPM-Thesis/blob/master/docs/mscThesis.pdf "MSc Thesis Report").
 
 ## Project Introduction
-**Graph Neural Networks** are a unique type of Deep Learning models that have a capability to exploit an explicitly stated structure of data representation. By design they carry a strong _relational inductive bias_, which is a set of assumptions that makes the algorithm prioritize some solutions over another, independent of observed data. This makes the method especially interesting for applications to problems that are naturally relation-centric, or in which local interactions between features are the main value of interest. 
+**Graph Neural Networks** are a unique type of Deep Learning models that have capability to exploit an explicitly stated structure of data representation. By design they carry a strong _relational inductive bias_, which is a set of assumptions that makes the algorithm prioritize some solutions over another, independent of observed data. This makes the method especially interesting for applications to problems that are naturally relation-centric, or in which local interactions between features are the main value of interest. 
 <p align="center">
   <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/problem_setup.JPG" alt="drawing" width="700"/>
 </p>
