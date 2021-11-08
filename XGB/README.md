@@ -7,9 +7,9 @@
 In the comparison the classifier model achieves better results with an overall F1-macro score of 0.72.
 
 <p align="center">
-  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/xgb_results.jpg" width="200"/>
-  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/xgb_learning_curves.jpg" width="200"/>   
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/xgb_results.JPG"/>
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/xgb_learning_curves.JPG"/>   
 </p>
 
-It has been made clear in data analysis that simple data manipulation can lead to splitting the problem into 3 smaller sub-problems with separate datapoints. The predictions made on this subsets have better prediction score on average. The models for these subsets are trained in xgb_split_model_tuning.py. </br>
+It has been made clear in data analysis that simple data manipulation can lead to splitting the problem into 3 smaller sub-problems with separate datapoints. The predictions made on this subsets have better prediction score on average. The models for these subsets are trained in **xgb_split_model_tuning.py** </br>
 In general it has been proven that making a prediction more accurate would require generating more datapoints for the most difficult propagation scenarios. 
