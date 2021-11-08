@@ -23,7 +23,6 @@ non_src_files/
 
 # VS-compiled folders
 .vs/
-.vscode/
 
 # C extensions
 *.so
@@ -84,3 +83,14 @@ events/
 
 # NetworkX graphs
 networkx_graphs/
+
+# VScode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
