@@ -14,6 +14,7 @@ Its main purpose is to present replicable results and to give an outline of prop
   <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/problem_setup.JPG" alt="drawing" width="700"/>
 </p>
 
+<p align="justify">
 The presented research, aims to explore the potential of a GNN in application to an Ocean Acoustics problem, specifically to attempt a **prediction of the optimal sonar resolution**, calculated in a simulated ocean environment. 
 
 **The database** consists of a aprox. 40,000 unique data points representing underwater sound propagation scenarios. Each scenario is described by a unique set of input parameters and a Sound Speed Profile (SSP) function. The inputs are limited to 4 numerical features - source depth, min. water depth, max. water dept and a slope gradient - describing problem geometry. There is one categorical feature that represents a bottom type, i.e. sand or mud. SSP has a critical impact on sound propagation mode, acting as a guideline for reflected and refracted paths of rays travelling through a water column. 
@@ -22,6 +23,7 @@ For each scenario the sound wave propagation is calculated with BELLHOP geometri
 This is the traditional way in which finding the sufficent number of waves requires multiple time-consuming numerical simulation runs. The performance of the algorithm is poor and thus its use is limited to offline applications. It cannot be used in i.e. real-time applications for onboard computing units of autnomous vehicles. This drawback creates a research gap for a data-driven model that could achieve the same result based simply on the numerical data, but without necessity to run iterative simulations.
 
 A predictive model, which is to capture acoustic phenomena effectively, requires a mean of representing local interactions in a very scarce feature space which also cannot be trivially transformed into an input vector or a matrix for a machine learning model.
+</p>
 
 ## General Approach & Folder Structure
 The solution consists of the 3 main steps which correspond to folder structure of the presented repo:
