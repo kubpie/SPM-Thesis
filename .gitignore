@@ -24,6 +24,7 @@ non_src_fles/
 # VS-compiled folders
 .vs/
 .vscode/
+
 # C extensions
 *.so
 
