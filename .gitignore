@@ -10,7 +10,6 @@ kgcnmodels/
 
 # Saved NetworkX graphs
 networkx/
-#nx_*/
 
 # XGB results
 XGB/results/
@@ -20,10 +19,11 @@ old_versions/
 
 # Non-essential files
 reports/
+non_src_fles/
 
 # VS-compiled folders
 .vs/
-
+.vscode/
 # C extensions
 *.so
 

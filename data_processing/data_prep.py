@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 Created on Fri Mar 27 13:42:50 2020
 
@@ -8,34 +7,54 @@ Created on Fri Mar 27 13:42:50 2020
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from os import listdir
+import os
 
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
-#from imblearn.over_sampling import SMOTENC
+#from imblearn.over_sampling import SMOTENC #TODO: problems with import six in colab
 
-from data_analysis_lib import ClassImbalance, PlotCorrelation
 from ssp_features import SSPStat
+from data_analysis import ClassImbalance
+""" 
+### DATA PREPARATION & FEATURE VECTOR CREATION LIBRARY ###
+Contents:
+1. LoadData: load data from csv and select convergent scenarios
+2. UndersampleData: creates a stratified subset less or equal (=<) n samples in each ray-class
+3. XGB data prep:
+    - EncodeData: One Hot encoder for categorical feautes and optionally the target feature
+    - CreateModelSplits: split data on slope value to create 3 sub-models
+4. SSP Features:
+    - FeatDuct: add or remove features connected to ducted propagation, used mostly with InputOnly = True to leave only 'raw' BELLHOP input data
+    - FeatBathy: add missing bathymetry featues slope/flat bottom seg. lengths
+    - FeatSSPId: creates feature vector from SSPId function of Deep Sound Channels Axis and Sonic Layer depths & gradients
+    - FeatSSPStat: creates feature vector of statistical properties of SSP function - mean and std #TODO: Make it read from csv too instead of function
+    - FeatSSPVec: creates feature vector representation of all SSP values until dmax (XGB Application)
+    - FeatSSPOnDepth: retrieves SSP values only for critical depths appearing in the input (XGB Application, alternative to SSPVec, closest repr. to KGCN model)
 
-def LoadData(path): 
-    
-    def CheckCol(lst):
-        return lst[1:] == lst[:-1] 
-    
-    flist = [f for f in listdir(path) if "Dataset" in f]
+IMPORTANT: Most of the functions depend on previously created env.xlsx to save time with relatively slow SSPId script!
+Make sure to have env.xlsx created from ssp_features.py or downlaoded before running.
+"""
+
+
+def LoadData(path):   
+
+    flist = [f for f in os.listdir(path) if "Dataset" in f]
     col = []
     frames = []
 
-    # Fist check if columns in all data*.csv files are consistent
-    for file in flist: 
-        raw_data = pd.read_csv(path+file, index_col=None, header=0)
+    def CheckCol(lst):
+        return lst[1:] == lst[:-1] 
+    
+    for file in flist: #to check fix it latest
+        raw_data = pd.read_csv( str(path)+"/"+file, index_col=None, header=0)
         col.append(raw_data.columns.tolist())
         frames.append(raw_data)
-        assert CheckCol(col), "Column names are inconsistent! I can't merge the files."
-
+        test_col = CheckCol(col)
+        if test_col == False:
+            print("Column names are inconsistent!")
     
     mergedData = pd.concat(frames, ignore_index = True)
     # fill NaN
@@ -50,29 +69,31 @@ def LoadData(path):
     convData = convData.drop(columns = ['runID','residual','runtime','criterion'])
     # reset index values (loses info from the initial set)
     convData.reset_index(drop=True, inplace=True)
-    print(f' Files {flist} were merged and initally formatted.')
+    
+    #print(f'Total size of the database: {len(mergedData)}')
+    #print(f'Number of converged scenarios: {len(convData)}')
+    #print(f'Number of nonconverged scenarios: {len(nonconverged)}')
+    
     return convData
     
-# DATA FORMATTING
 def FeatDuct(data, Input_Only = True):   
     # merge SD/BD features into one to emphasize duct propagation mode
     duct_cols = ['duct_prop_type','duct_width_if_sourceinduct', 'duct_SSP_if_sourceinduct']
     duct_df = pd.DataFrame(0, index=np.arange(len(data)), columns=duct_cols)
    
     data = pd.concat((data,duct_df), axis = 1)
-    # Surface duct propagation features
+    
     data.loc[data['duct_type'] == 'SD', 'duct_prop_type'] = 1
     data.loc[data['duct_type'] == 'SD', 'duct_width_if_sourceinduct'] =  data.loc[data['duct_type'] == 'SD', 'surface_duct_depth']
     data.loc[data['duct_type'] == 'SD', 'duct_SSP_if_sourceinduct'] = data.loc[data['duct_type'] == 'SD', 'surface_duct_SSP']
-    #Bottom duct propagation features
+
     data.loc[data['duct_type'] == 'BD', 'duct_prop_type'] = -1
     data.loc[data['duct_type'] == 'BD', 'duct_width_if_sourceinduct'] =  data.loc[data['duct_type'] == 'BD', 'bottom_duct_width']
     data.loc[data['duct_type'] == 'BD', 'duct_SSP_if_sourceinduct'] = data.loc[data['duct_type'] == 'BD', 'bottom_duct_SSP']
 
     data = data.drop(columns = ['duct_type', 'surface_duct', 'bottom_duct', 'source_in_duct','surface_duct_depth','surface_duct_SSP','bottom_duct_width','bottom_duct_depth','bottom_duct_SSP'])        
                
-    # DROPPING LOTS OF COLUMNS HERE TO LEAVE OUT PLAIN SIMULATION I/O DATA
-    # These features were mostly inaccurate and will be re-created in the later process
+    #DROPPING LOTS OF COLUMNS HERE TO LEAVE OUT PLAIN SIMULATION I/O DATA
     if Input_Only == True:
         data = data.drop(columns = ['deep_CH_axis','deep_CH_SSP','shallow_CH_axis','shallow_CH_SSP'])
         data = data.drop(columns = ['waveguide','CHmax_axis','SSP_CHmax'])
@@ -80,41 +101,33 @@ def FeatDuct(data, Input_Only = True):
         data = data.drop(columns = duct_cols)
     return data
 
-def FeatBathy(data,path):
-    
-    Bathy = pd.read_excel(path+"env.xlsx", sheet_name = "BATHY")
+def FeatBathy(data, path):    
+    Bathy = pd.read_excel(str(path)+"\env.xlsx", sheet_name = "BATHY")
     wedge = np.zeros([len(data),2]) #wedge parameters, bathymetry info
     
-    for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ):
-        
+    for dmin, dmax, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['wedge_slope'], range(len(data)) ): 
         ### Wedge Loop
         if slope == 0 or slope == -2:
             dstart = dmin
             dend = dmax
         else:
             dstart = dmax
-            dend = dmin 
-            
+            dend = dmin     
         find_lenflat = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_flat']
         lenflat = find_lenflat.values[0]        
-        
         find_lenslope = Bathy.loc[(Bathy['d_start'] == dstart) & (Bathy['d_end'] == dend), 'len_slope']
-        lenslope = find_lenslope.values[0]        
-
+        lenslope = find_lenslope.values[0]
         wedge[row, 0] = lenflat
-        wedge[row, 1] = lenslope
-        
-     
-        
+        wedge[row, 1] = lenslope        
+            
     df_wedge = pd.DataFrame(wedge)
     df_wedge.columns = ['len_flat','len_slope']
     # Choose only slope length, len_flat is redundant
     data = pd.concat([data, df_wedge.iloc[:,1]], axis=1, sort=False)    
-    
     return data
     
-def FeatSSPvec(data, path):
-    ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+def FeatSSPVec(data, path):
+    ssp = pd.read_excel(str(path)+"\env.xlsx", sheet_name = "SSP_LEVITUS") #changed for original sampling!!
     depth = ssp['DEPTH'].values.tolist()
     
     cmat = np.zeros([len(data),len(depth)]) #segmented & interpolated sound speed profile vector   
@@ -123,13 +136,12 @@ def FeatSSPvec(data, path):
     
     for dmin, dmax, profile, slope, row in zip(data['water_depth_min'], data['water_depth_max'], data['profile'], data['wedge_slope'], range(len(data)) ):
 
-        ### SSP-vec Loop
-        
-        # d is a depth approximation in case that ssp sampling doesn't match the grid in Bellhop
+        ### SSP-vec Loop        
         d = min(depth, key=lambda x:abs(x-dmin))
+        # d is a depth approximation in case that ssp sampling doesn't match the grid in Bellhop
+        idx = depth.index(d)+1
         # idx matches the index of ssp-vec entry with max_depth in each scenarion
         # so in flat-bottom scn only a part of ssp is used
-        idx = depth.index(d)+1
         
         if slope == 0:
             weight[row,0:idx] = 1.0
@@ -164,9 +176,9 @@ def FeatSSPvec(data, path):
     #data = data.drop(columns = 'profile')
     return data
 
-def FeatSSPId(data, path, src_cond = True):
+def FeatSSPId(data, path, src_cond):
     
-    ssp_prop = pd.read_excel(path+"env.xlsx",  sheet_name = "SSP_PROP")
+    ssp_prop = pd.read_excel(str(path)+"/env.xlsx",  sheet_name = "SSP_PROP")
     # beacause 0 is a meaningful value, to allocate space, use an array of NaNs
     dat = np.empty([len(data), len(ssp_prop.columns)])
     dat[:,:] = np.nan
@@ -177,10 +189,8 @@ def FeatSSPId(data, path, src_cond = True):
         if not match.empty:
             df_sid.loc[row,:] = match.values[0]
             
-    
     df_sid = df_sid.drop(columns = ['SSP', 'dmax'])
     data = pd.concat([data, df_sid], axis=1, sort=False)
-    
     # With this condition the src position will be checked to indicate whether sound propagates 
     # in specific duct type SD/BD/DC and not only if those ducts exists on a given SSP
     # This includes EXPERT KNWOLEDGE in creation of feature vector beyond SSP identification
@@ -190,7 +200,7 @@ def FeatSSPId(data, path, src_cond = True):
         dccols = [col for col in data.columns if 'DC' in col ]
         sldcols = [col for col in data.columns if 'SLD' in col ]
   
-        for src, sld, dctop, dcbot, row in zip(data['source_depth'], data['SLD_depth'], data['DC_top'], data['DC_bott'], range(len(data))):
+        for src, sld, dctop, dcbot, row in zip(data['source_depth'], data['SLD_depth'], data['DC_top'], data['DC_bot'], range(len(data))):
             # no SD/BD propagation
             if sld < 30 or src >= sld: 
                 data.loc[row,sldcols] = np.nan   
@@ -203,8 +213,8 @@ def FeatSSPId(data, path, src_cond = True):
 def FeatSSPStat(data, path):
     
     SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-    SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
     ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
+    SSP_Stat = SSPStat(SSP_Input, path, plot = False, save = False)
     depth = ssp['DEPTH'].values.tolist()
     
     stats = ['mean_SSP','stdev_SSP','mean_grad','stdev_grad']
@@ -218,9 +228,9 @@ def FeatSSPStat(data, path):
     return data      
 
 def FeatSSPOnDepth(data_sspid, path, save = False):
-    
-    SSP_Input = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bott', 'DC_top', 'SLD_depth']
+    # Retrieve SSP values only for critical depths appearing in the input
+    SSP_Input = pd.read_excel(str(path)+"\env.xlsx", sheet_name = "SSP")
+    crit_depths = ['water_depth_min', 'water_depth_max', 'source_depth', 'DC_axis', 'DC_bot', 'DC_top', 'SLD_depth']
     crit_ssp = ['SSP_wmin', 'SSP_wmax', 'SSP_src', 'SSP_dcax', 'SSP_dcb', 'SSP_dct', 'SSP_sld']
     dat = np.empty([len(data_sspid),len(crit_ssp)])
     dat[:,:] = np.nan
@@ -238,7 +248,7 @@ def FeatSSPOnDepth(data_sspid, path, save = False):
     
     data = pd.concat([data_sspid,df_sdep], axis = 1, sort = False)
     if save:
-        data.to_csv(path + 'data_complete.csv', index = None, header = True)
+        data.to_csv(str(path) + '/data_complete.csv', index = None, header = True)
         print("New datafiles have been created!")                
 
     return data
@@ -246,7 +256,6 @@ def FeatSSPOnDepth(data_sspid, path, save = False):
 def EncodeData(data):
     SeasonList = []
     LocationList = []
-    
     # Split 'profile' into features 'location' and 'season' and remove 'profile' permamently
     for ssp in data['profile']:
         seasons = ['Winter', 'Spring', 'Summer', 'Autumn']
@@ -271,10 +280,33 @@ def EncodeData(data):
         feature.columns = alph_srt
         data_enc = pd.concat((data_enc, feature), axis=1)
         
+    #TODO: See if encoding target is still necessary with the new method
+    # encode y for k-folded valdiation
+    #label_encoder = LabelEncoder()
+    #label_encoder = label_encoder.fit(y)
+    #y_enc = label_encoder.transform(y)
+    #y_enc = y
     return data_enc 
 
+def UndersampleData(data, max_sample):
+    
+    target = np.unique(data['num_rays'])
+    random_state = 27
+    y_population = ClassImbalance(data,plot = False)
+    
+    data_sampled = pd.DataFrame(columns = data.columns)
+    
+    for raynr in target:
+        if y_population[raynr][0] > max_sample:
+            data_slice = data.loc[data['num_rays'] == raynr]
+            data_sample = data_slice.sample(n = max_sample, random_state = random_state)
+            data_sampled = data_sampled.append(data_sample, ignore_index = False)
+        else:
+            data_sampled = data_sampled.append(data.loc[data['num_rays'] == raynr], ignore_index= False)
+            
+    return data_sampled
 
-def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False, plot_distributions = False, plot_correlations = False):
+def CreateModelSplits(data, level_out = 1, remove_outliers = True, replace_outliers = True, feature_dropout = False, plot_distributions = False, plot_correlations = False):
     """
     1. Create 3 separate data splits based on the 'wedge_slope' value
     --- OUTLIERS ---
@@ -360,12 +392,12 @@ def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers =
                         dat = remove_outliers(dat,rayclass)
         
               
-            ystat = ClassImbalance(dat, plot = plot_distributions)
+            ystat = ClassImbalance(dat)
             distributions.append(ystat)  
             SplitSets.append(dat)  
         
         SplitSets[0] = remove_outliers(SplitSets[0], 6000)    
-        distributions[1] = ClassImbalance(SplitSets[0], plot = plot_distributions)
+        distributions[1] = ClassImbalance(SplitSets[0])
         
     #2. TODO : A value is trying to be set on a copy of a slice from a DataFrame.
     #          Try using .loc[row_indexer,col_indexer] = value instead
@@ -386,79 +418,37 @@ def CreateSplits(data, level_out = 1, remove_outliers = True, replace_outliers =
             if plot_correlations:
                 PlotCorrelation(SplitSets[i], features, annotate = True)
 
-    
+    if plot_distributions:
+        for split in SplitSets:
+            ClassImbalance(split, plot_splits = True)
+
     return SplitSets, distributions
 
-def TrainTestSplit(data, save = False, seed = 27, test_size = 0.25):
-    # divide dataset into test & training subsets
-    target = 'num_rays'
-    predictors = [x for x in data.columns if x not in target]
-    X_train, X_test, y_train, y_test = train_test_split(data[predictors], data[target], test_size=test_size, random_state=seed, stratify =  data[target])
-    # stratified split ensures that the class distribution in training\test sets is as similar as possible
-    dtrain = pd.concat((X_train, y_train), axis = 1)
-    dtest = pd.concat((X_test, y_test), axis = 1)
-    
-    if save:
-        # save into separate .csv files
-        filepath = os.getcwd()+'\data\\'
-        dtest.to_csv(filepath + 'dtest_25.csv', index = None, header = True)
-        dtrain.to_csv(filepath + 'dtrain_75.csv', index = None, header = True)
-        #dtrainup.to_csv(filepath + 'dtrainup.csv', index = None, header = True)
-        #dtrain_smot.to_csv(filepath + 'dtrain_smot.csv', index = None, header = True)
-        print("New datafiles have been created!")
-    
-    return dtrain, dtest
 
-def UndersampleData(data, max_sample):
-    
-    target = np.unique(data['num_rays'])
-    random_state = 27
-    y_population = ClassImbalance(data,plot = False)
-    
-    data_sampled = pd.DataFrame(columns = data.columns)
-    
-    for raynr in target:
-        if y_population[raynr][0] > max_sample:
-            data_slice = data.loc[data['num_rays'] == raynr]
-            data_sample = data_slice.sample(n = max_sample, random_state = random_state)
-            data_sampled = data_sampled.append(data_sample, ignore_index = False)
+def SMOTSampling(X_train, y_train, min_class_size = 100):
+    # UPSAMPLING 
+    #check the label population - important for the value of max folds possible
+    yclass, ycount = np.unique(y_train, return_counts=True)
+    yper = ycount/sum(ycount)*100
+    y_population = dict(zip(yclass, zip(ycount, yper)))
+
+    # Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
+    #categorical_var = np.hstack([2, np.arange(5,33)])
+    seasons = ['Winter', 'Spring', 'Summer', 'Autumn']
+    locations = ['Labrador-Sea','Mediterranean-Sea','North-Pacific-Ocean','Norwegian-Sea','South-Atlantic-Ocean','South-Pacific-Ocean']
+    bottom = ['bottom_type']
+    categorical_var =[]
+    for cat in locations+seasons+bottom:
+        cat_idx = X_train.columns.get_loc(cat)
+        categorical_var.append(cat_idx)
+    min_class_size = min_class_size
+    population_target = dict.fromkeys(y_population.keys())
+    for ray, nrsamples in y_population.items():
+        if nrsamples[0] < min_class_size:
+            population_target[ray] = min_class_size
         else:
-            data_sampled = data_sampled.append(data.loc[data['num_rays'] == raynr], ignore_index= False)
-            
-    return data_sampled
-
-# Upsampling with SMOT-ENC technique that can handle both cont. and categorical variables
-#categorical_var = np.hstack([2, np.arange(5,33)])
-categorical_var = np.hstack([2,np.arange(5,33)])
-minority = np.arange(4,17)
-samplenr = 250
-population_target = dict(zip(minority, (np.ones(len(minority))*samplenr).astype(int)))
-smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
-#smote_nc_max = SMOTENC(categorical_features=categorical_var, sampling_strategy='auto', random_state=42)
-X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
-dtrain_smot = pd.concat((X_smot, y_smot), axis =1)
-dtrain_smot = dtrain_smot.sample(frac = 1) #shuffle the upsampled dataset
-
-# TESTING NEW FEATURES AND THEIR CORRELATIONS
-
-import os
-path = os.getcwd()+'\data\\'
-
-#ssp = pd.read_excel(path+"env.xlsx", sheet_name = "SSP")
-#ssp_grad = pd.read_excel(path+"env.xlsx", sheet_name = "SSP_GRAD")
-
-rawdata = LoadData(path)
-data1 = FeatDuct(rawdata, Input_Only = True)
-#data2 = FeatBathy(data1, path)
-#data3 = FeatSSPId(data2, path, src_cond = True)
-#data4 = FeatSSPStat(data3,path)
-#data5 = FeatSSPOnDepth(data4, path, save = True)
-data = UndersampleData(data1, 100)
-ClassImbalance(data, plot = True)
-
-
-#target = 'num_rays'
-#features = data5.columns.tolist()
-#features.remove(target)
-
-#PlotCorrelation(data5,features, annotate = False)
+            population_target[ray] = y_population[ray][0]
+    smote_nc = SMOTENC(categorical_features=categorical_var, sampling_strategy=population_target, random_state=42)
+    X_train = X_train.fillna(0) #smotenc doesn't work for NaNs, which is not good and changes sspid logics
+    X_smot, y_smot = smote_nc.fit_resample(X_train, y_train)
+    return X_smot, y_smot
