@@ -41,9 +41,9 @@ $sid == {}; </br>
 get; offset 0; limit 300; 
 
 ### Making predictions with KGCN
-Best to be 
+Training of a GNN is a time-consuming and computationally intensive process. To make predictions with KGCN execute the code in Google Colab notebook: [KGCN Colab Notebook](https://github.com/kubpie/SPM-Thesis/blob/master/KGCN/KGCNcolab.ipynb) and make use of GPU processing.
 
 ## Troubleshooting
-In case you run into issues with indices being out of range, I'd recommend updating your pandas to version 1.0.3 and\or numpy to 1.18.1.
+In case you run into issues with indices being out of range, I'd recommend updating your pandas to version >1.0.3 and\or numpy to >1.18.1.
 
 
