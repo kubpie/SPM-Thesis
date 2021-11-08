@@ -19,7 +19,7 @@ old_versions/
 
 # Non-essential files
 reports/
-non_src_fles/
+non_src_files/
 
 # VS-compiled folders
 .vs/
