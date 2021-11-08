@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Design of a Graph Neural Network to predict the optimal resolution of the Sonar Performance Model
 Master of Science Thesis by Jakub Pietrak
 
@@ -73,4 +72,3 @@ get; offset 0; limit 300;
 
 #### Query flattened
 match $scn isa sound-propagation-scenario, has scenario_id $sid; $ray isa ray-input, has num_rays $nray; $src isa source, has depth $dsrc; $seg isa bottom-segment, has depth $dseg, has length $l, has slope $s; $conv(converged_scenario: $scn, minimum_resolution: $ray) isa convergence;$srcp(defined_by_src: $scn, define_src: $src) isa src-position;$bathy(defined_by_bathy: $scn, define_bathy: $seg) isa bathymetry, has bottom_type $bt;$ssp isa SSP-vec, has location $loc, has season $ses, has SSP_value $sspval, has depth $dsspmax;$dct isa duct, has depth $ddct, has grad $gd; $speed(defined_by_SSP: $scn, define_SSP: $ssp) isa sound-speed;$duct(find_channel: $ssp, channel_exists: $dct) isa SSP-channel, has number_of_ducts $nod; $sspval has depth $dssp;{$dssp == $dsrc;} or {$dssp == $dseg;} or {$dssp == $ddct;} or {$dssp == $dsspmax;}; $sid == {}; get; offset 0; limit 300;
->>>>>>> colab-branch
