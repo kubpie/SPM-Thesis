@@ -9,7 +9,17 @@ events/
 kgcnmodels/
 
 # Saved NetworkX graphs
-#networkx/
+networkx/
+#nx_*/
+
+# XGB results
+XGB/results/
+
+# Old code etc
+old_versions/
+
+# Non-essential files
+reports/
 
 # VS-compiled folders
 .vs/
