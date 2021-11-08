@@ -495,9 +495,11 @@ def go_test(val_graphs, val_ge_split, reload_fle, **kwargs):
     validation_evals = [solveds_tr, solveds_ge] 
     return ge_graphs, validation_evals
 
+#############################
 ##### RUN THE PIPELINE  #####  
+#############################
 
-# DATA SELECTION FOR GRAKN TESTING
+#1. DATA SELECTION FOR GRAKN TESTING
 from data_analysis_lib import ClassImbalance
 from data_prep import CreateSplits
 
@@ -517,7 +519,9 @@ data = UndersampleData(data_sparse2, max_sample = 794)
 class_population = ClassImbalance(data, plot = False)
 print(class_population)
 
+#2. TRAIN & VALIDATE KGCN
 
+# Connect to Grakn client 
 client = GraknClient(uri=URI)
 session = client.session(keyspace=KEYSPACE)
 
@@ -530,6 +534,7 @@ with session.transaction().read() as tx:
         print(f'Found node types: {node_types}')
         print(f'Found edge types: {edge_types}')   
 
+# Define KGCN training parameters
 train_graphs, tr_ge_split, training_data, testing_data = prepare_data(session, data, train_split=0.7, validation_split = 0.2)
 #, val_graphs,  val_ge_split
 kgcn_vars = {
@@ -543,7 +548,7 @@ kgcn_vars = {
           'output_dir': f"./events/{time.time()}/"
           }           
 
-
+# Train KGCN
 tr_ge_graphs, tr_score = go_train(train_graphs, tr_ge_split, save_fle = "test_model.ckpt", **kgcn_vars)
 
 with session.transaction().write() as tx:
@@ -552,6 +557,7 @@ with session.transaction().write() as tx:
 session.close()
 client.close()
 
-#val_ge_graphs, validation_evals = go_train(val_graphs, val_ge_split, reload_fle = "test_model.ckpt", **kgcn_vars)    
+# Validate training results
+val_ge_graphs, validation_evals = go_train(val_graphs, val_ge_split, reload_fle = "test_model.ckpt", **kgcn_vars)    
 # Close transaction, session and client due to write query
     
