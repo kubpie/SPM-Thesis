@@ -14,8 +14,10 @@ from xgb_mylib import ModelFit
 from data_prep import LoadData, FeatDuct, EncodeData, CreateSplits, TrainTestSplit, \
 FeatBathy, FeatSSPvec, FeatSSPId, FeatSSPStat, FeatSSPOnDepth
 
+###########################################
+#### XGBOOST FEATURE SELECTION PROCESS ####
+###########################################
 
-# XGBOOST DATABASE PROCESSING (incl. feature selection)
 # load data
 import os
 path = os.getcwd()+'\data\\'

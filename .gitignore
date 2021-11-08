@@ -85,7 +85,7 @@ events/
 networkx_graphs/
 
 # VScode
-.vscode/*
+.vscode/
 .vscode/**/*
 !.vscode/settings.json
 !.vscode/tasks.json

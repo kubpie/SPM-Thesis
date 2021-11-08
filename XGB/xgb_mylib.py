@@ -8,6 +8,7 @@ Created on Tue Feb  4 16:47:55 2020
 import numpy as np
 import matplotlib.pyplot as plt
 import xgboost as xgb
+import os
 from joblib import dump
 from joblib import load
 from sklearn.model_selection import GridSearchCV
@@ -24,7 +25,7 @@ from sklearn.metrics import plot_confusion_matrix
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_val_score
 
-from sklearn.metrics.classification import _check_targets
+from sklearn.metrics import _check_targets
 from sklearn.metrics.classification import _weighted_sum
 
 from matplotlib.ticker import FormatStrFormatter
@@ -92,7 +93,7 @@ def ModelFit(bst_model, dtrain, dtest, features, target, early_stop, verbose, le
     plt.show()
     """
     #Path for plots
-    resultpath = r'C:\Users\kubap\Documents\THESIS\XGBoost\results\\'
+    resultpath = os.getcwd()+'\results\\'
 
     if savename:
          #save model to file
@@ -227,7 +228,7 @@ def PlotGS(results, param, scoring, modeltype):
     
     plt.legend(loc="best")
     plt.grid(False)
-    resultpath = r'C:\Users\kubap\Documents\THESIS\XGBoost\results\tuning\\'
+    resultpath = resultpath = os.getcwd()+'results\tuning\\'
     plt.savefig(resultpath + list(param.keys())[0]+modeltype+'.png')
     #plt.show(False)
 
@@ -237,7 +238,7 @@ def accuracy_rounding_score(y_true, y_pred, normalize=True, sample_weight=None):
         4500.,  5000.,  6000.,  7000.,  8000.,  9000., 10000., 12500., 15000.]
         y_pred[p] = min(labels, key=lambda x:abs(x-y_pred[p]))    
     # Compute accuracy for each possible representation
-    y_type, y_true, y_pred = _check_targets(y_true, y_pred)
+    #y_type, y_true, y_pred = _check_targets(y_true, y_pred)
     check_consistent_length(y_true, y_pred, sample_weight)
     if y_type.startswith('multilabel'):
         differing_labels = count_nonzero(y_true - y_pred, axis=1)
