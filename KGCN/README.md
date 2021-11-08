@@ -10,7 +10,7 @@ Grakn Workbase 1.2.7 </br>
 
 ## KGCN Schema
 <p align="center">
-  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/kgcn_schema.JPG"/>
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/kgcn_schema.JPG" width = 900/>
 </p>
 The designed relational database schema to represent sound propagation. Scheam definiton can be found in ssp_schema_kgcn.gql.
 
@@ -79,12 +79,13 @@ be labelled correctly. Especially in the multi-class scenario it is easy to imag
 the learner can usually easily exclude a few candidate relations, labelling of all 16 of these
 correctly is a much harder task.
 <p align="center">
-  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/predicted_graph.jpg"/>
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/predicted_graph.jpg" width = 600/>
 </p>
 
 ### KGCN Architecture
 <p align="center">
-  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/GN_block.jpg"/>
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/GN_block.jpg" width = 500/>
+  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/enc_dec.jpg" width = 300/>
 </p>
 Proposed KGCN used a fully-connected GN-block in the GN core block, defined by: </br>
 
@@ -97,11 +98,8 @@ Proposed KGCN used a fully-connected GN-block in the GN core block, defined by: 
     * reduce set of outputs from multiple graph elements of the same type
     * are invariant to permutations of their inputs
     * take variable number of inputs
-<p align="center">
-  <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/enc_dec.jpg"/>
-</p>
 
-GN core block learns how to pass useful updates around the graph. It uses concatenated input of {t, t+1} steps which effectively makes it a **Messake Passing Neural Network**.</br>
+GN core block learns how to pass useful updates around the graph. It passes the messages for _M_ steps before it updates the weights of graph elements. GN core uses concatenated input of _{t, t+1}_ steps which effectively makes it a **Messake Passing Neural Network**.</br>
 The encoder block transforms Grakn output into NetworkX graph with defined transformation functions </br>
 The decoder block contains a Neural Network which is a learned readout function. It learns how to represent aggregated update of each graph element after which it decodes it back to the initial Network graph format.
 
@@ -116,7 +114,7 @@ Training of a GNN is a time-consuming and computationally intensive process. To 
 <p align="center">
   <img src="https://github.com/kubpie/SPM-Thesis/blob/master/pics/loss_func.jpg"/>
 </p>
-
+<p align="justify">
 The next test was repeated in an unbiased 2-class setup. The input consisted of 1020 samples
 of the 500 rays class and 1020 samples of the 1500 rays (the whole available sample for that
 class). The model was trained for 103 iterations in the binary classification task with the best
@@ -131,9 +129,9 @@ loss function gradually decreases by the end of the training, so hypothetically 
 improvement in the accuracy of predictions would require much longer training or increasing
 the learning rate of the model, possibly even leading to overfitting at the training set. All of
 the above observations support the conclusion that the model is indeed capable of learning
-and solving a binary classification task on the BELLHOP database with certain, better-thanrandom
+and solving a binary classification task on the BELLHOP database with certain, better than random
 accuracy.
-
+</p>
 ## Troubleshooting
 In case you run into issues with indices being out of range, I'd recommend updating your pandas to version >1.0.3 and\or numpy to >1.18.1.
 
