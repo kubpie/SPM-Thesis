@@ -105,7 +105,7 @@ The decoder block contains a Neural Network which is a learned readout function.
 
 ### Making predictions with KGCN
 
-Training of a GNN is a time-consuming and computationally intensive process. To make predictions with KGCN execute the code in Google Colab notebook: [KGCN Colab Notebook](https://github.com/kubpie/SPM-Thesis/blob/master/JupyterNotebook/KGCNcolab.ipynb) and make use of GPU processing.
+Training of a GNN is a time-consuming and computationally intensive process. To make predictions with KGCN execute the code in Google Colab notebook: [KGCN Colab Notebook](https://github.com/kubpie/SPM-Thesis/blob/master/JupyterNotebook/KGCNcolab.ipynb) and make use of free and awesome cloud GPU\TPU processing.
 
 ## Results
 <p align="center">
