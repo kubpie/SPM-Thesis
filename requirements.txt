@@ -19,7 +19,7 @@ kiwisolver==1.1.0
 Markdown==3.1.1
 matplotlib==3.1.2
 networkx==2.3
-numpy==1.17.2
+numpy==1.22.0
 pandas==1.0.3
 protobuf==3.9.1
 pycebox==0.0.1
